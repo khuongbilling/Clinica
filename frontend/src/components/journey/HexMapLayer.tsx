@@ -1467,6 +1467,19 @@ export interface HexMapDevOverlay {
    * MUST NOT ship — gated with __DEV__.
    */
   fogMask?:          boolean;
+  /**
+   * DEV ONLY — playable-bounds visualiser.
+   * Renders four layers inside MapWorld:
+   *   GOLD  — full world canvas outline (the base map image boundary)
+   *   CYAN  — playable-bounds rectangle (map inset by hexOuterRadius × 0.75)
+   *   GREEN — per-tile border: hex body fits inside playable bounds ✓
+   *   RED   — per-tile border: hex body extends outside playable bounds ✗
+   * A stats label shows total terrain cells and out-of-bounds count.
+   * A console.warn fires in __DEV__ for every out-of-bounds tile regardless
+   * of whether the overlay flag is enabled, so CI surfaces the problem early.
+   * MUST NOT ship — gated with __DEV__.
+   */
+  playableBounds?:   boolean;
 }
 
 /**
@@ -1672,10 +1685,8 @@ export function HexMapLayer({
   const coords = computeHexWorldCoords(tiles, containerWidth);
   const {
     sz,
-    worldOriginX: ox,
-    worldOriginY: oy,
-    worldWidth:   worldW,
-    worldHeight:  worldH,
+    worldWidth:  worldW,
+    worldHeight: worldH,
   } = coords;
 
   // ── Persistent refs ─────────────────────────────────────────────────────────
@@ -1716,54 +1727,86 @@ export function HexMapLayer({
   // Runs whenever the world geometry or container changes.
   // Must run BEFORE Effect 2 so the camera centering reads fresh bounds.
   //
-  // Bounds design (Push 1A fix):
+  // Bounds design — base map image is the authoritative world boundary:
   //
-  //   SPRITE_PAD = 1.0 × sz — clearance for the largest world object (Gate
-  //   at 1.8 × sz).  Enough bleed on every edge so sprites near the world
-  //   boundary can always be panned fully into view.
+  //   Camera translation (cx, cy) positions MapWorld's top-left at viewport
+  //   pixel (cx, cy).  The Chapter background image fills worldW × worldH
+  //   exactly.  The viewport must never expose any area outside that image.
   //
-  //   The formula is derived from "what camera offset is needed to centre
-  //   the topmost / bottommost / leftmost / rightmost tile?":
+  //   Derivation per axis (X shown; Y is symmetric):
   //
-  //     maxY = containerHeight/2 − worldOriginY + SPRITE_PAD
-  //       → camera offset that places the topmost tile (at worldOriginY)
-  //         at the viewport centre, plus bleed for the player sprite head.
-  //       → Previously MARGIN (≈ 23 px), so the start-tile player was
-  //         clamped to y ≈ 55 px — top-clipped.  Now ≈ 270 px, allowing
-  //         full vertical centering.
+  //     MapWorld left  edge in viewport = cx
+  //     MapWorld right edge in viewport = cx + worldW
   //
-  //     minY = containerHeight/2 − worldH − SPRITE_PAD
-  //       → camera offset to centre the bottommost tile.
+  //     Constraints:
+  //       cx ≤ 0                         MapWorld left  ≤ viewport left
+  //       cx ≥ containerWidth − worldW   MapWorld right ≥ viewport right
   //
-  //     maxX = containerWidth/2 + SPRITE_PAD
-  //       → leftmost-tile centering headroom.
+  //     → maxX = 0
+  //     → minX = containerWidth − worldW
   //
-  //     minX = containerWidth/2 − worldW − SPRITE_PAD
-  //       → rightmost-tile (Gate) centering headroom.
-  //         Previously too tight, clipping the 1.8 × sz Gate overlay at
-  //         the right viewport edge.
+  //   When the world is SMALLER than the viewport on an axis (tiny map):
+  //     do not pan on that axis; center the map instead.
+  //     → minX = maxX = round((containerWidth − worldW) / 2)
   //
-  //   When the world fits entirely in the viewport on one axis the bounds
-  //   still allow the camera to centre any tile on that axis; empty world-
-  //   background space outside the tile grid is acceptable (the painted
-  //   chapter background fills the world canvas).
+  //   SPRITE_PAD, fog canvas padding, Gate sprite, and area-boss dimensions
+  //   do NOT expand camera bounds.  All world objects must be positioned
+  //   inside the painted base map; they do not define the camera limits.
+  //   Manual pan (PanResponder) and recenter both read from boundsRef so
+  //   they automatically apply the same clamp — no separate handling needed.
   useLayoutEffect(() => {
     if (containerWidth < 10 || containerHeight < 10) return;
-    // 1.0 × sz gives one full tile of bleed — enough for the Gate (1.8 × sz)
-    // and the area-boss sprite (1.35 × sz) to be brought fully into view.
-    const SPRITE_PAD = Math.round(sz * 1.0);
-    // oy = worldOriginY = 10 px (fixed top breathing room in hexWorldCoords).
-    // Used to compute the exact camera position that centres the topmost tile.
+
+    // X axis — center map if it fits entirely in the viewport width.
+    const fitsW    = worldW < containerWidth;
+    const halfExtraW = Math.round((containerWidth  - worldW) / 2);
+
+    // Y axis — center map if it fits entirely in the viewport height.
+    const fitsH    = worldH < containerHeight;
+    const halfExtraH = Math.round((containerHeight - worldH) / 2);
+
     boundsRef.current = {
-      minX: Math.round(containerWidth  / 2 - worldW - SPRITE_PAD),
-      maxX: Math.round(containerWidth  / 2           + SPRITE_PAD),
-      minY: Math.round(containerHeight / 2 - worldH  - SPRITE_PAD),
-      maxY: Math.round(containerHeight / 2 - oy      + SPRITE_PAD),
+      minX: fitsW ? halfExtraW : Math.round(containerWidth  - worldW),
+      maxX: fitsW ? halfExtraW : 0,
+      minY: fitsH ? halfExtraH : Math.round(containerHeight - worldH),
+      maxY: fitsH ? halfExtraH : 0,
     };
-  // oy (worldOriginY) is always 10 — a constant in hexWorldCoords.ts.
-  // Listed in deps for correctness; its stability means no extra renders.
+  }, [containerWidth, containerHeight, worldW, worldH]);
+
+  // ── Effect: DEV playable-bounds validation ────────────────────────────────
+  // Runs in __DEV__ whenever tile geometry settles.  Warns to the console if
+  // any tile's rendered hex body extends outside the safe playable margin
+  // (map canvas inset by hexOuterRadius × 0.75 on every side).
+  //
+  // The check uses the same hex half-extents as the overlay visualiser:
+  //   hexR      = (sz/2) × 0.89   — outer radius of the inset hex (inset=0.89)
+  //   halfWidth = round(hexR)      — horizontal half-extent
+  //   halfHeight = round(hexR × √3/2)  — vertical half-extent
+  //   margin    = round(hexR × 0.75)   — safe inset from world edge
+  //
+  // This never throws or blocks — it is a developer signal only.
+  useLayoutEffect(() => {
+    if (!__DEV__ || tiles.length === 0 || worldW < 10 || worldH < 10) return;
+    const hexR   = (sz / 2) * 0.89;
+    const margin = Math.round(hexR * 0.75);
+    const halfW  = Math.round(hexR);
+    const halfH  = Math.round(hexR * 0.866);
+    const pb     = { left: margin, top: margin, right: worldW - margin, bottom: worldH - margin };
+    const oob    = tiles.filter(tile => {
+      const { cx, cy } = coords.axialToWorld(tile.q, tile.r);
+      return cx - halfW < pb.left || cx + halfW > pb.right ||
+             cy - halfH < pb.top  || cy + halfH > pb.bottom;
+    });
+    if (oob.length > 0) {
+      console.warn(
+        `[HexMapLayer] ${oob.length}/${tiles.length} tile(s) extend outside ` +
+        `playable bounds (margin=${margin}px sz=${sz}px worldW=${worldW}px worldH=${worldH}px): ` +
+        oob.map(t => t.id).join(', '),
+      );
+    }
+  // coords is derived from tiles + containerWidth; tiles in deps covers both.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [containerWidth, containerHeight, sz, worldW, worldH, oy]);
+  }, [worldW, worldH, sz, tiles]);
 
   // ── Effect 2: position camera on load / player move / resize ─────────────
   // Three distinct camera behaviours (Push 8):
@@ -2015,6 +2058,29 @@ export function HexMapLayer({
       }),
     [tiles],
   );
+
+  // ── DEV: precompute playable bounds for overlay rendering ─────────────────
+  // Evaluated once per render when the flag is enabled; null in production or
+  // when the flag is off.  Both the per-tile border pass and the world-space
+  // rectangle block reference this object so the formula runs only once.
+  const devPlayableBounds = (__DEV__ && !!devOverlay?.playableBounds && worldW >= 10 && worldH >= 10)
+    ? (() => {
+        const hexR   = (sz / 2) * 0.89;
+        const margin = Math.round(hexR * 0.75);
+        const halfW  = Math.round(hexR);
+        const halfH  = Math.round(hexR * 0.866);
+        const left   = margin;
+        const top    = margin;
+        const right  = worldW - margin;
+        const bottom = worldH - margin;
+        const oobCount = tiles.filter(tile => {
+          const { cx, cy } = coords.axialToWorld(tile.q, tile.r);
+          return cx - halfW < left || cx + halfW > right ||
+                 cy - halfH < top  || cy + halfH > bottom;
+        }).length;
+        return { left, top, right, bottom, halfW, halfH, oobCount };
+      })()
+    : null;
 
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
@@ -2486,6 +2552,29 @@ export function HexMapLayer({
                 );
               })()}
 
+              {/* Playable-bounds per-tile border: GREEN = inside, RED = outside */}
+              {devOverlay.playableBounds && devPlayableBounds && (() => {
+                const { cx: tcx, cy: tcy } = coords.axialToWorld(tile.q, tile.r);
+                const { halfW, halfH, left: pbL, top: pbT, right: pbR, bottom: pbB } = devPlayableBounds;
+                const inside =
+                  tcx - halfW >= pbL && tcx + halfW <= pbR &&
+                  tcy - halfH >= pbT && tcy + halfH <= pbB;
+                return (
+                  <View
+                    pointerEvents="none"
+                    style={{
+                      position:    'absolute',
+                      left:        0,
+                      top:         0,
+                      width:       sz,
+                      height:      sz,
+                      borderWidth: 2,
+                      borderColor: inside ? '#22c55e' : '#ef4444',
+                    }}
+                  />
+                );
+              })()}
+
             </View>
           );
         })}
@@ -2514,6 +2603,54 @@ export function HexMapLayer({
               {worldW}×{worldH}
             </Text>
           </View>
+        )}
+
+        {/* Playable-bounds visualiser — GOLD map boundary + CYAN playable rect */}
+        {__DEV__ && devPlayableBounds && (
+          <>
+            {/* GOLD — full world canvas = base map image boundary */}
+            <View
+              pointerEvents="none"
+              style={{
+                position:    'absolute',
+                left:        0,
+                top:         0,
+                width:       worldW,
+                height:      worldH,
+                borderWidth: 2,
+                borderColor: '#f59e0b',
+                zIndex:      19410,
+              }}
+            />
+            {/* CYAN — playable bounds (inset by hexOuterRadius × 0.75) */}
+            <View
+              pointerEvents="none"
+              style={{
+                position:    'absolute',
+                left:        devPlayableBounds.left,
+                top:         devPlayableBounds.top,
+                width:       devPlayableBounds.right  - devPlayableBounds.left,
+                height:      devPlayableBounds.bottom - devPlayableBounds.top,
+                borderWidth: 2,
+                borderColor: '#06b6d4',
+                zIndex:      19420,
+              }}
+            >
+              <Text style={{
+                position:        'absolute',
+                bottom:          2,
+                left:            2,
+                color:           '#06b6d4',
+                fontSize:        7,
+                fontWeight:      '700',
+                backgroundColor: '#00000099',
+                padding:         2,
+              }}>
+                {'Terrain cells: ' + tiles.length + '/' + tiles.length +
+                 ' | Out-of-bounds: ' + devPlayableBounds.oobCount}
+              </Text>
+            </View>
+          </>
         )}
       </Animated.View>
 

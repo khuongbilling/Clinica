@@ -1,0 +1,400 @@
+PUSH — CLAMP HEX TERRAIN AND PLAYER MOVEMENT TO THE BASE MAP
+
+This complements the camera-boundary rule.
+
+CANONICAL RULE:
+
+The painted Chapter BASE MAP defines the absolute world boundary.
+
+Nothing playable may exist outside it.
+
+This applies to:
+
+- camera
+- hex terrain
+- player movement
+- encounter placement
+- Boss Gate placement
+- Treasure
+- Merchant
+- Area Bosses
+- Ward Events
+
+The player must NEVER be able to move onto a hex that visually extends outside the base map.
+
+Do NOT change:
+- encounter probabilities
+- stamina cost
+- Field of Vision
+- fog logic
+- camera-follow behavior
+- fixed Chapter geometry philosophy
+
+-----------------------------------
+1. BASE MAP DEFINES TWO BOUNDARIES
+-----------------------------------
+
+Maintain:
+
+A. mapBounds
+The full painted Chapter environment.
+
+B. playableBounds
+A safe inset inside mapBounds where hex terrain is allowed.
+
+Example:
+
+const mapBounds = {
+  left: 0,
+  top: 0,
+  right: baseMapWidth,
+  bottom: baseMapHeight,
+};
+
+Create a safe margin:
+
+const PLAYABLE_EDGE_MARGIN =
+  hexOuterRadius * 0.75;
+
+const playableBounds = {
+  left:
+    mapBounds.left +
+    PLAYABLE_EDGE_MARGIN,
+
+  top:
+    mapBounds.top +
+    PLAYABLE_EDGE_MARGIN,
+
+  right:
+    mapBounds.right -
+    PLAYABLE_EDGE_MARGIN,
+
+  bottom:
+    mapBounds.bottom -
+    PLAYABLE_EDGE_MARGIN,
+};
+
+Reason:
+
+A tile center technically being inside the image is not enough.
+
+The visible HEX BODY must also remain inside the map.
+
+-----------------------------------
+2. VALIDATE THE ENTIRE HEX, NOT ONLY ITS CENTER
+-----------------------------------
+
+For every authored terrain hex:
+
+const center =
+  axialToWorld(tile.q, tile.r);
+
+Validate that its visible footprint remains inside playableBounds.
+
+For a flat/pointy hex, use the actual rendered outer radius / half-width / half-height.
+
+Example concept:
+
+function isHexInsidePlayableBounds(
+  centerX: number,
+  centerY: number,
+  hexHalfWidth: number,
+  hexHalfHeight: number,
+  bounds: PlayableBounds
+): boolean {
+  return (
+    centerX - hexHalfWidth >= bounds.left &&
+    centerX + hexHalfWidth <= bounds.right &&
+    centerY - hexHalfHeight >= bounds.top &&
+    centerY + hexHalfHeight <= bounds.bottom
+  );
+}
+
+Do NOT approve a tile simply because:
+
+centerX >= 0
+centerY >= 0
+
+The complete movement cell must fit.
+
+-----------------------------------
+3. FIXED CHAPTER TEMPLATE IS AUTHORITATIVE
+-----------------------------------
+
+Movement must ONLY occur between terrain cells that exist in:
+
+ChapterMapTemplate.tiles
+
+Do not dynamically create a neighboring hex just because an axial neighbor exists mathematically.
+
+Correct:
+
+const neighbor =
+  template.tiles.find(
+    tile =>
+      tile.q === targetQ &&
+      tile.r === targetR
+  );
+
+if (!neighbor) {
+  movementNotAllowed();
+}
+
+Therefore:
+
+hex adjacency mathematics determines WHICH coordinate is adjacent.
+
+ChapterMapTemplate determines WHETHER that coordinate actually exists as playable terrain.
+
+-----------------------------------
+4. NEVER GENERATE MOVEMENT CELLS OUTSIDE THE TEMPLATE
+-----------------------------------
+
+Remove any runtime behavior similar to:
+
+generateNeighborTile(...)
+createTileIfMissing(...)
+expandMapOnMovement(...)
+
+Journey movement does NOT grow the map.
+
+Each Chapter has a fixed authored terrain footprint.
+
+Chapter 1:
+30 physical terrain cells.
+
+Those exact 30 cells are the complete movement field.
+
+-----------------------------------
+5. VALIDATE CHAPTER TEMPLATE ON LOAD
+-----------------------------------
+
+Add:
+
+validateChapterMapTemplate(template, mapVisualConfig)
+
+Validation must fail development builds if:
+
+- any hex extends outside playableBounds
+- any duplicate coordinate exists
+- Start is outside playableBounds
+- Gate is outside playableBounds
+- terrain count is incorrect
+- template contains disconnected terrain
+
+For Chapter 1:
+
+assert terrainCellCount === 30
+
+If even one of the 30 cells extends outside the safe map area:
+
+FAIL VALIDATION.
+
+Do not silently reposition it at runtime.
+
+The authored template should be corrected instead.
+
+-----------------------------------
+6. PLAYER MOVEMENT MUST CHECK TARGET TILE
+-----------------------------------
+
+Before spending stamina:
+
+function canMoveToTile(
+  currentTile,
+  targetTile
+) {
+  if (!targetTile) {
+    return false;
+  }
+
+  if (
+    axialHexDistance(
+      currentTile,
+      targetTile
+    ) !== 1
+  ) {
+    return false;
+  }
+
+  if (
+    !chapterTemplateTileIds.has(
+      targetTile.id
+    )
+  ) {
+    return false;
+  }
+
+  if (
+    !isTileInsidePlayableBounds(
+      targetTile
+    )
+  ) {
+    return false;
+  }
+
+  return true;
+}
+
+Only AFTER this passes:
+
+deduct 1 stamina.
+
+Do not deduct stamina for invalid movement attempts.
+
+-----------------------------------
+7. EDGE HEXES HAVE FEWER VALID NEIGHBORS
+-----------------------------------
+
+This is expected.
+
+An interior hex may have:
+
+6 valid neighbors.
+
+A map-edge hex may have:
+
+2–5 valid neighbors.
+
+Do NOT create missing neighbors just to maintain six movement choices.
+
+The missing direction represents:
+
+the edge of the physical environment.
+
+-----------------------------------
+8. DO NOT SHOW MOVEMENT HIGHLIGHT OUTSIDE MAP
+-----------------------------------
+
+Reachable-tile highlighting must only consider:
+
+existing valid ChapterMapTemplate tiles.
+
+Never draw:
+- ghost hex
+- target outline
+- reachable glow
+- tap target
+
+outside the base map.
+
+If an axial neighbor does not exist in the template:
+
+render nothing.
+
+-----------------------------------
+9. ENCOUNTERS ALSO CANNOT EXIST OUTSIDE MAP
+-----------------------------------
+
+Encounter assignment operates only on:
+
+template encounter-eligible terrain cells.
+
+Never assign:
+- Battle
+- Treasure
+- Merchant
+- Ward Event
+- Area Boss
+
+to a generated coordinate outside the authored terrain template.
+
+-----------------------------------
+10. BOSS GATE MUST ALSO RESPECT SAFE MAP SPACE
+-----------------------------------
+
+The Gate anchor tile must exist inside the terrain template.
+
+However the Gate artwork itself may be larger than one hex.
+
+Therefore Chapter visual design must reserve enough environmental margin around the Gate so the artwork remains inside the base map.
+
+Do NOT expand map/camera bounds to accommodate a badly placed Gate.
+
+Move/scale the Gate within the authored map instead.
+
+-----------------------------------
+11. FOG CAN EXTEND BEYOND TERRAIN — MOVEMENT CANNOT
+-----------------------------------
+
+Fog art may internally use rendering padding.
+
+That is purely visual.
+
+Fog padding does NOT:
+- create terrain
+- create movement space
+- enlarge map bounds
+- enlarge camera bounds
+
+Playable terrain always stops at the authored Chapter template.
+
+-----------------------------------
+12. DEVELOPMENT DEBUG MODE
+-----------------------------------
+
+Add temporary debug visualization:
+
+GREEN:
+valid playable hex
+
+RED:
+hex whose footprint violates playableBounds
+
+CYAN:
+playableBounds
+
+GOLD:
+full mapBounds
+
+Also display:
+
+Terrain cells: 30 / 30
+Out-of-bounds cells: 0
+Invalid movement targets: 0
+
+Production must never show these overlays.
+
+-----------------------------------
+ACCEPTANCE TEST
+-----------------------------------
+
+Chapter 1:
+
+- all 30 hex cells fit fully inside the base map
+- no hex crosses the painted map edge
+- no movement highlight appears outside the map
+- tapping outside the map does nothing
+- movement cannot create a new hex
+- stamina is not deducted for invalid movement
+- edge cells naturally have fewer neighbors
+- encounters appear only on valid terrain
+- player never walks into blank/off-map space
+- camera remains clamped to the same base map
+
+The visual result should be:
+
+PAINTED MAP
+┌──────────────────────────────┐
+│     environmental margin     │
+│                              │
+│       ⬡ ⬡ ⬡ ⬡              │
+│     ⬡ ⬡ PLAYER ⬡            │
+│       ⬡ ⬡ ⬡                 │
+│                              │
+│     environmental margin     │
+└──────────────────────────────┘
+
+NOT:
+
+PAINTED MAP
+┌──────────────────────────────┐
+│                        ⬡     │── hex outside map
+│                    PLAYER →  │
+└──────────────────────────────┘
+                         ⬡
+                         ⬡
+
+Commit:
+
+fix(journey): constrain hex terrain and movement to chapter map bounds
