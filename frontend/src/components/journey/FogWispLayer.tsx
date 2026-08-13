@@ -6,14 +6,14 @@
  *
  * ── Role in the layer stack ───────────────────────────────────────────────────
  *
- *   ChapterEnvironment   (background painting)
- *   HexTerrain           (tile Pressables — z 50–5400)
- *   FogBaseLayer         (Layer 2, z 5500 — primary concealment)
- *   FogMidLayer          (Layer 3, z 5510 — atmospheric detail)
- *   FogEdgeLayer         (Layer 3.5, z 5520 — boundary wisps)
- *   FogWispLayer         (Layer 4, z 5530 — THIS COMPONENT)
- *   WorldObjects         (encounter nodes, gate — z 6200–7000)
- *   Player               (sprite — z 6200+)
+ *   ChapterEnvironment   (background painting — z 0)
+ *   HexTerrain           (tile Pressables — z 100–400)
+ *   WorldContent         (player, encounters — z 3000–4900)
+ *   FogBaseLayer         (Layer 2, z 5000 — primary concealment)
+ *   Gate                 (z 5100)
+ *   FogMidLayer          (Layer 3, z 5200 — atmospheric detail)
+ *   FogEdgeLayer         (Layer 3.5, z 5300 — boundary wisps)
+ *   FogWispLayer         (Layer 4, z 5400 — THIS COMPONENT)
  *
  * Topmost fog layer — thin surface wisps at 0.20–0.45 opacity over unexplored
  * terrain.  Uses the same visibility mask as Base/Mid so the clear zone is
@@ -39,6 +39,11 @@ import { Platform, View } from 'react-native';
 
 import { drawFogWisp, FOG_WISP_PADDING } from '@/src/game/journeyMap/fog/fogWisp';
 import { fogMaskCacheKey } from '@/src/game/journeyMap/fog/fogMask';
+import {
+  fogVisibilityFromTileState,
+  getEffectiveVisionRadius,
+  DEFAULT_PLAYER_VISION_STATS,
+} from '@/src/game/journeyMap/fog/fogVision';
 import type { HexMapTile } from '@/src/game/journeyMap/fixture';
 import type { HexWorldCoords } from './hexWorldCoords';
 
@@ -52,8 +57,9 @@ export interface FogWispLayerProps {
   runSeed:     string;
 }
 
-/** z-index — above FogEdgeLayer (5520), below WorldObjects (6200+). */
-export const FOG_WISP_Z = 5530;
+/** z-index — above FogEdgeLayer (5300), topmost fog layer.
+ *  Matches JOURNEY_Z.FOG_WISP. */
+export const FOG_WISP_Z = 5400;
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
@@ -105,14 +111,14 @@ export function FogWispLayer({
     for (const tile of tiles) {
       const { left, top } = coords.axialToWorld(tile.q, tile.r);
       tileCenters.set(tile.id, { cx: left + sz / 2, cy: top + sz / 2 });
-      if (tile.visibility === 'visibleNow' || tile.current) {
-        visibleNowIds.add(tile.id);
-      } else if (tile.visibility === 'exploredButOutOfVision') {
-        exploredIds.add(tile.id);
-      }
+      // Central fog-visibility resolver — no direct tile.visibility comparisons.
+      const fs = fogVisibilityFromTileState(tile.visibility, tile.current);
+      if (fs === 'visibleNow') visibleNowIds.add(tile.id);
+      else if (fs === 'explored') exploredIds.add(tile.id);
     }
 
-    const nextKey = fogMaskCacheKey({ visibleNowIds, exploredIds, effectiveFieldOfVision: 1, sz });
+    const fov     = getEffectiveVisionRadius(DEFAULT_PLAYER_VISION_STATS);
+    const nextKey = fogMaskCacheKey({ visibleNowIds, exploredIds, effectiveFieldOfVision: fov, sz });
     if (nextKey === cacheKeyRef.current) return;
     cacheKeyRef.current = nextKey;
 
@@ -123,7 +129,7 @@ export function FogWispLayer({
       tileCenters,
       visibleNowIds,
       exploredIds,
-      effectiveFieldOfVision: 1,
+      effectiveFieldOfVision: fov,
       runSeed,
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps

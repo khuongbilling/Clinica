@@ -6,13 +6,14 @@
  *
  * ── Role in the layer stack ───────────────────────────────────────────────────
  *
- *   ChapterEnvironment   (background painting)
- *   HexTerrain           (tile Pressables — z 50–5400)
- *   FogBaseLayer         (Layer 2, z 5500 — primary concealment)
- *   FogMidLayer          (Layer 3, z 5510 — atmospheric detail)
- *   FogEdgeLayer         (Layer 3.5, z 5520 — THIS COMPONENT)
- *   WorldObjects         (encounter nodes, gate — z 6200–7000)
- *   Player               (sprite — z 6200+)
+ *   ChapterEnvironment   (background painting — z 0)
+ *   HexTerrain           (tile Pressables — z 100–400)
+ *   WorldContent         (player, encounters — z 3000–4900)
+ *   FogBaseLayer         (Layer 2, z 5000 — primary concealment)
+ *   Gate                 (z 5100)
+ *   FogMidLayer          (Layer 3, z 5200 — atmospheric detail)
+ *   FogEdgeLayer         (Layer 3.5, z 5300 — THIS COMPONENT)
+ *   FogWispLayer         (z 5400)
  *
  * FogEdgeLayer places sparse fog_edge sprites ONLY near the boundary between
  * VISIBLE_NOW and unexplored / explored terrain.  Its job is to make the
@@ -36,6 +37,7 @@ import React, { useEffect, useRef } from 'react';
 import { Platform, View } from 'react-native';
 
 import { drawFogEdge, FOG_EDGE_PADDING } from '@/src/game/journeyMap/fog/fogEdge';
+import { fogVisibilityFromTileState } from '@/src/game/journeyMap/fog/fogVision';
 import type { HexMapTile } from '@/src/game/journeyMap/fixture';
 import type { HexWorldCoords } from './hexWorldCoords';
 
@@ -52,8 +54,9 @@ export interface FogEdgeLayerProps {
   runSeed:     string;
 }
 
-/** z-index inside MapWorld — above Mid Fog (5510), below WorldObjects (6200+). */
-export const FOG_EDGE_Z = 5520;
+/** z-index inside MapWorld — above FogMid (5200), below FogWisp (5400).
+ *  Matches JOURNEY_Z.FOG_EDGE. */
+export const FOG_EDGE_Z = 5300;
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
@@ -99,7 +102,8 @@ export function FogEdgeLayer({
     // Build the visibleNow set for boundary detection.
     const visibleNowIds = new Set<string>();
     for (const tile of tiles) {
-      if (tile.visibility === 'visibleNow' || tile.current) {
+      // Central fog-visibility resolver — no direct tile.visibility comparisons.
+      if (fogVisibilityFromTileState(tile.visibility, tile.current) === 'visibleNow') {
         visibleNowIds.add(tile.id);
       }
     }

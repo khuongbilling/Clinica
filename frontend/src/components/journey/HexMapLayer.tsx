@@ -49,15 +49,17 @@
  * • Current-tile hex ring (Layer 1a) renders below the sprite and remains
  *   visible in the upper half of the tile above the character's body.
  *
- * PUSH 4 (fog) — Seamless atmospheric fog (no per-tile fog blocks)
- * ────────────────────────────────────────────────────────────────
+ * PUSH 4 (fog) — Canvas-based layered fog renderer (no per-tile fog blocks)
+ * ──────────────────────────────────────────────────────────────────────────
  * • TILE_BASE.hidden and per-tile fog textures removed entirely.
- * • Fog is ONE world-space SVG above all tile Pressables (zIndex 5000).
- * • unexplored → large RadialGradient blob (2.8 × sz); adjacent blobs overlap
- *   into a seamless ink-blue fog mass.  Tile disabled Pressable at zIndex 50–1550.
- * • visibleNow → terrain at TERRAIN_BASE + worldY*DEPTH (5100–5400).  Jade glow; full brightness.
- * • current → terrain at same formula as visibleNow; player sprite at OBJECT_BASE + worldY*DEPTH.
- * Note: SVG <Mask> is NOT used — react-native-svg's web backend has no Mask class.
+ * • Fog is four world-space canvas layers (FogBase/Mid/Edge/Wisp).
+ *   All layers live ABOVE world content (player, encounters, 3000–4900).
+ *   FogBase (5000) is the primary concealment layer.  Gate (5100) rises above
+ *   it.  FogMid/Edge/Wisp (5200–5400) veil the upper atmosphere above the gate.
+ * • Concealment uses canvas destination-in compositing — NOT SVG <Mask>
+ *   (react-native-svg's web backend has no Mask class).
+ * • unexplored tiles hidden by opaque fog canvas; no z-poke-through needed.
+ * • visibleNow / exploredButOutOfVision → transparent fog holes reveal terrain.
  *
  * PUSH 9 — Standardise map encounters as 2.5D world pieces
  * ──────────────────────────────────────────────────────────
@@ -175,10 +177,18 @@ import {
 import Svg, { Circle, Defs, Ellipse, Polygon, RadialGradient, Stop } from 'react-native-svg';
 
 import { drawFogMask, fogMaskCacheKey } from '@/src/game/journeyMap/fog/fogMask';
+import {
+  type FogVisibilityState,
+  fogVisibilityFromTileState,
+  getFogVisibilityState,
+  getEffectiveVisionRadius,
+  DEFAULT_PLAYER_VISION_STATS,
+} from '@/src/game/journeyMap/fog/fogVision';
 import { FogBaseLayer } from './FogBaseLayer';
 import { FogMidLayer }  from './FogMidLayer';
 import { FogEdgeLayer } from './FogEdgeLayer';
 import { FogWispLayer } from './FogWispLayer';
+import { JOURNEY_Z }    from './journeyZ';
 import { type HexMapTile, JOURNEY_MAP_FIXTURE } from '@/src/game/journeyMap/fixture';
 import { UI, SERIF } from '@/src/theme/ui';
 import {
@@ -355,33 +365,30 @@ const SHADOW_COLOR     = 'rgba(0,5,20,0.62)';   // Ink & Mist dark navy — Push
 const SHADOW_RY_FRAC   = 0.068;                  // Push 12: slightly taller profile for clearer contact
 const SHADOW_RX_MUL    = 0.48;                   // node shadow rx = sizeMul × this × sz
 
-// ── Push 21: two-pass depth-sort z-layer bases ────────────────────────────────
+// ── z-layer bases (see journeyZ.ts for the full canonical table) ──────────────
 //
 // TERRAIN pass  (HexTile Pressable — terrain image, state rings, contact shadow)
-//   TERRAIN_BASE = 5100 — sits above z 5000 for all revealed
-//   tiles, even those with negative worldY.
-//   worldY range for authored maps: roughly 0 – 30.
-//   terrain z range: 5100 – 5400.
+//   z = JOURNEY_Z.TERRAIN_BASE (100) + worldY × TERRAIN_DEPTH (10)
+//   worldY range for authored maps: roughly 0–30 → terrain z 100–400.
+//   Unexplored disabled Pressables: capped below TERRAIN_BASE (≤ 99)
+//   so they never intercept taps on revealed tiles above them.
 //
-// OBJECT pass  (HexObjectLayer — encounter node sprites, jade glow, player sprite)
-//   OBJECT_BASE = 6200 — clear of the top of the terrain band (~5400) with a
-//   comfortable 800-unit gap.  All world-object sprites always render above all
-//   terrain tiles, then sort among themselves by worldY so southern objects are
-//   visually in front of northern ones.
-//   object z range: 6200 – 6500.
+// WORLD CONTENT pass  (HexObjectLayer — encounter nodes, jade glow, player)
+//   z = JOURNEY_Z.WORLD_CONTENT_BASE (3000) + worldY × OBJECT_DEPTH (10)
+//   Clamped to JOURNEY_Z.WORLD_CONTENT_MAX (4900) — world objects sort by
+//   worldY for 2.5D depth but never escape above FogBase (5000).
 //
-// GATE_ART_Z = 7000 — above all objects; boss-gate overlay always on top.
+// GATE  → JOURNEY_Z.GATE (5100)
+//   Above FogBase (5000): gate landmark rises through the base fog mass.
+//   Below FogMid/Edge/Wisp (5200–5400): still veiled by upper atmospheric layers.
 //
-// DEPTH = 10 — one z-unit per 0.1 worldY step; consistent across both passes
-// so a southern tile in pass A cannot accidentally appear above its own objects
-// in pass B.
-//
-// Unexplored Pressables: worldY*50 + 50 → z 50–1550, well below fog (5000).
-const TERRAIN_BASE  = 5100;
+// DEPTH = 10 — one z-unit per 0.1 worldY step; consistent across TERRAIN and
+// WORLD CONTENT passes so a southern terrain tile never rises above its objects.
+const TERRAIN_BASE  = JOURNEY_Z.TERRAIN_BASE;         // 100
 const TERRAIN_DEPTH = 10;
-const OBJECT_BASE   = 6200;
+const OBJECT_BASE   = JOURNEY_Z.WORLD_CONTENT_BASE;   // 3000
 const OBJECT_DEPTH  = 10;
-const GATE_ART_Z    = 7000;
+const GATE_ART_Z    = JOURNEY_Z.GATE;                 // 5100
 const CHR_SHADOW_CY    = CHR_GLOW_CY;            // same floor as jade glow (0.65 × sz)
 const CHR_SHADOW_RX    = CHR_GLOW_RX + 0.07;     // wider than glow (0.43 × sz) — Push 8
 const CHR_SHADOW_RY    = 0.075;                  // slightly taller than node shadow
@@ -541,12 +548,13 @@ type EncounterMapNode = { src: number; sizeMul: number; shadowColor?: string };
  *   battle      0.70 — stone pedestal; raised slightly for better presence
  *   treasure    0.68 — chest scale; slightly larger for tier readability
  */
-function encounterMapNode(tile: HexMapTile): EncounterMapNode | null {
-  const vis = tile.visibility;
-
+// Push 2: fogState parameter replaces direct tile.visibility comparison so that
+// encounter-privacy is always derived from the central getFogVisibilityState()
+// resolver rather than scattered string checks.
+function encounterMapNode(tile: HexMapTile, fogState: FogVisibilityState): EncounterMapNode | null {
   // Only truly unexplored tiles suppress world objects.
-  // visibleNow, exploredButOutOfVision, and current all render their encounter.
-  if (!tile.current && vis === 'unexplored') return null;
+  // visibleNow, explored, and current all render their encounter.
+  if (!tile.current && fogState === 'unexplored') return null;
 
   switch (tile.encounter) {
     case 'battle':
@@ -655,15 +663,17 @@ const _ENCOUNTER_ICON_REF = ENCOUNTER_ICON;
  *   frontier → "Nearby tile, not yet explored"
  *   revealed / current → descriptive label including encounter type
  */
-function a11yLabel(tile: HexMapTile): string {
+// Push 2: fogState replaces direct tile.visibility comparisons so all a11y
+// text is routed through the central getFogVisibilityState() resolver.
+function a11yLabel(tile: HexMapTile, fogState: FogVisibilityState): string {
   if (tile.current) return 'Current position';
-  if (tile.isGate && tile.visibility === 'exploredButOutOfVision') return 'Chapter Boss Gate';
-  if (tile.visibility === 'unexplored') return 'Unexplored tile';
+  if (tile.isGate && fogState === 'explored') return 'Chapter Boss Gate';
+  if (fogState === 'unexplored') return 'Unexplored tile';
 
   // Push 9: all encounter types are disclosed once a tile is visibleNow or
-  // exploredButOutOfVision — the world object is visible, so the label matches.
+  // explored — the world object is visible, so the label matches it.
   if (tile.encounter !== 'none' && tile.encounter !== 'boss') {
-    const prefix = tile.visibility === 'visibleNow' ? 'Nearby' : 'Tile';
+    const prefix = fogState === 'visibleNow' ? 'Nearby' : 'Tile';
     const enc =
       tile.encounter === 'areaBoss' ? 'Area Boss'
     : tile.encounter === 'treasure' ? `Treasure (${tile.chestTier ?? 'bronze'})`
@@ -672,7 +682,7 @@ function a11yLabel(tile: HexMapTile): string {
     return `${prefix} — ${enc}`;
   }
 
-  if (tile.visibility === 'visibleNow') return 'Nearby tile, not yet explored';
+  if (fogState === 'visibleNow') return 'Nearby tile, not yet explored';
   return tile.isGate ? 'Gate tile' : 'Explored tile — no encounter';
 }
 
@@ -739,26 +749,34 @@ interface HexTileProps {
    * When absent: falls back to TERRAIN_NORMAL (canonical night stone).
    */
   terrainSrc?: number;
+  /**
+   * Push 2: pre-computed fog visibility state from getFogVisibilityState().
+   * HexTile must NOT read tile.visibility directly — all fog-state decisions
+   * must go through the central resolver in fogVision.ts.
+   */
+  fogState: FogVisibilityState;
 }
 
 // Push 21: explorationCharacter removed from HexTile — it is now consumed by
 // HexObjectLayer (the object-pass renderer).  HexTile handles terrain + rings
 // + contact shadow only; it never renders sprites directly.
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-function HexTile({ tile, coords, onPress, fogTheme, terrainSrc: _terrainSrc }: HexTileProps) {
+function HexTile({ tile, coords, onPress, fogTheme, terrainSrc: _terrainSrc, fogState }: HexTileProps) {
   const { sz } = coords;
   const pos = coords.axialToWorld(tile.q, tile.r);
   // Push 7: world-object node replaces flat encounter icon on the map.
   // node.sizeMul controls footprint; bottom of bounding box sits at ~88 % tile height.
-  const node = encounterMapNode(tile);
+  // Push 2: fogState comes from the central getFogVisibilityState() resolver.
+  const node = encounterMapNode(tile, fogState);
 
   // Privacy: mask encounter type in DOM attributes for non-revealed tiles.
-  const isRevealed = tile.current || tile.visibility === 'exploredButOutOfVision';
+  // Push 2: derived from the central fogState, not tile.visibility directly.
+  const isRevealed = tile.current || fogState === 'explored';
 
   // unexplored tiles are not interactive — players cannot select unseen territory.
-  const isHidden   = !tile.current && tile.visibility === 'unexplored';
-  const isVisible  = !tile.current && tile.visibility === 'visibleNow';
-  const isExplored = !tile.current && tile.visibility === 'exploredButOutOfVision';
+  const isHidden   = !tile.current && fogState === 'unexplored';
+  const isVisible  = !tile.current && fogState === 'visibleNow';
+  const isExplored = !tile.current && fogState === 'explored';
 
   // Push A: terrainSz / terrainOff removed — Layer 0 standalone terrain PNG
   // is gone.  The environmentBackground inside MapWorld is the floor; hex cells
@@ -774,15 +792,18 @@ function HexTile({ tile, coords, onPress, fogTheme, terrainSrc: _terrainSrc }: H
   // against encounter nodes on adjacent tiles.
   //
   // Strata (Push 21):
-  //   OBJECT_BASE + worldY*DEPTH   6200–6500   HexObjectLayer (nodes + player)
-  //   TERRAIN_BASE + worldY*DEPTH  5100–5400   HexTile Pressables (revealed)
-  //   JourneyFogOverlay            5000        atmospheric fog (Push 2+)
+  //   FogBase (5000) and above   fog layers + gate — see journeyZ.ts
+  //   OBJECT_BASE + worldY*DEPTH  3000–4900   HexObjectLayer (nodes + player)
+  //   TERRAIN_BASE + worldY*DEPTH  100–400    HexTile Pressables (revealed)
+  //   unexplored (capped ≤ 99)    10–99       disabled Pressables, below terrain
   //   See: /assets/dev-reference/fog_system_design_reference.png
-  //   worldY*50 + 50               50–1550     unexplored disabled Pressables
   const worldY = tile.r + tile.q * 0.5;
+  // Unexplored: capped strictly below TERRAIN_BASE so they never z-intercept
+  // taps on revealed tiles above them (they're invisible under fog anyway).
+  // Push 2: use fogState (from the central resolver) for the z-index branch.
   const tileZ  =
-    tile.visibility === 'unexplored' && !tile.current
-      ? Math.round(worldY * 50) + 50
+    fogState === 'unexplored' && !tile.current
+      ? Math.min(JOURNEY_Z.TERRAIN_BASE - 1, Math.round(worldY * 3) + 10)
       : TERRAIN_BASE + Math.round(worldY * TERRAIN_DEPTH);
 
   return (
@@ -800,12 +821,12 @@ function HexTile({ tile, coords, onPress, fogTheme, terrainSrc: _terrainSrc }: H
       onPress={() => onPress(tile)}
       disabled={isHidden}
       accessibilityRole={isHidden ? 'none' : 'button'}
-      accessibilityLabel={a11yLabel(tile)}
+      accessibilityLabel={a11yLabel(tile, fogState)}
       {...webData({
         'data-tile-id':    tile.id,
         'data-q':          String(tile.q),
         'data-r':          String(tile.r),
-        'data-visibility': tile.current ? 'current' : tile.visibility,
+        'data-visibility': tile.current ? 'current' : fogState,
         'data-encounter':  isRevealed ? tile.encounter : 'unknown',
       })}
     >
@@ -985,20 +1006,20 @@ function HexTile({ tile, coords, onPress, fogTheme, terrainSrc: _terrainSrc }: H
 
 // ── HexObjectLayer ────────────────────────────────────────────────────────────
 //
-// Push 21: object-pass renderer — renders encounter node sprites, jade ambient
-// ground pool, and the player sprite in a separate layer above all terrain.
+// WORLD CONTENT pass — renders encounter node sprites, jade ground pool, and
+// the player sprite below the fog layers.
 //
 // Architecture:
-//   • Each tile that has an encounter node OR is the current (player) tile gets
-//     an absolutely-positioned View at that tile's world coordinates.
-//   • zIndex = OBJECT_BASE + round(worldY * OBJECT_DEPTH)
-//     So a tile at r=7 (south) always paints above a tile at r=5 (north) in the
-//     object layer, regardless of its encounter type or visibility state.
-//   • The View is pointerEvents="none" so all taps fall through to the Pressable
-//     terrain tiles in the lower TERRAIN pass.
-//   • overflow="visible" (via s.tile style reuse) lets large sprites (areaBoss
-//     ×1.35, patient bed ×0.92) extend beyond the sz×sz bounding box without
-//     being clipped — the same property that allowed terrain bleed in Push 11.
+//   • Each tile with an encounter node OR the current (player) tile gets an
+//     absolutely-positioned View at that tile's world coordinates.
+//   • zIndex = OBJECT_BASE + round(worldY × OBJECT_DEPTH), clamped to
+//     JOURNEY_Z.WORLD_CONTENT_MAX (4900) so no object escapes above FogBase (5000).
+//     Southern tiles paint above northern ones within the content pass.
+//   • Fog (FogBase 5000+) conceals objects on unexplored tiles via canvas
+//     transparency — no special-case z-poke-through needed here.
+//   • The View is pointerEvents="none" — all taps fall through to terrain.
+//   • overflow="visible" lets large sprites (areaBoss ×1.35) extend beyond
+//     the sz×sz bounding box without being clipped.
 //
 // Layer order within each object View (DOM painters order):
 //   1. Jade glow Svg (if current tile) — BELOW player sprite
@@ -1184,18 +1205,39 @@ function HexObjectLayer({
   // Explorer uses EXPLORER_FACING_SPRITES per-direction — no scaleX needed.
   const classScaleX = facingScaleX(playerFacing);
 
+  // Push 2: build the canonical fog-state sets once per render so that all
+  // encounter-privacy, opacity, and a11y decisions inside this component
+  // consistently use getFogVisibilityState() instead of tile.visibility checks.
+  const { visibleNowIds: objVisibleNowIds, exploredIds: objExploredIds } = useMemo(() => {
+    const visibleNowIds = new Set<string>();
+    const exploredIds   = new Set<string>();
+    for (const t of tiles) {
+      const fs = fogVisibilityFromTileState(t.visibility, t.current);
+      if (fs === 'visibleNow') visibleNowIds.add(t.id);
+      else if (fs === 'explored') exploredIds.add(t.id);
+    }
+    return { visibleNowIds, exploredIds };
+  }, [tiles]);
+
   return (
     <>
       {tiles.map(tile => {
-        const node       = encounterMapNode(tile);
+        // Push 2: derive fog state from the central resolver so encounter
+        // visibility is never gated by a scattered tile.visibility comparison.
+        const fogState   = getFogVisibilityState(tile.id, objVisibleNowIds, objExploredIds);
+        const node       = encounterMapNode(tile, fogState);
         const hasCurrent = tile.current;
         const hasDust    = tile.id === dustTileId;
         if (!node && !hasCurrent && !hasDust) return null;
 
         const pos      = coords.axialToWorld(tile.q, tile.r);
         const worldY   = tile.r + tile.q * 0.5;
-        const objectZ  = OBJECT_BASE + Math.round(worldY * OBJECT_DEPTH);
-        const isExplored = !tile.current && tile.visibility === 'exploredButOutOfVision';
+        const objectZ  = Math.min(
+          JOURNEY_Z.WORLD_CONTENT_MAX,
+          OBJECT_BASE + Math.round(worldY * OBJECT_DEPTH),
+        );
+        // Push 2: derived from the central fog state, not tile.visibility.
+        const isExplored = !tile.current && fogState === 'explored';
         // Unique glow gradient id — only one current tile exists at a time but
         // SVG ids are document-global on web so we namespace per tile anyway.
         const glowId = `chr-gnd-${tile.id}`;
@@ -2006,15 +2048,17 @@ export function HexMapLayer({
     for (const tile of tiles) {
       const { left, top } = coords.axialToWorld(tile.q, tile.r);
       tileCenters.set(tile.id, { cx: left + sz / 2, cy: top + sz / 2 });
-      if (tile.visibility === 'visibleNow' || tile.current) {
-        visibleNowIds.add(tile.id);
-      } else if (tile.visibility === 'exploredButOutOfVision') {
-        exploredIds.add(tile.id);
-      }
+      // Push 2: use the central bridge helper — consistent with all other layers.
+      const fs = fogVisibilityFromTileState(tile.visibility, tile.current);
+      if (fs === 'visibleNow') visibleNowIds.add(tile.id);
+      else if (fs === 'explored') exploredIds.add(tile.id);
     }
 
     // Skip redraw if nothing changed (e.g. cosmetic re-render with same state)
-    const nextKey = fogMaskCacheKey({ visibleNowIds, exploredIds, effectiveFieldOfVision: 1, sz });
+    // Push 2: use getEffectiveVisionRadius so the dev canvas stays in sync
+    // with the live fog layers as class/skill bonuses are wired in later.
+    const fov     = getEffectiveVisionRadius(DEFAULT_PLAYER_VISION_STATS);
+    const nextKey = fogMaskCacheKey({ visibleNowIds, exploredIds, effectiveFieldOfVision: fov, sz });
     if (nextKey === fogMaskKeyRef.current) return;
     fogMaskKeyRef.current = nextKey;
 
@@ -2025,7 +2069,7 @@ export function HexMapLayer({
       tileCenters,
       visibleNowIds,
       exploredIds,
-      effectiveFieldOfVision: 1,
+      effectiveFieldOfVision: fov,
     });
   // coords.axialToWorld is a pure function derived from tiles + containerWidth;
   // including coords would cause spurious redraws — sz + tiles are sufficient.
@@ -2135,124 +2179,14 @@ export function HexMapLayer({
           />
         )}
 
-        {/* ── Push 3: fog mask canvas container (dev only, web only) ────────────
-          * A zero-size world-space View whose DOM div hosts the imperative
-          * <canvas> created by Effect A above.  The canvas is sized to
-          * worldW × worldH in that effect, so it covers the full MapWorld.
-          *
-          * zIndex 14500: above terrain (5100–5400), encounters (6200–6500),
-          *               player sprite (6200+), gate (7000) — below the dev
-          *               text overlays (19000) so tile IDs remain readable.
-          *
-          * pointerEvents="none": taps fall through to tiles below.
-          * Opacity 0.82 (set on the canvas element in Effect A).
-          * MUST NOT ship — guarded by __DEV__ && devOverlay.fogMask.
-          */}
-        {__DEV__ && devOverlay?.fogMask && (
-          <View
-            ref={fogContainerRef}
-            pointerEvents="none"
-            style={{
-              position: 'absolute',
-              left:     0,
-              top:      0,
-              width:    worldW,
-              height:   worldH,
-              zIndex:   14500,
-            }}
-          />
-        )}
-
-        {/* ── Push 4: FogBaseLayer — Layer 2 Base Fog ──────────────────────────
-          * Primary atmospheric concealment for unexplored terrain.
-          *
-          * z 5000: above unexplored tile Pressables (z 50–1550) so they are
-          *         hidden; below revealed terrain Pressables (z 5100+) so they
-          *         naturally show through.  The visibility mask (destination-in)
-          *         adds soft organic clearing edges around explored and
-          *         visible-now areas.
-          *
-          * Web only — native = null stub.  Camera pan does not trigger redraw.
-          */}
-        <FogBaseLayer
-          tiles={tiles}
-          coords={coords}
-          worldWidth={worldW}
-          worldHeight={worldH}
-          runSeed={runSeed ?? 'fixture-default'}
-        />
-
-        {/* ── Push 5: FogMidLayer — Layer 3 Mid Fog ────────────────────────────
-          * Atmospheric texture and density variation stacked over Base Fog.
-          * NOT the primary concealment layer — opacity 0.30–0.60 (vs Base's
-          * 0.70–0.90).  Finer grid spacing (cell 3.5 × sz vs Base's 4.5 × sz)
-          * → more instances → smoky internal detail that prevents Base Fog
-          * from reading as a single flat cloud.
-          *
-          * z 5010: directly above FogBaseLayer (z 5000), still below all
-          *         revealed terrain Pressables (z 5100+).
-          *
-          * Web only — native = null stub.
-          */}
-        <FogMidLayer
-          tiles={tiles}
-          coords={coords}
-          worldWidth={worldW}
-          worldHeight={worldH}
-          runSeed={runSeed ?? 'fixture-default'}
-        />
-
-        {/* ── Push 6: FogEdgeLayer — Layer 3.5 Organic Reveal-Edge Fog ──────────
-          * Sparse edge sprites placed only at the VISIBLE_NOW / fog boundary.
-          * Disguises the mathematical reveal radius with wispy cloud tendrils.
-          * Opacity 0.25–0.50; no full-map coverage; no visibility mask applied
-          * (placement code ensures sprites only appear at the boundary).
-          *
-          * z 5520: above FogMidLayer (z 5510), below WorldObjects (z 6200+).
-          *
-          * Web only — native = null stub.
-          */}
-        <FogEdgeLayer
-          tiles={tiles}
-          coords={coords}
-          worldWidth={worldW}
-          worldHeight={worldH}
-          runSeed={runSeed ?? 'fixture-default'}
-        />
-
-        {/* ── Push 7: FogWispLayer — Layer 4 Foreground Wisps ──────────────────
-          * Topmost fog layer. Thin surface wisps at 0.20–0.45 opacity.
-          * Tighter grid (3.0 × sz) and smaller scale (1.5–3.2 × sz) add fine
-          * surface detail above Base + Mid fog. Same visibility mask applied.
-          *
-          * z 5530: above FogEdgeLayer (z 5520), below WorldObjects (z 6200+).
-          *
-          * Web only — native = null stub.
-          */}
-        <FogWispLayer
-          tiles={tiles}
-          coords={coords}
-          worldWidth={worldW}
-          worldHeight={worldH}
-          runSeed={runSeed ?? 'fixture-default'}
-        />
-
-        {/* ── Complete terrain — ALL tiles, no visibility filter (Push 5) ─────
-          * Every tile in the `tiles` prop is mounted into MapWorld for the
-          * full lifetime of the run.  Do NOT gate this map on visibility,
-          * encounter type, fog state, or whether a tile is inside the camera
-          * viewport.  Filtering here would:
-          *   • Leave permanent fog patches over missing tile positions (fog
-          *   • Break BFS adjacency and the movement/encounter eligibility graph
-          *   • Remove disabled Pressables that are still accessibility targets
-          *
-          * Camera panning → PanResponder + Animated.ValueXY (this file)
-          * Terrain is never removed from MapWorld.
-          */}
-        {/* ── TERRAIN PASS: Pressable + state rings + contact shadow ────────
-          * Push 21: HexTile no longer renders encounter sprites or the player
-          * sprite — those live in HexObjectLayer below.  HexTile is now a pure
-          * terrain + interaction + shadow layer sorted by worldY.              */}
+        {/* ── TERRAIN PASS: Pressable + state rings + contact shadow ─────────
+          * All tiles mounted for the full run lifetime — never filter by
+          * visibility, encounter type, or fog state.  Filtering would break
+          * BFS adjacency and leave permanent fog patches.
+          * z JOURNEY_Z.TERRAIN_BASE (100) + worldY×TERRAIN_DEPTH for all
+          * revealed tiles; unexplored disabled Pressables capped ≤ 99 so
+          * they never intercept taps on revealed tiles.
+          * HexTile renders terrain rings + contact shadow only.           */}
         {sorted.map(tile => (
           <HexTile
             key={tile.id}
@@ -2261,14 +2195,17 @@ export function HexMapLayer({
             onPress={handleTilePress}
             fogTheme={fogTheme}
             terrainSrc={terrainTexture}
+            fogState={fogVisibilityFromTileState(tile.visibility, tile.current)}
           />
         ))}
 
-        {/* ── OBJECT PASS: encounter nodes + jade glow + player sprite ────────
-          * Push 21: rendered at OBJECT_BASE (6200) + worldY*DEPTH above all
-          * terrain tiles.  pointerEvents="none" — taps fall through to terrain
-          * Pressables.  Large sprites (areaBoss ×1.35) may visually overlap
-          * adjacent cells and will correctly depth-sort among all world objects. */}
+        {/* ── WORLD CONTENT PASS: encounter nodes + jade glow + player ─────────
+          * z JOURNEY_Z.WORLD_CONTENT_BASE (3000) + worldY×OBJECT_DEPTH,
+          * clamped to JOURNEY_Z.WORLD_CONTENT_MAX (4900).
+          * Always below FogBase (5000) — fog physically conceals objects on
+          * unexplored tiles via canvas transparency, not z-poke-through.
+          * pointerEvents="none" — all taps fall through to terrain Pressables.
+          * Large sprites (areaBoss ×1.35) depth-sort among all world objects. */}
         <HexObjectLayer
           tiles={tiles}
           coords={coords}
@@ -2278,9 +2215,28 @@ export function HexMapLayer({
           dustTileId={dustTileId}
         />
 
-        {/* ── Gate art overlay ──────────────────────────────────────────────
+        {/* ── FogBaseLayer — primary concealment (JOURNEY_Z.FOG_BASE = 5000) ──
+          * Canvas blanket covering terrain (100–400) and world content
+          * (3000–4900).  destination-in compositing punches transparent holes
+          * at visibleNow / exploredButOutOfVision tile centres so terrain and
+          * objects show through without z-poke-through.
+          * Web only — native = null stub.  Camera pan does not trigger redraw. */}
+        <FogBaseLayer
+          tiles={tiles}
+          coords={coords}
+          worldWidth={worldW}
+          worldHeight={worldH}
+          runSeed={runSeed ?? 'fixture-default'}
+        />
+
+        {/* ── Gate art overlay (JOURNEY_Z.GATE = 5100) ────────────────────────
          * Push 22: spatially anchored to the template-fixed gate tile inside
          * the world viewport.  The gate is a true map landmark:
+         *
+         *   Z-INDEX
+         *   • 5100 — above FogBase (5000): landmark rises through the base fog.
+         *     Below FogMid/Edge/Wisp (5200–5400): upper atmospheric layers
+         *     still veil it with mist, giving a partially-obscured epic feel.
          *
          *   POSITIONING
          *   • Primary lookup: tiles.find(t => t.id === gateArt.gateTileId)
@@ -2313,7 +2269,14 @@ export function HexMapLayer({
           const gateTile = gateArt.gateTileId
             ? (tiles.find(t => t.id === gateArt.gateTileId) ?? tiles.find(t => t.isGate))
             : tiles.find(t => t.isGate);
-          if (!gateTile || gateTile.visibility === 'unexplored') return null;
+
+          // Push 2: derive gate fog state from the central resolver so that
+          // gate visibility and opacity decisions are never direct tile.visibility
+          // comparisons — they go through getFogVisibilityState() instead.
+          const gateFogState = gateTile
+            ? fogVisibilityFromTileState(gateTile.visibility, gateTile.current)
+            : 'unexplored' as const;
+          if (!gateTile || gateFogState === 'unexplored') return null;
 
           const { left, top } = coords.axialToWorld(gateTile.q, gateTile.r);
 
@@ -2322,9 +2285,9 @@ export function HexMapLayer({
           const overlaySize = Math.round(sz * 1.3);
           const offset      = Math.round((overlaySize - sz) / 2);
 
-          // Explored-but-out-of-vision: render at MEMORY_NODE_ALPHA so the
+          // Explored (out of vision): render at MEMORY_NODE_ALPHA so the
           // player knows the gate position without seeing the current lock state.
-          const gateOpacity = gateTile.visibility === 'exploredButOutOfVision'
+          const gateOpacity = gateFogState === 'explored'
             ? MEMORY_NODE_ALPHA
             : 1;
 
@@ -2369,7 +2332,7 @@ export function HexMapLayer({
               {/* Progress badge — "X/N  LOCKED" or "UNLOCKED"
                 * Rendered as an absolutely-positioned pill below the gate image.
                 * Not rendered in the memory state (gate is vague enough already). */}
-              {gateTile.visibility !== 'exploredButOutOfVision' && (
+              {gateFogState !== 'explored' && (
                 <View
                   style={{
                     marginTop:       badgePad,
@@ -2408,10 +2371,66 @@ export function HexMapLayer({
           );
         })()}
 
+        {/* ── FogMidLayer — atmospheric detail (JOURNEY_Z.FOG_MID = 5200) ─────
+          * Above Gate (5100) — upper mist veils the gate landmark.
+          * Density variation at opacity 0.30–0.60; finer grid than FogBase.
+          * Web only — native = null stub. */}
+        <FogMidLayer
+          tiles={tiles}
+          coords={coords}
+          worldWidth={worldW}
+          worldHeight={worldH}
+          runSeed={runSeed ?? 'fixture-default'}
+        />
+
+        {/* ── FogEdgeLayer — reveal boundary (JOURNEY_Z.FOG_EDGE = 5300) ───────
+          * Sparse edge sprites at the visibleNow / fog boundary.
+          * Organic wispy tendrils disguise the mathematical reveal radius.
+          * Web only — native = null stub. */}
+        <FogEdgeLayer
+          tiles={tiles}
+          coords={coords}
+          worldWidth={worldW}
+          worldHeight={worldH}
+          runSeed={runSeed ?? 'fixture-default'}
+        />
+
+        {/* ── FogWispLayer — topmost mist (JOURNEY_Z.FOG_WISP = 5400) ─────────
+          * Fine surface wisps at 0.20–0.45 opacity above all other fog layers.
+          * Same visibility mask — clears over visibleNow / exploredButOutOfVision.
+          * Web only — native = null stub. */}
+        <FogWispLayer
+          tiles={tiles}
+          coords={coords}
+          worldWidth={worldW}
+          worldHeight={worldH}
+          runSeed={runSeed ?? 'fixture-default'}
+        />
+
+        {/* ── Dev fog mask (JOURNEY_Z.DEV_MASK = 14500) — __DEV__ only ─────────
+          * Zero-size View whose DOM div hosts the imperative canvas drawn by
+          * Effect A.  Renders above all fog layers; below DEV_OVERLAY (19000).
+          * pointerEvents="none".  MUST NOT ship.
+          */}
+        {__DEV__ && devOverlay?.fogMask && (
+          <View
+            ref={fogContainerRef}
+            pointerEvents="none"
+            style={{
+              position: 'absolute',
+              left:     0,
+              top:      0,
+              width:    worldW,
+              height:   worldH,
+              zIndex:   JOURNEY_Z.DEV_MASK,
+            }}
+          />
+        )}
+
         {/* ── Dev per-tile overlays (Push 0 — __DEV__ only) ────────────────
          * Rendered as a second pass over `sorted` so overlay text/dots always
-         * appear above every tile Pressable (zIndex 19000 keeps them above the
-         * fog SVG at 5000 but below the diagnostics panel at 19999).
+         * appear above all fog layers (JOURNEY_Z.DEV_OVERLAY = 19000) and
+         * below the diagnostics panel (DEV_DIAGNOSTICS = 19999).
          * Every branch is wrapped in `__DEV__` — no runtime cost in production.
          */}
         {__DEV__ && devOverlay && sorted.map(tile => {

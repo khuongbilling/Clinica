@@ -78,3 +78,64 @@ export interface TileFogState {
   tileId:     string;
   visibility: FogVisibility;
 }
+
+// ── Spec-canonical types (Push 2) ─────────────────────────────────────────────
+//
+// These are the publicly-exported names required by the Push 2 spec.
+// They sit alongside the existing uppercase FogVisibility for back-compat.
+//
+// All fog rendering, gate logic, and encounter-privacy guards MUST derive
+// tile state from getFogVisibilityState() (fogVision.ts) using these types —
+// never from raw tile.visibility string comparisons scattered in components.
+
+/**
+ * Canonical three-state fog visibility for rendering and gate logic.
+ *
+ *   "visibleNow"  — within the player's current field of vision
+ *   "explored"    — seen at least once this run; light haze remains
+ *   "unexplored"  — never seen; fully opaque fog
+ *
+ * Note: "explored" maps to the legacy TileVisibility value
+ * 'exploredButOutOfVision' on JourneyTile.  The shorter name is canonical
+ * in the fog system; the legacy name is kept on JourneyTile only for
+ * backward compatibility with the tile-state pipeline.
+ */
+export type FogVisibilityState =
+  | 'visibleNow'
+  | 'explored'
+  | 'unexplored';
+
+/**
+ * Simple axial hex coordinate pair.
+ * Canonical argument shape for fog-vision functions (matches the spec).
+ * Use instead of the domain-level AxialCoord where the fog layer is the caller.
+ */
+export interface HexCoord {
+  q: number;
+  r: number;
+}
+
+/**
+ * Additive field-of-vision bonuses from all game-mechanic sources.
+ * Canonical alias for FovBonuses — prefer VisionBonuses in new code.
+ */
+export type VisionBonuses = FovBonuses;
+
+/**
+ * Full vision input: base radius + additive bonus breakdown.
+ * Pass to getEffectiveVisionRadius() and calculateVisibleTileIds().
+ */
+export interface PlayerVisionStats {
+  /** Base radius before any bonuses (always 1 for the current push). */
+  baseVisionRadius: number;
+  bonuses:          VisionBonuses;
+}
+
+/**
+ * Default PlayerVisionStats — no class / skill / equipment / temporary bonuses.
+ * Effective radius = 1 (current tile + all 6 neighbours).
+ */
+export const DEFAULT_PLAYER_VISION_STATS: PlayerVisionStats = {
+  baseVisionRadius: 1,
+  bonuses: ZERO_FOV_BONUSES,
+};

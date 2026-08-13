@@ -8,19 +8,20 @@
  *
  * ── Role in the layer stack ───────────────────────────────────────────────────
  *
- *   ChapterEnvironment   (background painting)
- *   HexTerrain           (tile Pressables — z 50–5400)
- *   FogBaseLayer         (this component — z 5500)   ← primary concealment
- *   FogMidLayer          (z 5510)
- *   FogEdgeLayer         (z 5520)
- *   FogWispLayer         (z 5530)
- *   WorldObjects         (encounter nodes, gate — z 6200–7000)
- *   Player               (sprite — z 6200+)
+ *   ChapterEnvironment   (background painting — z 0)
+ *   HexTerrain           (tile Pressables — z 100–400)
+ *   WorldContent         (player, encounters — z 3000–4900)
+ *   FogBaseLayer         (this component — z 5000)   ← primary concealment
+ *   Gate                 (z 5100)
+ *   FogMidLayer          (z 5200)
+ *   FogEdgeLayer         (z 5300)
+ *   FogWispLayer         (z 5400)
  *
- * At z 5500, the canvas sits ABOVE all terrain Pressables including revealed
- * tiles (z 50–5400).  The visibility mask from fogMask.ts (destination-in
- * compositing) punches clear holes over explored / visible-now tile centres so
- * they show through the fog; unexplored tiles remain hidden beneath it.
+ * At z 5000, the canvas sits ABOVE all terrain (100–400) and world content
+ * (3000–4900).  The visibility mask from fogMask.ts (destination-in
+ * compositing) punches transparent holes over explored / visible-now tile
+ * centres so terrain and objects show through the fog; unexplored tiles and
+ * their world objects remain hidden beneath the opaque canvas.
  *
  * ── Redraw triggers ───────────────────────────────────────────────────────────
  *
@@ -43,6 +44,11 @@ import { Platform, View } from 'react-native';
 
 import { drawFogBase, FOG_WORLD_PADDING } from '@/src/game/journeyMap/fog/fogBase';
 import { fogMaskCacheKey } from '@/src/game/journeyMap/fog/fogMask';
+import {
+  fogVisibilityFromTileState,
+  getEffectiveVisionRadius,
+  DEFAULT_PLAYER_VISION_STATS,
+} from '@/src/game/journeyMap/fog/fogVision';
 import type { HexMapTile } from '@/src/game/journeyMap/fixture';
 import type { HexWorldCoords } from './hexWorldCoords';
 
@@ -63,9 +69,10 @@ export interface FogBaseLayerProps {
 }
 
 /** z-index of the fog canvas inside MapWorld.
- *  Must be above TERRAIN_BASE ceiling (5400) so fog covers all tiles,
- *  and below WorldObjects / player (6200+). */
-export const FOG_BASE_Z = 5500;
+ *  Must be above terrain (100–400) and world content (3000–4900);
+ *  below Gate (5100), FogMid (5200), FogEdge (5300), FogWisp (5400).
+ *  Matches JOURNEY_Z.FOG_BASE. */
+export const FOG_BASE_Z = 5000;
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
@@ -123,15 +130,18 @@ export function FogBaseLayer({
     for (const tile of tiles) {
       const { left, top } = coords.axialToWorld(tile.q, tile.r);
       tileCenters.set(tile.id, { cx: left + sz / 2, cy: top + sz / 2 });
-      if (tile.visibility === 'visibleNow' || tile.current) {
-        visibleNowIds.add(tile.id);
-      } else if (tile.visibility === 'exploredButOutOfVision') {
-        exploredIds.add(tile.id);
-      }
+      // Use the central fog-visibility resolver so no component invents
+      // its own TileVisibility comparisons (Push 2 spec §F).
+      const fs = fogVisibilityFromTileState(tile.visibility, tile.current);
+      if (fs === 'visibleNow') visibleNowIds.add(tile.id);
+      else if (fs === 'explored') exploredIds.add(tile.id);
     }
 
     // Skip expensive canvas draw if nothing that affects the output changed.
-    const nextKey = fogMaskCacheKey({ visibleNowIds, exploredIds, effectiveFieldOfVision: 1, sz });
+    // Drive effectiveFieldOfVision through the proper function so it can be
+    // bumped by class/skill bonuses in a future push without changing this file.
+    const fov     = getEffectiveVisionRadius(DEFAULT_PLAYER_VISION_STATS);
+    const nextKey = fogMaskCacheKey({ visibleNowIds, exploredIds, effectiveFieldOfVision: fov, sz });
     if (nextKey === cacheKeyRef.current) return;
     cacheKeyRef.current = nextKey;
 
@@ -143,7 +153,7 @@ export function FogBaseLayer({
       tileCenters,
       visibleNowIds,
       exploredIds,
-      effectiveFieldOfVision: 1,
+      effectiveFieldOfVision: fov,
       runSeed,
     });
   // coords.axialToWorld is stable for the same tiles+containerWidth; including

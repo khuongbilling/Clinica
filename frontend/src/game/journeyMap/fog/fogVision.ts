@@ -33,7 +33,15 @@
  *   Shift affects fog art colour only (handled by the rendering layer).
  */
 
-import type { FogVisibility, FovBonuses, VisionConfig } from './fog.types';
+import type {
+  FogVisibility,
+  FogVisibilityState,
+  FovBonuses,
+  PlayerVisionStats,
+  VisionConfig,
+} from './fog.types';
+import { DEFAULT_PLAYER_VISION_STATS } from './fog.types';
+import type { TileVisibility } from '../types';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -205,3 +213,89 @@ export function computeFogSnapshot({
   }
   return snapshot;
 }
+
+// ── Push 2: spec-canonical exports ───────────────────────────────────────────
+//
+// All fog rendering, gate behavior, and encounter-privacy guards MUST use
+// getFogVisibilityState() as the single classifier.  No component should
+// compare tile.visibility strings directly after this push.
+
+/**
+ * Spec-named hex-distance alias.
+ * Identical to axialHexDistance — use whichever name reads better at the call site.
+ */
+export function hexDistance(
+  a: { q: number; r: number },
+  b: { q: number; r: number },
+): number {
+  return axialHexDistance(a, b);
+}
+
+/**
+ * Computes the player's effective field-of-vision radius from PlayerVisionStats.
+ * Clamped to [FOV_MIN, FOV_MAX] (1–4).
+ *
+ * Push 2: all bonuses are 0; result is BASE_FIELD_OF_VISION (1).
+ * Future pushes supply real class / skill / equipment / temporary values.
+ *
+ * @example
+ *   getEffectiveVisionRadius(DEFAULT_PLAYER_VISION_STATS) // → 1
+ */
+export function getEffectiveVisionRadius(stats: PlayerVisionStats): number {
+  const radius =
+    stats.baseVisionRadius        +
+    stats.bonuses.classBonus      +
+    stats.bonuses.skillBonus      +
+    stats.bonuses.equipmentBonus  +
+    stats.bonuses.temporaryBonus;
+
+  return Math.max(FOV_MIN, Math.min(FOV_MAX, radius));
+}
+
+/**
+ * Central fog-visibility resolver — the ONLY authoritative source for tile
+ * fog classification in rendering and gate behavior.
+ *
+ * Priority:
+ *   1. "visibleNow"  — tile is in the player's current field of vision
+ *   2. "explored"    — tile has been seen before this run (explored set)
+ *   3. "unexplored"  — tile has never been in the player's FoV
+ *
+ * All fog layers, gate opacity, encounter-privacy guards, and a11y labels
+ * MUST call this function rather than reading tile.visibility directly.
+ */
+export function getFogVisibilityState(
+  tileId:        string,
+  visibleNowIds: ReadonlySet<string>,
+  exploredIds:   ReadonlySet<string>,
+): FogVisibilityState {
+  if (visibleNowIds.has(tileId)) return 'visibleNow';
+  if (exploredIds.has(tileId))   return 'explored';
+  return 'unexplored';
+}
+
+/**
+ * Bridge helper: maps the legacy JourneyTile TileVisibility + isCurrent flag
+ * to the canonical FogVisibilityState used by the fog-rendering system.
+ *
+ * This is the ONLY place that translates the legacy 'exploredButOutOfVision'
+ * string into the fog system's shorter 'explored' name.
+ *
+ * Use this when you have a single tile and building full sets would be
+ * wasteful (e.g. the gate IIFE, per-tile HexTile classification).
+ *
+ * @param tileVisibility — tile.visibility from JourneyTile (legacy TileVisibility)
+ * @param isCurrent      — tile.current — the player is on this tile now
+ */
+export function fogVisibilityFromTileState(
+  tileVisibility: TileVisibility,
+  isCurrent:      boolean,
+): FogVisibilityState {
+  if (isCurrent || tileVisibility === 'visibleNow')            return 'visibleNow';
+  if (tileVisibility === 'exploredButOutOfVision')              return 'explored';
+  return 'unexplored';
+}
+
+// ── Re-exports: callers can import all fog-vision APIs from this one module ───
+export { DEFAULT_PLAYER_VISION_STATS };
+export type { FogVisibilityState } from './fog.types';

@@ -9,14 +9,14 @@
  *
  * ── Layer Architecture (from reference) ────────────────────────────────────
  *
- *  Layer 4  Foreground Wisps    sparse atmospheric mist ABOVE world objects
- *  ────────────────────────────────────────────────────────────────────────
- *  [world objects: encounters, Gate, player sprite]
- *  ────────────────────────────────────────────────────────────────────────
- *  Layer 3  Mid Fog             atmospheric detail + transition softness
- *  Layer 2  Base Fog            dense primary concealment (80–95 % opacity)
- *  Layer 1  Visibility Mask     code-generated, invisible, driven by FoV
- *  Layer 0  Map Background      tactical map / chapter environment
+ *  Layer 4  FogWisp (5400)      topmost mist — veils gate + upper atmosphere
+ *  Layer 3.5 FogEdge (5300)    organic reveal-edge sprites at visibility boundary
+ *  Layer 3  FogMid (5200)      atmospheric detail + density variation
+ *  ──  Gate (5100)  ──          rises through base fog; veiled by upper layers
+ *  Layer 2  FogBase (5000)     dense primary concealment (canvas, destination-in)
+ *  ──  WorldContent (3000–4900) player sprite, encounters, treasure, boss
+ *  ──  Terrain (100–400)        hex Pressables, rings, shadows (y-depth sorted)
+ *  Layer 0  Background (0)      chapter environment painting
  *
  * ── Fog Behaviour ──────────────────────────────────────────────────────────
  *

@@ -6,12 +6,14 @@
  *
  * ── Role in the layer stack ───────────────────────────────────────────────────
  *
- *   ChapterEnvironment   (background painting)
- *   HexTerrain           (tile Pressables — z 50–5400)
+ *   ChapterEnvironment   (background painting — z 0)
+ *   HexTerrain           (tile Pressables — z 100–400)
+ *   WorldContent         (player, encounters — z 3000–4900)
  *   FogBaseLayer         (Layer 2, z 5000 — primary concealment)
- *   FogMidLayer          (Layer 3, z 5010 — THIS COMPONENT)
- *   WorldObjects         (z 6200–7000)
- *   Player               (z 6200+)
+ *   Gate                 (z 5100)
+ *   FogMidLayer          (Layer 3, z 5200 — THIS COMPONENT)
+ *   FogEdgeLayer         (z 5300)
+ *   FogWispLayer         (z 5400)
  *
  * Mid Fog sits directly above Base Fog in world space.  Both layers clear in
  * the same way (same visibility mask) — the behavioural difference comes purely
@@ -34,6 +36,11 @@ import { Platform, View } from 'react-native';
 
 import { drawFogMid, FOG_MID_WORLD_PADDING } from '@/src/game/journeyMap/fog/fogMid';
 import { fogMaskCacheKey } from '@/src/game/journeyMap/fog/fogMask';
+import {
+  fogVisibilityFromTileState,
+  getEffectiveVisionRadius,
+  DEFAULT_PLAYER_VISION_STATS,
+} from '@/src/game/journeyMap/fog/fogVision';
 import type { HexMapTile } from '@/src/game/journeyMap/fixture';
 import type { HexWorldCoords } from './hexWorldCoords';
 
@@ -47,9 +54,9 @@ export interface FogMidLayerProps {
   runSeed:     string;
 }
 
-/** z-index inside MapWorld — directly above FogBaseLayer (z 5000). */
-/** Above terrain ceiling (5400) and FOG_BASE_Z (5500); below WorldObjects (6200+). */
-export const FOG_MID_Z = 5510;
+/** z-index inside MapWorld — above Gate (5100), below FogEdge (5300).
+ *  Matches JOURNEY_Z.FOG_MID. */
+export const FOG_MID_Z = 5200;
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
@@ -103,14 +110,14 @@ export function FogMidLayer({
     for (const tile of tiles) {
       const { left, top } = coords.axialToWorld(tile.q, tile.r);
       tileCenters.set(tile.id, { cx: left + sz / 2, cy: top + sz / 2 });
-      if (tile.visibility === 'visibleNow' || tile.current) {
-        visibleNowIds.add(tile.id);
-      } else if (tile.visibility === 'exploredButOutOfVision') {
-        exploredIds.add(tile.id);
-      }
+      // Central fog-visibility resolver — no direct tile.visibility comparisons.
+      const fs = fogVisibilityFromTileState(tile.visibility, tile.current);
+      if (fs === 'visibleNow') visibleNowIds.add(tile.id);
+      else if (fs === 'explored') exploredIds.add(tile.id);
     }
 
-    const nextKey = fogMaskCacheKey({ visibleNowIds, exploredIds, effectiveFieldOfVision: 1, sz });
+    const fov     = getEffectiveVisionRadius(DEFAULT_PLAYER_VISION_STATS);
+    const nextKey = fogMaskCacheKey({ visibleNowIds, exploredIds, effectiveFieldOfVision: fov, sz });
     if (nextKey === cacheKeyRef.current) return;
     cacheKeyRef.current = nextKey;
 
@@ -121,7 +128,7 @@ export function FogMidLayer({
       tileCenters,
       visibleNowIds,
       exploredIds,
-      effectiveFieldOfVision: 1,
+      effectiveFieldOfVision: fov,
       runSeed,
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
