@@ -39,7 +39,7 @@
 
 import { Asset } from 'expo-asset';
 import { JOURNEY_ASSETS } from '../assets';
-import { applyEdgeTaper, drawFogMask, type FogMaskParams } from './fogMask';
+import { drawFogMask, type FogMaskParams } from './fogMask';
 
 // ── Bundled asset sources ──────────────────────────────────────────────────────
 // Both are Metro-bundled require() numbers resolved via expo-asset.
@@ -50,12 +50,11 @@ const FOG_BANK_DAY_SOURCE = JOURNEY_ASSETS.fog.bankDay;
 // ── Layout constants ──────────────────────────────────────────────────────────
 
 /**
- * Extra pixels added on all four sides of the fog canvas beyond the MapWorld
- * boundary.  The canvas is positioned at (−padding, −padding) in world space
- * so the fog extends past the outermost hex centres and never shows a hard edge.
- * FogBaseLayer.tsx reads this export to apply the matching CSS offset.
+ * @deprecated Push 3: canvas is now exactly worldWidth × worldHeight at origin
+ * 0,0.  Kept as 0 so existing import references in FogBaseLayer.tsx / fogMid.ts
+ * / fogWisp.ts compile without changes.
  */
-export const FOG_WORLD_PADDING = 200;
+export const FOG_WORLD_PADDING = 0;
 
 /** Grid cell width in tile-size multiples. Adjacent cells overlap at ≥ half-width. */
 const BASE_CELL_TILES = 4.5;
@@ -180,33 +179,32 @@ export async function drawFogBase(
     loadBundledImage(FOG_BANK_DAY_SOURCE),
   ]);
 
-  const P = FOG_WORLD_PADDING;
-
-  // ── Size canvas to world + padding on all sides ───────────────────────────
-  // The canvas is positioned at (−P, −P) in world space (CSS offset applied by
-  // FogBaseLayer) so it bleeds past the outermost hex edges and never shows a
-  // hard rectangular boundary.
-  canvas.width  = Math.ceil(worldWidth  + 2 * P);
-  canvas.height = Math.ceil(worldHeight + 2 * P);
+  // ── Size canvas: exact world dimensions, DPR-backed ─────────────────────────
+  // Push 3: canvas is exactly worldWidth × worldHeight at origin 0,0.
+  // The MapViewport clips any overflow — no need for padding bleed.
+  const DPR = typeof window !== 'undefined' ? (window.devicePixelRatio ?? 1) : 1;
+  canvas.width  = Math.ceil(worldWidth  * DPR);
+  canvas.height = Math.ceil(worldHeight * DPR);
+  // CSS display size must be set explicitly so retina backing doesn't scale up.
+  canvas.style.width  = `${worldWidth}px`;
+  canvas.style.height = `${worldHeight}px`;
 
   const ctx = canvas.getContext('2d');
   if (!ctx) return;
 
   // Start fully transparent — no colored background fill.
   ctx.clearRect(0, 0, canvas.width, canvas.height);
+  // Scale coordinate system so all sprite positions are in world units.
+  ctx.scale(DPR, DPR);
 
   // ── Step 3: Draw overlapping fog instances ────────────────────────────────
-  // We translate the context by (P, P) so all sprite positions stay in world
-  // space (0,0 = top-left of MapWorld) while canvas(0,0) = world(−P, −P).
   const cellSize = sz * BASE_CELL_TILES;
-  const cols     = Math.ceil(worldWidth  / cellSize) + 2; // +2 for bleed beyond world
+  const cols     = Math.ceil(worldWidth  / cellSize) + 2;
   const rows     = Math.ceil(worldHeight / cellSize) + 2;
 
   const rand = seededRandom(hashString(runSeed + ':fogbase'));
 
   ctx.save();
-  // Shift so world coordinates map correctly onto the padded canvas.
-  ctx.translate(P, P);
 
   for (let row = -1; row < rows; row++) {
     for (let col = -1; col < cols; col++) {
@@ -234,18 +232,15 @@ export async function drawFogBase(
     }
   }
 
-  ctx.restore(); // undo translate(P, P) opened before the base fog sprite loop
+  ctx.restore();
 
   // ── Bank fog pass (secondary irregular variation) ─────────────────────────
-  // Uses a separate seed namespace and wider cell grid so bank instances
-  // interleave with the base layer, breaking repetition.
   const bankCellSize = sz * BANK_CELL_TILES;
   const bankCols     = Math.ceil(worldWidth  / bankCellSize) + 2;
   const bankRows     = Math.ceil(worldHeight / bankCellSize) + 2;
   const bankRand     = seededRandom(hashString(runSeed + ':fogbank'));
 
   ctx.save();
-  ctx.translate(P, P);
 
   for (let row = -1; row < bankRows; row++) {
     for (let col = -1; col < bankCols; col++) {
@@ -271,12 +266,12 @@ export async function drawFogBase(
     }
   }
 
-  ctx.restore(); // undo translate(P, P) for bank pass
+  ctx.restore();
 
   // ── Step 4: Apply visibility mask (destination-in) ────────────────────────
-  // White mask canvas = keep fog. Erased regions = reveal player FoV.
-  // padding=P aligns the mask canvas with the padded fog canvas so tile-centre
-  // clearing coordinates land at the correct positions.
+  // drawFogMask produces a DPR-backed canvas exactly worldWidth × worldHeight.
+  // We draw it at world coords (ctx is already DPR-scaled) by passing explicit
+  // world-unit dest dimensions so it maps 1:1 onto the DPR-backed fog canvas.
   const maskCanvas = document.createElement('canvas');
   const maskParams: FogMaskParams = {
     worldWidth,
@@ -286,17 +281,16 @@ export async function drawFogBase(
     visibleNowIds,
     exploredIds,
     effectiveFieldOfVision,
-    padding: P,
+    // Push 3: no padding — mask is exact world size.
   };
   drawFogMask(maskCanvas, maskParams);
 
   ctx.globalCompositeOperation = 'destination-in';
   ctx.globalAlpha = 1;
-  ctx.drawImage(maskCanvas, 0, 0);
+  // Explicit world-unit dest size so DPR-scaled ctx maps to DPR-backed maskCanvas.
+  ctx.drawImage(maskCanvas, 0, 0, worldWidth, worldHeight);
   ctx.globalCompositeOperation = 'source-over';
 
-  // ── Step 5: Edge taper ────────────────────────────────────────────────────
-  // Dissolve fog to transparent at all four world edges so no rectangular
-  // cutoff is ever visible.
-  applyEdgeTaper(ctx, canvas.width, canvas.height, P, 140);
+  // Push 3: applyEdgeTaper removed.  The map edge is clipped by MapViewport;
+  // only visibility transitions need feathering (handled by organic reveal lobes).
 }

@@ -42,8 +42,8 @@
 import React, { useEffect, useRef } from 'react';
 import { Platform, View } from 'react-native';
 
-import { drawFogBase, FOG_WORLD_PADDING } from '@/src/game/journeyMap/fog/fogBase';
-import { fogMaskCacheKey } from '@/src/game/journeyMap/fog/fogMask';
+import { drawFogBase } from '@/src/game/journeyMap/fog/fogBase';
+import { buildFogMaskCacheKey } from '@/src/game/journeyMap/fog/fogMask';
 import {
   fogVisibilityFromTileState,
   getEffectiveVisionRadius,
@@ -99,8 +99,9 @@ export function FogBaseLayer({
     if (!container) return;
 
     const canvas = document.createElement('canvas');
-    // Offset by −padding so the extended canvas bleeds past all world edges.
-    canvas.style.cssText = `position:absolute;left:${-FOG_WORLD_PADDING}px;top:${-FOG_WORLD_PADDING}px;pointer-events:none;`;
+    // Push 3: canvas is exactly worldWidth × worldHeight at origin 0,0.
+    // MapViewport clips any overflow — no bleed padding needed.
+    canvas.style.cssText = `position:absolute;left:0;top:0;pointer-events:none;`;
     container.appendChild(canvas);
     canvasRef.current  = canvas;
     cacheKeyRef.current = ''; // force a draw on first attach
@@ -141,7 +142,17 @@ export function FogBaseLayer({
     // Drive effectiveFieldOfVision through the proper function so it can be
     // bumped by class/skill bonuses in a future push without changing this file.
     const fov     = getEffectiveVisionRadius(DEFAULT_PLAYER_VISION_STATS);
-    const nextKey = fogMaskCacheKey({ visibleNowIds, exploredIds, effectiveFieldOfVision: fov, sz });
+    // Push 3: buildFogMaskCacheKey includes runId + world dimensions so a
+    // viewport resize correctly forces a full redraw (cache bug fix).
+    const nextKey = buildFogMaskCacheKey({
+      runId:                  runSeed,
+      worldWidth,
+      worldHeight,
+      tileSize:               sz,
+      effectiveFieldOfVision: fov,
+      visibleNowIds,
+      exploredIds,
+    });
     if (nextKey === cacheKeyRef.current) return;
     cacheKeyRef.current = nextKey;
 

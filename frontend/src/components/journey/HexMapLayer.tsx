@@ -176,7 +176,7 @@ import {
 } from 'react-native';
 import Svg, { Circle, Defs, Ellipse, Polygon, RadialGradient, Stop } from 'react-native-svg';
 
-import { drawFogMask, fogMaskCacheKey } from '@/src/game/journeyMap/fog/fogMask';
+import { buildFogMaskCacheKey, drawFogMaskDev } from '@/src/game/journeyMap/fog/fogMask';
 import {
   type FogVisibilityState,
   fogVisibilityFromTileState,
@@ -2033,7 +2033,7 @@ export function HexMapLayer({
 
   // ── Push 3: fog mask canvas — redraw when visibility inputs change ─────────
   // Effect B: runs whenever tiles / world dimensions / sz change.
-  //           Uses fogMaskCacheKey to skip redraws when inputs are unchanged.
+  //           Uses buildFogMaskCacheKey to skip redraws when inputs are unchanged.
   //           Camera translation is NOT in these deps (pan = no redraw).
   useEffect(() => {
     if (!__DEV__ || !devOverlay?.fogMask || Platform.OS !== 'web') return;
@@ -2054,15 +2054,30 @@ export function HexMapLayer({
       else if (fs === 'explored') exploredIds.add(tile.id);
     }
 
-    // Skip redraw if nothing changed (e.g. cosmetic re-render with same state)
-    // Push 2: use getEffectiveVisionRadius so the dev canvas stays in sync
-    // with the live fog layers as class/skill bonuses are wired in later.
+    // Skip redraw if nothing changed (e.g. cosmetic re-render with same state).
+    // Push 3: buildFogMaskCacheKey now includes world dimensions + runId so
+    // viewport resizes correctly force regeneration (Push 3 cache bug fix).
     const fov     = getEffectiveVisionRadius(DEFAULT_PLAYER_VISION_STATS);
-    const nextKey = fogMaskCacheKey({ visibleNowIds, exploredIds, effectiveFieldOfVision: fov, sz });
+    // Use the run seed embedded in the tile data as the run identifier.
+    // HexMapLayer doesn't receive runSeed directly — derive a stable id from
+    // tile count + first tile id so different runs produce different keys.
+    const devRunId = tiles.length > 0 ? (tiles[0]?.id ?? '') : '';
+    const nextKey  = buildFogMaskCacheKey({
+      runId:                  devRunId,
+      worldWidth:             worldW,
+      worldHeight:            worldH,
+      tileSize:               sz,
+      effectiveFieldOfVision: fov,
+      visibleNowIds,
+      exploredIds,
+    });
     if (nextKey === fogMaskKeyRef.current) return;
     fogMaskKeyRef.current = nextKey;
 
-    drawFogMask(canvas, {
+    // drawFogMaskDev shows the three-state grayscale (dark/mid/light) so the
+    // organic reveal shape is visible without running the full fog sprite pipeline.
+    // This function must never be used in production rendering.
+    drawFogMaskDev(canvas, {
       worldWidth:             worldW,
       worldHeight:            worldH,
       sz,

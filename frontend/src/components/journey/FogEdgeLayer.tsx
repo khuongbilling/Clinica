@@ -36,7 +36,7 @@
 import React, { useEffect, useRef } from 'react';
 import { Platform, View } from 'react-native';
 
-import { drawFogEdge, FOG_EDGE_PADDING } from '@/src/game/journeyMap/fog/fogEdge';
+import { drawFogEdge } from '@/src/game/journeyMap/fog/fogEdge';
 import { fogVisibilityFromTileState } from '@/src/game/journeyMap/fog/fogVision';
 import type { HexMapTile } from '@/src/game/journeyMap/fixture';
 import type { HexWorldCoords } from './hexWorldCoords';
@@ -80,7 +80,8 @@ export function FogEdgeLayer({
     if (!container) return;
 
     const canvas = document.createElement('canvas');
-    canvas.style.cssText = `position:absolute;left:${-FOG_EDGE_PADDING}px;top:${-FOG_EDGE_PADDING}px;pointer-events:none;`;
+    // Push 3: canvas is exactly worldWidth × worldHeight at origin 0,0.
+    canvas.style.cssText = `position:absolute;left:0;top:0;pointer-events:none;`;
     container.appendChild(canvas);
     canvasRef.current  = canvas;
     cacheKeyRef.current = '';
@@ -108,10 +109,10 @@ export function FogEdgeLayer({
       }
     }
 
-    // Cache key: only redraw when the visibleNow set or tile-size changes.
-    // (Boundary is fully determined by these two inputs + runSeed, which is
-    //  handled by Effect A recreating the canvas on run change.)
-    const nextKey = `v=${[...visibleNowIds].sort().join(',')}|sz=${coords.sz}`;
+    // Cache key: redraw when the visibleNow set, tile-size, or world dimensions change.
+    // Push 3: world dimensions added so a viewport resize correctly forces regeneration
+    // even when tile visibility and tile size are unchanged.
+    const nextKey = `v=${[...visibleNowIds].sort().join(',')}|sz=${coords.sz}|w=${Math.round(worldWidth)}|h=${Math.round(worldHeight)}`;
     if (nextKey === cacheKeyRef.current) return;
     cacheKeyRef.current = nextKey;
 

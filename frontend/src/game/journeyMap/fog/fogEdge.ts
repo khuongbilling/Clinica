@@ -41,7 +41,7 @@
 
 import { Asset } from 'expo-asset';
 import { JOURNEY_ASSETS } from '../assets';
-import { applyEdgeTaper } from './fogMask';
+// Push 3: applyEdgeTaper removed — MapViewport clips edges; import dropped.
 import type { HexMapTile } from '../fixture';
 import type { HexWorldCoords } from '../../../components/journey/hexWorldCoords';
 
@@ -51,7 +51,11 @@ const FOG_EDGE_DAY_SOURCE = JOURNEY_ASSETS.fog.edgeDay;
 // ── Layout constants ───────────────────────────────────────────────────────────
 
 /** Matches Base and Mid fog padding so all three layers bleed identically. */
-export const FOG_EDGE_PADDING = 200;
+/**
+ * @deprecated Push 3: canvas is now exactly worldWidth × worldHeight at origin 0,0.
+ * Kept as 0 so existing import references compile without changes.
+ */
+export const FOG_EDGE_PADDING = 0;
 
 /** Minimum rendered width of one edge instance (× sz). */
 const EDGE_W_MIN_TILES = 2.5;
@@ -148,15 +152,19 @@ export async function drawFogEdge(
 
   const edgeImg = await loadBundledImage(FOG_EDGE_DAY_SOURCE);
 
-  const P = FOG_EDGE_PADDING;
-
-  canvas.width  = Math.ceil(worldWidth  + 2 * P);
-  canvas.height = Math.ceil(worldHeight + 2 * P);
+  // ── Size canvas: exact world dimensions, DPR-backed ─────────────────────────
+  // Push 3: canvas is exactly worldWidth × worldHeight at origin 0,0.
+  const DPR = typeof window !== 'undefined' ? (window.devicePixelRatio ?? 1) : 1;
+  canvas.width  = Math.ceil(worldWidth  * DPR);
+  canvas.height = Math.ceil(worldHeight * DPR);
+  canvas.style.width  = `${worldWidth}px`;
+  canvas.style.height = `${worldHeight}px`;
 
   const ctx = canvas.getContext('2d');
   if (!ctx) return;
 
   ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.scale(DPR, DPR);
 
   // ── Build tile lookup tables ───────────────────────────────────────────────
   // tileCenters: id → world-space centre point (no padding offset yet)
@@ -172,7 +180,7 @@ export async function drawFogEdge(
 
   // ── Find boundary tiles and draw sprites ──────────────────────────────────
   ctx.save();
-  ctx.translate(P, P); // world-space → padded canvas coords
+  // Push 3: no translate — sprites are drawn directly in world coords.
 
   for (const tile of tiles) {
     if (!visibleNowIds.has(tile.id)) continue; // only boundary of VISIBLE_NOW
@@ -242,9 +250,8 @@ export async function drawFogEdge(
     }
   }
 
-  ctx.restore(); // undo translate(P, P)
+  ctx.restore();
 
-  // Edge taper — prevents any hard cutoff at the world boundary.
-  // No visibility mask applied (see module docstring for reasoning).
-  applyEdgeTaper(ctx, canvas.width, canvas.height, P, 140);
+  // Push 3: applyEdgeTaper removed — MapViewport clips edges; taper not needed.
+  // No visibility mask applied to edge sprites (see module docstring).
 }

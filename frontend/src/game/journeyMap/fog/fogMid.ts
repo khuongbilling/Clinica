@@ -43,7 +43,7 @@
 
 import { Asset } from 'expo-asset';
 import { JOURNEY_ASSETS } from '../assets';
-import { applyEdgeTaper, drawFogMask, type FogMaskParams } from './fogMask';
+import { drawFogMask, type FogMaskParams } from './fogMask';
 
 // ── Bundled asset source ───────────────────────────────────────────────────────
 const FOG_MID_DAY_SOURCE = JOURNEY_ASSETS.fog.midDay;
@@ -55,7 +55,11 @@ const FOG_MID_DAY_SOURCE = JOURNEY_ASSETS.fog.midDay;
  * FOG_WORLD_PADDING in fogBase.ts so both layers bleed identically.
  * FogMidLayer.tsx reads this export to apply the matching CSS offset.
  */
-export const FOG_MID_WORLD_PADDING = 200;
+/**
+ * @deprecated Push 3: canvas is now exactly worldWidth × worldHeight at origin 0,0.
+ * Kept as 0 so existing import references compile without changes.
+ */
+export const FOG_MID_WORLD_PADDING = 0;
 
 /** Grid cell width in tile-size multiples (smaller than Base Fog for finer texture). */
 const MID_CELL_TILES = 3.5;
@@ -161,17 +165,19 @@ export async function drawFogMid(
 
   const midImg = await loadBundledImage(FOG_MID_DAY_SOURCE);
 
-  const P = FOG_MID_WORLD_PADDING;
-
-  // Padded canvas: bleeds P px past every world edge.
-  // FogMidLayer offsets CSS left/top by −P to keep alignment with MapWorld.
-  canvas.width  = Math.ceil(worldWidth  + 2 * P);
-  canvas.height = Math.ceil(worldHeight + 2 * P);
+  // ── Size canvas: exact world dimensions, DPR-backed ─────────────────────────
+  // Push 3: canvas is exactly worldWidth × worldHeight at origin 0,0.
+  const DPR = typeof window !== 'undefined' ? (window.devicePixelRatio ?? 1) : 1;
+  canvas.width  = Math.ceil(worldWidth  * DPR);
+  canvas.height = Math.ceil(worldHeight * DPR);
+  canvas.style.width  = `${worldWidth}px`;
+  canvas.style.height = `${worldHeight}px`;
 
   const ctx = canvas.getContext('2d');
   if (!ctx) return;
 
   ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.scale(DPR, DPR);
 
   // ── Fog instances ─────────────────────────────────────────────────────────
   const cellSize = sz * MID_CELL_TILES;
@@ -182,7 +188,7 @@ export async function drawFogMid(
   const rand = seededRandom(hashString(runSeed + ':fogmid'));
 
   ctx.save();
-  ctx.translate(P, P); // world-space coords → padded canvas coords
+  // Push 3: no translate — sprites are drawn directly in world coords.
 
   for (let row = -1; row < rows; row++) {
     for (let col = -1; col < cols; col++) {
@@ -209,7 +215,7 @@ export async function drawFogMid(
     }
   }
 
-  ctx.restore(); // undo translate(P, P)
+  ctx.restore();
 
   // ── Visibility mask (destination-in) ──────────────────────────────────────
   // Mid Fog uses the same mask as Base Fog — same clearing radii, same FoV.
@@ -224,15 +230,15 @@ export async function drawFogMid(
     visibleNowIds,
     exploredIds,
     effectiveFieldOfVision,
-    padding: P,
+    // Push 3: no padding — mask is exact world size.
   };
   drawFogMask(maskCanvas, maskParams);
 
   ctx.globalCompositeOperation = 'destination-in';
   ctx.globalAlpha = 1;
-  ctx.drawImage(maskCanvas, 0, 0);
+  // Explicit world-unit dest size so DPR-scaled ctx maps to DPR-backed maskCanvas.
+  ctx.drawImage(maskCanvas, 0, 0, worldWidth, worldHeight);
   ctx.globalCompositeOperation = 'source-over';
 
-  // Edge taper — matches fogBase taper so both layers dissolve uniformly.
-  applyEdgeTaper(ctx, canvas.width, canvas.height, P, 140);
+  // Push 3: applyEdgeTaper removed — MapViewport clips edges; taper not needed.
 }

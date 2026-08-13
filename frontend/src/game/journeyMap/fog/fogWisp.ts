@@ -38,7 +38,7 @@
 
 import { Asset } from 'expo-asset';
 import { JOURNEY_ASSETS } from '../assets';
-import { applyEdgeTaper, drawFogMask, type FogMaskParams } from './fogMask';
+import { drawFogMask, type FogMaskParams } from './fogMask';
 
 // ── Asset source ───────────────────────────────────────────────────────────────
 const FOG_WISP_DAY_SOURCE = JOURNEY_ASSETS.fog.wispDay;
@@ -46,7 +46,11 @@ const FOG_WISP_DAY_SOURCE = JOURNEY_ASSETS.fog.wispDay;
 // ── Layout constants ───────────────────────────────────────────────────────────
 
 /** Matches all other fog layer paddings so every layer bleeds identically. */
-export const FOG_WISP_PADDING = 200;
+/**
+ * @deprecated Push 3: canvas is now exactly worldWidth × worldHeight at origin 0,0.
+ * Kept as 0 so existing import references compile without changes.
+ */
+export const FOG_WISP_PADDING = 0;
 
 /** Tighter grid than Mid Fog — more wisp instances for surface detail. */
 const WISP_CELL_TILES = 3.0;
@@ -147,15 +151,19 @@ export async function drawFogWisp(
 
   const wispImg = await loadBundledImage(FOG_WISP_DAY_SOURCE);
 
-  const P = FOG_WISP_PADDING;
-
-  canvas.width  = Math.ceil(worldWidth  + 2 * P);
-  canvas.height = Math.ceil(worldHeight + 2 * P);
+  // ── Size canvas: exact world dimensions, DPR-backed ─────────────────────────
+  // Push 3: canvas is exactly worldWidth × worldHeight at origin 0,0.
+  const DPR = typeof window !== 'undefined' ? (window.devicePixelRatio ?? 1) : 1;
+  canvas.width  = Math.ceil(worldWidth  * DPR);
+  canvas.height = Math.ceil(worldHeight * DPR);
+  canvas.style.width  = `${worldWidth}px`;
+  canvas.style.height = `${worldHeight}px`;
 
   const ctx = canvas.getContext('2d');
   if (!ctx) return;
 
   ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.scale(DPR, DPR);
 
   // ── Draw wisp instances ───────────────────────────────────────────────────
   const cellSize = sz * WISP_CELL_TILES;
@@ -165,7 +173,7 @@ export async function drawFogWisp(
   const rand = seededRandom(hashString(runSeed + ':fogwisp'));
 
   ctx.save();
-  ctx.translate(P, P);
+  // Push 3: no translate — sprites are drawn directly in world coords.
 
   for (let row = -1; row < rows; row++) {
     for (let col = -1; col < cols; col++) {
@@ -204,15 +212,15 @@ export async function drawFogWisp(
     visibleNowIds,
     exploredIds,
     effectiveFieldOfVision,
-    padding: P,
+    // Push 3: no padding — mask is exact world size.
   };
   drawFogMask(maskCanvas, maskParams);
 
   ctx.globalCompositeOperation = 'destination-in';
   ctx.globalAlpha = 1;
-  ctx.drawImage(maskCanvas, 0, 0);
+  // Explicit world-unit dest size so DPR-scaled ctx maps to DPR-backed maskCanvas.
+  ctx.drawImage(maskCanvas, 0, 0, worldWidth, worldHeight);
   ctx.globalCompositeOperation = 'source-over';
 
-  // Edge taper — matches all other fog layers.
-  applyEdgeTaper(ctx, canvas.width, canvas.height, P, 140);
+  // Push 3: applyEdgeTaper removed — MapViewport clips edges; taper not needed.
 }
