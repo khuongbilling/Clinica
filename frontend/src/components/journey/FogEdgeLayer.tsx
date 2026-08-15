@@ -135,6 +135,9 @@ export function FogEdgeLayer({
     if (nextKey === cacheKeyRef.current) return;
     cacheKeyRef.current = nextKey;
 
+    // DEV: report actual canvas CSS + visibleNow count consumed by this layer.
+    if (__DEV__) console.log(`[FogEdge] CSS: ${worldWidth}×${worldHeight} @ 0,0 | visibleNow: ${visibleNowIds.size}`);
+
     void drawFogEdge(canvas, {
       worldWidth,
       worldHeight,

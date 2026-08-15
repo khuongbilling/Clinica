@@ -147,6 +147,9 @@ export function FogWispLayer({
     if (nextKey === cacheKeyRef.current) return;
     cacheKeyRef.current = nextKey;
 
+    // DEV: report actual canvas CSS + visibleNow count consumed by this layer.
+    if (__DEV__) console.log(`[FogWisp] CSS: ${worldWidth}×${worldHeight} @ 0,0 | visibleNow: ${visibleNowIds.size} | explored: ${exploredIds.size}`);
+
     void drawFogWisp(canvas, {
       worldWidth,
       worldHeight,

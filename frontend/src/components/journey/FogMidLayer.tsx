@@ -145,6 +145,9 @@ export function FogMidLayer({
     if (nextKey === cacheKeyRef.current) return;
     cacheKeyRef.current = nextKey;
 
+    // DEV: report actual canvas CSS + visibleNow count consumed by this layer.
+    if (__DEV__) console.log(`[FogMid]  CSS: ${worldWidth}×${worldHeight} @ 0,0 | visibleNow: ${visibleNowIds.size} | explored: ${exploredIds.size}`);
+
     void drawFogMid(canvas, {
       worldWidth,
       worldHeight,

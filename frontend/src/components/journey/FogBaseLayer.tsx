@@ -159,6 +159,9 @@ export function FogBaseLayer({
     if (nextKey === cacheKeyRef.current) return;
     cacheKeyRef.current = nextKey;
 
+    // DEV: report actual canvas CSS + visibleNow count consumed by this layer.
+    if (__DEV__) console.log(`[FogBase] CSS: ${worldWidth}×${worldHeight} @ 0,0 | visibleNow: ${visibleNowIds.size} | explored: ${exploredIds.size}`);
+
     // Async — image load is cached after first call; subsequent calls are fast.
     void drawFogBase(canvas, {
       worldWidth,
