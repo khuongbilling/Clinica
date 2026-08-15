@@ -1,0 +1,595 @@
+CORRECTIVE PUSH — REPLACE STAMPED SQUARE FOG WITH ONE CONTINUOUS WORLD-SIZED FOG FIELD
+
+The screenshot reveals a critical runtime asset error and a composition error.
+
+DO NOT proceed with additional fog effects until this is corrected.
+
+==================================================
+1. REMOVE ALL REFERENCE SHEETS FROM RUNTIME
+==================================================
+
+The following files are REFERENCE ART ONLY:
+
+fog_system_design_reference.png
+fog_bank_system reference.png
+
+IMPORTANT:
+
+fog_bank_system reference.png IS NOT a runtime fog bank.
+
+It contains:
+- labels
+- example assets
+- filenames
+- BASE FOG text
+- FOREGROUND WISPS text
+- EXTRA OVERLAYS text
+- color examples
+
+The live screenshot proves this reference sheet is currently being painted into the game.
+
+REMOVE it from every runtime:
+- asset registry
+- loadBundledImage call
+- drawFogBase call
+- fog placement pool
+- fallback asset list
+
+Do not rename it fog_bank_day_01.png.
+
+If it currently exists under that name, remove that runtime entry.
+
+Move/reference it only as:
+
+/assets/dev-reference/fog_bank_system_reference.png
+
+The other design sheet remains:
+
+/assets/dev-reference/fog_system_design_reference.png
+
+Neither reference image may ever be passed to drawImage() in production fog rendering.
+
+For now the approved DAY runtime assets are ONLY:
+
+fog_base_day_01.png
+fog_mid_day_01.png
+fog_edge_day_01.png
+fog_wisp_day_01.png
+
+Add a defensive development check:
+
+if (
+  src.includes("reference") ||
+  src.includes("system_reference") ||
+  src.includes("system reference")
+) {
+  throw new Error(
+    `Reference fog image cannot be used as runtime fog: ${src}`
+  );
+}
+
+==================================================
+2. BASE FOG MUST BE ONE CONTINUOUS WORLD FIELD
+==================================================
+
+Current visual problem:
+
+The canvas itself may be world-sized, but several rectangular
+source images are being stamped into that canvas.
+
+This produces visible overlapping panels.
+
+Stop treating FogBase as a group of small independent fog cards.
+
+FogBase must render as ONE continuous world-sized atmospheric field.
+
+Keep:
+
+one FogBase canvas
+
+canvas CSS size:
+worldWidth × worldHeight
+
+canvas backing size:
+worldWidth × DPR
+worldHeight × DPR
+
+But change how its contents are drawn.
+
+==================================================
+3. SIZE CANVAS SYNCHRONOUSLY
+==================================================
+
+Do this BEFORE any image await.
+
+Immediately when creating/updating the canvas:
+
+const cssWidth = worldWidth;
+const cssHeight = worldHeight;
+
+canvas.style.position = "absolute";
+canvas.style.left = "0px";
+canvas.style.top = "0px";
+canvas.style.width = `${cssWidth}px`;
+canvas.style.height = `${cssHeight}px`;
+
+canvas.width =
+  Math.ceil(cssWidth * dpr);
+
+canvas.height =
+  Math.ceil(cssHeight * dpr);
+
+Then:
+
+const ctx = canvas.getContext("2d");
+
+ctx.setTransform(
+  dpr,
+  0,
+  0,
+  dpr,
+  0,
+  0
+);
+
+Do NOT wait for image loading before setting CSS dimensions.
+
+This removes the current DPR first-frame oversize flash.
+
+Fog layer container and MapViewport must both use:
+
+overflow: "hidden"
+
+==================================================
+4. ADD A CONTINUOUS ATMOSPHERIC FOUNDATION
+==================================================
+
+The Base canvas needs guaranteed alpha coverage.
+
+But do NOT use:
+
+rgba(6, 10, 22, 0.88)
+
+for DAY.
+
+That is too dark and would turn the Day map into a navy blackout.
+
+Instead begin the DAY Base canvas with a blue-gray atmospheric veil.
+
+Start approximately around:
+
+rgba(62, 82, 96, 0.68)
+
+Treat this as a tuning value, not a permanent final color.
+
+Example:
+
+ctx.clearRect(
+  0,
+  0,
+  worldWidth,
+  worldHeight
+);
+
+ctx.fillStyle =
+  "rgba(62, 82, 96, 0.68)";
+
+ctx.fillRect(
+  0,
+  0,
+  worldWidth,
+  worldHeight
+);
+
+This foundation exists only to guarantee that UNEXPLORED
+space never contains completely transparent gaps.
+
+The actual painted fog texture goes above it.
+
+==================================================
+5. DRAW fog_base_day_01.png AS A WORLD FIELD
+==================================================
+
+Load:
+
+fog_base_day_01.png
+
+Do NOT stamp it as multiple small rectangles.
+
+Do NOT create 6–18 independent copies for Base Fog.
+
+Instead draw the Base Fog artwork as a WORLD-SCALE texture.
+
+Use cover-style sizing.
+
+Implement a helper similar to:
+
+function drawImageCover(
+  ctx,
+  image,
+  destX,
+  destY,
+  destWidth,
+  destHeight
+) {
+  const sourceRatio =
+    image.width / image.height;
+
+  const destRatio =
+    destWidth / destHeight;
+
+  let sx = 0;
+  let sy = 0;
+  let sw = image.width;
+  let sh = image.height;
+
+  if (sourceRatio > destRatio) {
+    sw =
+      image.height * destRatio;
+
+    sx =
+      (image.width - sw) / 2;
+  } else {
+    sh =
+      image.width / destRatio;
+
+    sy =
+      (image.height - sh) / 2;
+  }
+
+  ctx.drawImage(
+    image,
+    sx,
+    sy,
+    sw,
+    sh,
+    destX,
+    destY,
+    destWidth,
+    destHeight
+  );
+}
+
+Then:
+
+ctx.save();
+
+ctx.globalAlpha = 0.80;
+
+drawImageCover(
+  ctx,
+  fogBaseImage,
+  0,
+  0,
+  worldWidth,
+  worldHeight
+);
+
+ctx.restore();
+
+The result must be:
+
+ONE continuous fog texture across the entire chapter map.
+
+No visible source-image panels.
+
+No grid.
+
+No overlapping squares.
+
+==================================================
+6. BASE FOG IS PRIMARY COVERAGE
+==================================================
+
+The visual structure becomes:
+
+continuous blue-gray atmospheric foundation
++
+one world-scale painted Base Fog texture
++
+visibility mask
+
+NOT:
+
+small fog rectangle
++
+small fog rectangle
++
+small fog rectangle
++
+another rectangular fog image
+
+Mid / Edge / Wisp may still add irregular local detail later.
+
+Base Fog may not.
+
+==================================================
+7. FIX THE FOV INPUT — CURRENT visibleNow = 1 IS WRONG
+==================================================
+
+Replit reports that on a fresh run:
+
+visibleNow = 1
+
+because only:
+
+isCurrent === true
+
+is currently becoming visibleNow.
+
+This is NOT the intended Clinica FOV system.
+
+Base FOV = 1 means:
+
+player's current hex
+PLUS
+every existing Chapter terrain hex with:
+
+hexDistance(player, tile) <= 1
+
+Therefore, on an interior tile FOV 1 will usually produce:
+
+7 visible terrain cells
+
+1 current
++
+up to 6 adjacent
+
+Near a physical map boundary it may contain fewer because
+only authored Chapter tiles count.
+
+Do NOT derive visibility from:
+
+tileVisibility === "frontier"
+tileVisibility === "revealed"
+
+Those are other map-state concepts.
+
+Use the canonical calculated:
+
+visibleNowIds
+
+directly.
+
+Example:
+
+const visibleNowIds =
+  calculateVisibleTileIds({
+    playerCoord,
+    tiles: chapterTemplate.tiles,
+    effectiveVisionRadius,
+  });
+
+Then fog classification:
+
+if (visibleNowIds.has(tile.id)) {
+  return "visibleNow";
+}
+
+if (exploredIds.has(tile.id)) {
+  return "explored";
+}
+
+return "unexplored";
+
+Do not let fogVisibilityFromTileState reinterpret
+frontier/revealed into a different FOV model.
+
+==================================================
+8. APPLY ORGANIC MASK TO THE COMPLETE BASE FIELD
+==================================================
+
+After the full continuous Base Fog field has been rendered:
+
+ctx.globalCompositeOperation =
+  "destination-in";
+
+ctx.drawImage(
+  maskCanvas,
+  0,
+  0,
+  worldWidth,
+  worldHeight
+);
+
+ctx.globalCompositeOperation =
+  "source-over";
+
+The mask controls:
+
+UNEXPLORED
+dense fog
+
+EXPLORED
+light memory haze
+
+VISIBLE NOW
+clear
+
+Because Base Fog now has coverage across the COMPLETE world,
+destination-in will no longer expose arbitrary transparent gaps.
+
+==================================================
+9. DO NOT MAKE THE FOV REVEAL LOOK LIKE 7 CIRCLES
+==================================================
+
+FOV calculations are hex-based.
+
+The ART must hide that mathematical structure.
+
+Even though several adjacent hex centres contribute reveal:
+
+their organic mask lobes must overlap into ONE clearing.
+
+The player should see:
+
+one irregular receding fog boundary
+
+NOT:
+
+O O O
+ O O
+O O
+
+Do not expose:
+- seven circles
+- a flower pattern
+- exact hex outlines
+- square mask regions
+
+Continue using:
+- feathered brushes
+- seeded asymmetric sub-lobes
+- overlapping reveal influence
+- irregular edge noise
+
+==================================================
+10. MID FOG
+==================================================
+
+Keep FogMid as a world-sized canvas.
+
+Do not use the reference sheet.
+
+Use ONLY:
+
+fog_mid_day_01.png
+
+Mid Fog may use one or a very small number of broad
+world-scale placements.
+
+Do not create a mosaic of little rectangular copies.
+
+Mid Fog should add:
+- density variation
+- memory haze
+- cloud detail
+
+It should NOT provide primary map coverage.
+
+==================================================
+11. EDGE FOG
+==================================================
+
+Use ONLY:
+
+fog_edge_day_01.png
+
+Edge Fog remains selective.
+
+It is allowed to appear locally around portions of the
+visibility transition.
+
+But source rectangles must never be visible.
+
+Do not fill the whole world with repeated edge cards.
+
+==================================================
+12. WISP FOG
+==================================================
+
+Use ONLY:
+
+fog_wisp_day_01.png
+
+Wisps remain sparse and atmospheric.
+
+They may be locally placed.
+
+They are not responsible for concealment.
+
+==================================================
+13. EXPECTED RENDER RESULT
+==================================================
+
+A fresh Chapter should visually read as:
+
+ONE continuous fog-covered map.
+
+Around the player:
+
+a single organic clear region produced by FOV 1.
+
+Outside that region:
+
+continuous blue-gray fog.
+
+As player moves:
+
+current location becomes clear.
+
+previously explored areas retain soft haze.
+
+unexplored areas remain densely fogged.
+
+At no point should the user be able to identify:
+
+- a source PNG rectangle
+- a fog "card"
+- a square tile of fog
+- labels embedded inside fog
+- asset filenames
+- reference-sheet graphics
+
+==================================================
+14. DEV ASSET DIAGNOSTIC
+==================================================
+
+In development only, report:
+
+Runtime Fog Assets:
+
+Base:
+fog_base_day_01.png
+
+Mid:
+fog_mid_day_01.png
+
+Edge:
+fog_edge_day_01.png
+
+Wisp:
+fog_wisp_day_01.png
+
+Reference images:
+NOT LOADED
+
+If any runtime fog source contains:
+
+reference
+
+mark it RED and do not render.
+
+Also display:
+
+visibleNow count
+explored count
+unexplored count
+
+For a fresh interior start at FOV 1:
+
+visibleNow should normally be approximately 7,
+not 1.
+
+==================================================
+ACCEPTANCE CRITERIA
+==================================================
+
+1. No BASE FOG label appears in the map.
+2. No FOREGROUND WISPS label appears in the map.
+3. No asset filenames appear in the map.
+4. No overlapping square fog cards are visible.
+5. Base Fog visually covers the entire unexplored world as one field.
+6. FOV 1 reveals current tile + valid adjacent hexes.
+7. Those reveals visually merge into one organic clearing.
+8. No hard circles.
+9. No squares.
+10. No exact hex cutouts.
+11. Explored areas retain light haze.
+12. Unexplored areas remain dense.
+13. Map edge clips fog correctly.
+14. No first-frame DPR oversize flash.
+
+Commit:
+
+fix(journey): replace fog sprite panels with continuous world fog field

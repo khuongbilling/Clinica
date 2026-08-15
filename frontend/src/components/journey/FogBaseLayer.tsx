@@ -45,7 +45,7 @@ import { Platform, View } from 'react-native';
 import { drawFogBase } from '@/src/game/journeyMap/fog/fogBase';
 import { buildFogMaskCacheKey } from '@/src/game/journeyMap/fog/fogMask';
 import {
-  fogVisibilityFromTileState,
+  calculateVisibleTileIds,
   getEffectiveVisionRadius,
   DEFAULT_PLAYER_VISION_STATS,
 } from '@/src/game/journeyMap/fog/fogVision';
@@ -125,23 +125,26 @@ export function FogBaseLayer({
 
     // Build tile centres and classify visibility for the mask.
     const tileCenters   = new Map<string, { cx: number; cy: number }>();
-    const visibleNowIds = new Set<string>();
     const exploredIds   = new Set<string>();
+    let   currentCoord: { q: number; r: number } | undefined;
 
     for (const tile of tiles) {
       const { left, top } = coords.axialToWorld(tile.q, tile.r);
       tileCenters.set(tile.id, { cx: left + sz / 2, cy: top + sz / 2 });
-      // Use the central fog-visibility resolver so no component invents
-      // its own TileVisibility comparisons (Push 2 spec §F).
-      const fs = fogVisibilityFromTileState(tile.visibility, tile.current);
-      if (fs === 'visibleNow') visibleNowIds.add(tile.id);
-      else if (fs === 'explored') exploredIds.add(tile.id);
+      // Find the current tile so we can run the canonical FOV calculation.
+      if (tile.current) currentCoord = { q: tile.q, r: tile.r };
+      // Explored = previously visited tiles now outside the FOV window.
+      if (tile.visibility === 'exploredButOutOfVision') exploredIds.add(tile.id);
     }
 
-    // Skip expensive canvas draw if nothing that affects the output changed.
-    // Drive effectiveFieldOfVision through the proper function so it can be
-    // bumped by class/skill bonuses in a future push without changing this file.
-    const fov     = getEffectiveVisionRadius(DEFAULT_PLAYER_VISION_STATS);
+    // FOV: use calculateVisibleTileIds so the clearing reflects BASE_FOV (1),
+    // which includes the current hex PLUS all adjacent hexes within distance 1
+    // (up to 7 tiles total for an interior position).
+    // Using isCurrent alone produced visibleNow = 1, which is wrong.
+    const fov = getEffectiveVisionRadius(DEFAULT_PLAYER_VISION_STATS);
+    const visibleNowIds: ReadonlySet<string> = currentCoord
+      ? calculateVisibleTileIds({ currentTile: currentCoord, tiles, visionRadius: fov })
+      : new Set<string>();
     // Push 3: buildFogMaskCacheKey includes runId + world dimensions so a
     // viewport resize correctly forces a full redraw (cache bug fix).
     const nextKey = buildFogMaskCacheKey({
@@ -190,6 +193,7 @@ export function FogBaseLayer({
         width:    worldWidth,
         height:   worldHeight,
         zIndex:   FOG_BASE_Z,
+        overflow: 'hidden',
       }}
     />
   );

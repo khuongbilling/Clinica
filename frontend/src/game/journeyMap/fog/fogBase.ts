@@ -2,34 +2,42 @@
  * fog/fogBase.ts — Layer 2 Base Fog canvas drawing logic
  *
  * Canonical visual reference:
- * /assets/dev-reference/fog_system_design_reference.png
+ * /assets/dev-reference/fog_system_design_reference.png  (REFERENCE ONLY)
  *
- * REFERENCE ONLY. Never render that file in gameplay.
+ * ── Corrective Push: one continuous world field ───────────────────────────────
  *
- * ── What this module does ─────────────────────────────────────────────────────
+ * Previous approach stamped many small rectangular sprite copies across the
+ * canvas.  This produced visible overlapping fog cards and relied on sprite
+ * overlap for coverage (leaving transparent gaps between instances).
  *
- * Draws multiple overlapping fog sprite instances across the full world canvas,
- * then applies the Push-3 visibility mask to reveal explored / visible-now areas.
+ * Current approach:
  *
- * Result:
- *   UNEXPLORED  → dense atmospheric fog (opacity 0.70–0.90)
- *   EXPLORED    → mostly cleared; light haze from mask partial-erase
- *   VISIBLE_NOW → effectively clear (mask fully erases fog near tile centres)
+ *   1. Atmospheric foundation fill  rgba(62, 82, 96, 0.68)
+ *      Guarantees 100 % opaque coverage in unexplored space.
+ *      No transparent gaps possible regardless of image content.
  *
- * ── Assets ───────────────────────────────────────────────────────────────────
+ *   2. fog_base_day_01.png drawn cover-style across the FULL world rect
+ *      ONE draw call.  No grid.  No repeated panels.  No visible seams.
  *
- *   fog_base_day_01.png — PASS (16 near-centre cyan pixels; fog-body coloring)
- *   fog_bank_day_01.png — REJECTED (3 501 near-opaque dark pixels spread across
- *                         full image width; incompletely removed background)
+ *   3. Visibility mask (destination-in) punches organic clear / haze areas
+ *      for VISIBLE_NOW and EXPLORED tiles respectively.
  *
- *   Regenerate fog_bank with removeBackground:true before adding it back.
- *   This module currently uses only fog_base.
+ * ── Removed: fog_bank_day_01.png ─────────────────────────────────────────────
  *
- * ── Coverage strategy ────────────────────────────────────────────────────────
+ *   fog_bank_day_01.png is a reference-sheet image that contains text labels
+ *   ("BASE FOG", "FOREGROUND WISPS", asset filenames, etc.).  It was visibly
+ *   painting those labels into the live game map.  It is NOT a fog texture.
  *
- *   Instances are placed on a grid (cell = sz × BASE_CELL_TILES) with seeded
- *   jitter, scale, rotation, and opacity variation.  No single rectangle is
- *   visible: adjacent instances overlap and the mask feathers all edges.
+ *   Do NOT add it back until a clean, label-free asset is generated with
+ *   removeBackground:true.  Until then it must live only at:
+ *   /assets/dev-reference/fog_bank_system_reference.png
+ *
+ * ── Approved DAY runtime assets ──────────────────────────────────────────────
+ *
+ *   fog_base_day_01.png — primary Base Fog texture (PASS)
+ *   fog_mid_day_01.png  — Mid Fog texture  (handled by fogMid.ts)
+ *   fog_edge_day_01.png — Edge fog         (handled by fogEdge.ts)
+ *   fog_wisp_day_01.png — Foreground wisps (handled by fogWisp.ts)
  *
  * ── Platform ──────────────────────────────────────────────────────────────────
  *
@@ -41,74 +49,46 @@ import { Asset } from 'expo-asset';
 import { JOURNEY_ASSETS } from '../assets';
 import { drawFogMask, type FogMaskParams } from './fogMask';
 
-// ── Bundled asset sources ──────────────────────────────────────────────────────
-// Both are Metro-bundled require() numbers resolved via expo-asset.
+// ── Bundled asset source ──────────────────────────────────────────────────────
+// Metro-bundled require() number resolved via expo-asset.
 // DO NOT use Image.resolveAssetSource — react-native-web throws on Expo web.
 const FOG_BASE_DAY_SOURCE = JOURNEY_ASSETS.fog.baseDay;
-const FOG_BANK_DAY_SOURCE = JOURNEY_ASSETS.fog.bankDay;
 
-// ── Layout constants ──────────────────────────────────────────────────────────
+// ── Constants ─────────────────────────────────────────────────────────────────
 
 /**
  * @deprecated Push 3: canvas is now exactly worldWidth × worldHeight at origin
- * 0,0.  Kept as 0 so existing import references in FogBaseLayer.tsx / fogMid.ts
- * / fogWisp.ts compile without changes.
+ * 0,0.  Kept as 0 so existing import references compile without changes.
  */
 export const FOG_WORLD_PADDING = 0;
 
-/** Grid cell width in tile-size multiples. Adjacent cells overlap at ≥ half-width. */
-const BASE_CELL_TILES = 4.5;
-/** Minimum rendered width of one base instance (× sz). */
-const BASE_W_MIN_TILES = 4;
-/** Maximum rendered width of one base instance (× sz). */
-const BASE_W_MAX_TILES = 8;
-/** Natural aspect ratio of the fog_base image (1536 × 1024). */
-const FOG_BASE_ASPECT = 1536 / 1024;
+/**
+ * Day-time atmospheric foundation colour.
+ * Applied as a solid fillRect before the texture so unexplored areas are
+ * never transparent regardless of image alpha content.
+ * Tuning value — adjust for different shifts once per-shift assets exist.
+ */
+const DAY_FOUNDATION_COLOR = 'rgba(62, 82, 96, 0.68)';
 
-// ── Bank fog (secondary irregular variation) ──────────────────────────────────
-/** Slightly wider grid so bank instances interleave differently from base. */
-const BANK_CELL_TILES = 5.5;
-/** Minimum rendered width of one bank instance (× sz). Narrower range than base. */
-const BANK_W_MIN_TILES = 3;
-/** Maximum rendered width of one bank instance (× sz). */
-const BANK_W_MAX_TILES = 7;
-/** Natural aspect ratio of the fog_bank image (assumed same as base). */
-const FOG_BANK_ASPECT = 1536 / 1024;
+/**
+ * Opacity of the fog_base texture drawn over the foundation.
+ * The foundation shows through slightly, softening the single-image look.
+ */
+const BASE_TEXTURE_ALPHA = 0.80;
 
-// ── Types ──────────────────────────────────────────────────────────────────────
+// ── Types ─────────────────────────────────────────────────────────────────────
 
 export interface FogBaseParams {
   worldWidth:             number;
   worldHeight:            number;
+  /** Hex tile size (px) — used by the mask, not by the base draw. */
   sz:                     number;
   tileCenters:            ReadonlyMap<string, { cx: number; cy: number }>;
   visibleNowIds:          ReadonlySet<string>;
   exploredIds:            ReadonlySet<string>;
   effectiveFieldOfVision: number;
-  /** JourneyRun.seed — drives deterministic placement each run. */
+  /** JourneyRun.seed — used by the caller's cache key; not consumed here. */
   runSeed:                string;
-}
-
-// ── Seeded random ─────────────────────────────────────────────────────────────
-
-/** djb2-style string hash → unsigned 32-bit integer. */
-function hashString(s: string): number {
-  let h = 5381;
-  for (let i = 0; i < s.length; i++) {
-    h = ((h << 5) + h) ^ s.charCodeAt(i);
-    h = h >>> 0;
-  }
-  return h;
-}
-
-/** Linear-congruential generator seeded from a number.  Returns a closure → [0, 1). */
-function seededRandom(seed: number): () => number {
-  let s = seed >>> 0;
-  return () => {
-    s = Math.imul(s, 1664525) + 1013904223;
-    s = s >>> 0;
-    return s / 0x100000000;
-  };
 }
 
 // ── Image cache ───────────────────────────────────────────────────────────────
@@ -123,37 +103,96 @@ const imageCache = new Map<string, Promise<HTMLImageElement>>();
  * react-native-web does not implement resolveAssetSource — it throws
  * "not a function" on Expo web.  expo-asset's Asset.fromModule() has its
  * own cross-platform resolver that works correctly in the Metro dev server.
+ *
+ * Defensive guard: throws if the URI contains "reference" so a mis-registered
+ * reference sheet can never silently render as game fog.
  */
 async function loadBundledImage(source: number): Promise<HTMLImageElement> {
   const asset = Asset.fromModule(source);
-  // uri may be null on first access; downloadAsync() guarantees it is set.
   if (!asset.uri) await asset.downloadAsync();
   const uri = asset.uri ?? '';
+
+  // Refuse to load reference / design-sheet images as runtime fog.
+  if (
+    uri.includes('reference') ||
+    uri.includes('system_reference') ||
+    uri.includes('system reference')
+  ) {
+    throw new Error(
+      `[fogBase] Reference image cannot be used as runtime fog: ${uri}`,
+    );
+  }
 
   const cached = imageCache.get(uri);
   if (cached) return cached;
 
   const p = new Promise<HTMLImageElement>((resolve, reject) => {
-    if (!uri) { reject(new Error(`fogBase: asset URI unavailable (source=${source})`)); return; }
+    if (!uri) {
+      reject(new Error(`fogBase: asset URI unavailable (source=${source})`));
+      return;
+    }
     const img = new window.Image();
     img.crossOrigin = 'anonymous';
     img.onload  = () => resolve(img);
     img.onerror = () => reject(new Error(`fogBase: failed to load ${uri}`));
-    img.src     = uri;
+    img.src = uri;
   });
   imageCache.set(uri, p);
   return p;
 }
 
-// ── Main draw function ─────────────────────────────────────────────────────────
+// ── Cover-style drawImage ─────────────────────────────────────────────────────
+
+/**
+ * Draws `image` into the destination rectangle using CSS cover semantics:
+ * the image fills the entire destination, centred and cropped as needed.
+ * No distortion, no letterboxing.
+ *
+ * All coordinates are in world units (ctx already has DPR scale applied).
+ */
+function drawImageCover(
+  ctx:        CanvasRenderingContext2D,
+  image:      HTMLImageElement,
+  destX:      number,
+  destY:      number,
+  destWidth:  number,
+  destHeight: number,
+): void {
+  const srcRatio  = image.width  / image.height;
+  const destRatio = destWidth    / destHeight;
+
+  let sx = 0, sy = 0, sw = image.width, sh = image.height;
+
+  if (srcRatio > destRatio) {
+    // Image is wider than dest proportionally — crop left/right.
+    sw = image.height * destRatio;
+    sx = (image.width - sw) / 2;
+  } else {
+    // Image is taller than dest proportionally — crop top/bottom.
+    sh = image.width / destRatio;
+    sy = (image.height - sh) / 2;
+  }
+
+  ctx.drawImage(image, sx, sy, sw, sh, destX, destY, destWidth, destHeight);
+}
+
+// ── Main draw function ────────────────────────────────────────────────────────
 
 /**
  * Draws the Base Fog layer (Layer 2) onto `canvas`.
  *
- * Step 1: Load the fog_base image (cached after first call).
- * Step 2: Size canvas to worldW × worldH.
- * Step 3: Draw overlapping fog instances (grid + seeded jitter / scale / rotation).
- * Step 4: Apply the Push-3 visibility mask with `destination-in`.
+ * Step 1: Size canvas synchronously — CSS + backing — before any image await.
+ *         Eliminates the DPR first-frame oversize flash (canvas.style.width/height
+ *         was previously set only after the async image load resolved).
+ *
+ * Step 2: Load fog_base_day_01.png (cached after first call).
+ *
+ * Step 3: Render ONE continuous atmospheric field:
+ *           a. Solid atmospheric foundation fill (no transparent gaps possible).
+ *           b. fog_base texture drawn cover-style across the full world rect.
+ *
+ * Step 4: Apply the visibility mask with `destination-in` to reveal
+ *         explored / visible-now areas.
  *
  * Async — awaits image load on first call; subsequent calls use the cache.
  * Web only — wraps HTMLCanvasElement.getContext('2d').
@@ -170,108 +209,50 @@ export async function drawFogBase(
     visibleNowIds,
     exploredIds,
     effectiveFieldOfVision,
-    runSeed,
   } = params;
 
-  // ── Load fog images concurrently (cached after first call) ───────────────
-  const [baseImg, bankImg] = await Promise.all([
-    loadBundledImage(FOG_BASE_DAY_SOURCE),
-    loadBundledImage(FOG_BANK_DAY_SOURCE),
-  ]);
-
-  // ── Size canvas: exact world dimensions, DPR-backed ─────────────────────────
-  // Push 3: canvas is exactly worldWidth × worldHeight at origin 0,0.
-  // The MapViewport clips any overflow — no need for padding bleed.
   const DPR = typeof window !== 'undefined' ? (window.devicePixelRatio ?? 1) : 1;
+
+  // ── Step 1: Size canvas SYNCHRONOUSLY (before any await) ─────────────────
+  // Setting CSS dimensions here — not after the image-load await — means the
+  // canvas is the correct display size on every frame from first paint.
+  canvas.style.position = 'absolute';
+  canvas.style.left     = '0px';
+  canvas.style.top      = '0px';
+  canvas.style.width    = `${worldWidth}px`;
+  canvas.style.height   = `${worldHeight}px`;
+  // Assigning .width/.height resets the canvas context; do it before getContext().
   canvas.width  = Math.ceil(worldWidth  * DPR);
   canvas.height = Math.ceil(worldHeight * DPR);
-  // CSS display size must be set explicitly so retina backing doesn't scale up.
-  canvas.style.width  = `${worldWidth}px`;
-  canvas.style.height = `${worldHeight}px`;
 
+  // ── Step 2: Load fog_base image (cached after first call) ─────────────────
+  const baseImg = await loadBundledImage(FOG_BASE_DAY_SOURCE);
+
+  // ── Step 3: Continuous atmospheric field ─────────────────────────────────
   const ctx = canvas.getContext('2d');
   if (!ctx) return;
 
-  // Start fully transparent — no colored background fill.
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  // Scale coordinate system so all sprite positions are in world units.
-  ctx.scale(DPR, DPR);
+  // setTransform on a freshly-sized canvas (no accumulated scale from prior draw).
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  ctx.clearRect(0, 0, worldWidth, worldHeight);
 
-  // ── Step 3: Draw overlapping fog instances ────────────────────────────────
-  const cellSize = sz * BASE_CELL_TILES;
-  const cols     = Math.ceil(worldWidth  / cellSize) + 2;
-  const rows     = Math.ceil(worldHeight / cellSize) + 2;
+  // 3a. Foundation fill — guarantees 100 % opaque coverage everywhere.
+  //     The mask (Step 4) will erase it over visible / explored tiles.
+  //     Without this fill, transparent PNG edges leave gaps in unexplored fog.
+  ctx.fillStyle = DAY_FOUNDATION_COLOR;
+  ctx.fillRect(0, 0, worldWidth, worldHeight);
 
-  const rand = seededRandom(hashString(runSeed + ':fogbase'));
-
+  // 3b. fog_base texture — ONE cover-scale draw across the full world.
+  //     No grid.  No repeated rectangular panels.  No visible seams.
   ctx.save();
-
-  for (let row = -1; row < rows; row++) {
-    for (let col = -1; col < cols; col++) {
-      // Grid centre + seeded jitter (up to ±45% of cell size)
-      const cx = (col + 0.5) * cellSize + (rand() - 0.5) * cellSize * 0.9;
-      const cy = (row + 0.5) * cellSize + (rand() - 0.5) * cellSize * 0.9;
-
-      // Rendered width: [BASE_W_MIN_TILES × sz, BASE_W_MAX_TILES × sz]
-      const wTiles = BASE_W_MIN_TILES + rand() * (BASE_W_MAX_TILES - BASE_W_MIN_TILES);
-      const w      = sz * wTiles;
-      const h      = w / FOG_BASE_ASPECT;
-
-      // Rotation: −10° … +10°
-      const angle  = (rand() * 20 - 10) * (Math.PI / 180);
-
-      // Opacity: 0.70 … 0.90
-      const alpha  = 0.70 + rand() * 0.20;
-
-      ctx.save();
-      ctx.globalAlpha = alpha;
-      ctx.translate(cx, cy);
-      ctx.rotate(angle);
-      ctx.drawImage(baseImg, -w / 2, -h / 2, w, h);
-      ctx.restore();
-    }
-  }
-
-  ctx.restore();
-
-  // ── Bank fog pass (secondary irregular variation) ─────────────────────────
-  const bankCellSize = sz * BANK_CELL_TILES;
-  const bankCols     = Math.ceil(worldWidth  / bankCellSize) + 2;
-  const bankRows     = Math.ceil(worldHeight / bankCellSize) + 2;
-  const bankRand     = seededRandom(hashString(runSeed + ':fogbank'));
-
-  ctx.save();
-
-  for (let row = -1; row < bankRows; row++) {
-    for (let col = -1; col < bankCols; col++) {
-      const cx = (col + 0.5) * bankCellSize + (bankRand() - 0.5) * bankCellSize * 0.95;
-      const cy = (row + 0.5) * bankCellSize + (bankRand() - 0.5) * bankCellSize * 0.95;
-
-      const wTiles = BANK_W_MIN_TILES + bankRand() * (BANK_W_MAX_TILES - BANK_W_MIN_TILES);
-      const w      = sz * wTiles;
-      const h      = w / FOG_BANK_ASPECT;
-
-      // Rotation: −10° … +10°
-      const angle = (bankRand() * 20 - 10) * (Math.PI / 180);
-
-      // Opacity: 0.55 … 0.80 — lighter than base fog
-      const alpha = 0.55 + bankRand() * 0.25;
-
-      ctx.save();
-      ctx.globalAlpha = alpha;
-      ctx.translate(cx, cy);
-      ctx.rotate(angle);
-      ctx.drawImage(bankImg, -w / 2, -h / 2, w, h);
-      ctx.restore();
-    }
-  }
-
+  ctx.globalAlpha = BASE_TEXTURE_ALPHA;
+  drawImageCover(ctx, baseImg, 0, 0, worldWidth, worldHeight);
   ctx.restore();
 
   // ── Step 4: Apply visibility mask (destination-in) ────────────────────────
-  // drawFogMask produces a DPR-backed canvas exactly worldWidth × worldHeight.
-  // We draw it at world coords (ctx is already DPR-scaled) by passing explicit
-  // world-unit dest dimensions so it maps 1:1 onto the DPR-backed fog canvas.
+  // drawFogMask produces a DPR-backed offscreen canvas exactly worldWidth ×
+  // worldHeight.  We draw it at world coords (ctx already has DPR scale applied)
+  // by passing explicit world-unit dest dimensions so it maps 1:1.
   const maskCanvas = document.createElement('canvas');
   const maskParams: FogMaskParams = {
     worldWidth,
@@ -281,16 +262,11 @@ export async function drawFogBase(
     visibleNowIds,
     exploredIds,
     effectiveFieldOfVision,
-    // Push 3: no padding — mask is exact world size.
   };
   drawFogMask(maskCanvas, maskParams);
 
   ctx.globalCompositeOperation = 'destination-in';
   ctx.globalAlpha = 1;
-  // Explicit world-unit dest size so DPR-scaled ctx maps to DPR-backed maskCanvas.
   ctx.drawImage(maskCanvas, 0, 0, worldWidth, worldHeight);
   ctx.globalCompositeOperation = 'source-over';
-
-  // Push 3: applyEdgeTaper removed.  The map edge is clipped by MapViewport;
-  // only visibility transitions need feathering (handled by organic reveal lobes).
 }

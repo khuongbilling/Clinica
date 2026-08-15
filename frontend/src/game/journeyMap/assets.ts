@@ -92,12 +92,6 @@ export const JOURNEY_ASSETS = {
   fog: {
     /** Layer 2 — Base Fog primary dense coverage (PASS). */
     baseDay:  require('../../../public/assets/journey/fog/day/fog_base_day_01.png'),
-    /**
-     * Layer 2 — Base Fog secondary irregular cloud bank.
-     * REJECTED in Push 4 pixel audit (dark background bleed). Included here
-     * so the require() is registered; do not use until asset is regenerated.
-     */
-    bankDay:  require('../../../public/assets/journey/fog/day/fog_bank_day_01.png'),
     /** Layer 3 — Mid Fog atmospheric texture (PASS). */
     midDay:   require('../../../public/assets/journey/fog/day/fog_mid_day_01.png'),
     /** Layer 4 — Edge fog (future push). */
