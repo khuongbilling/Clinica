@@ -9,29 +9,26 @@
  *   Background: W × H @ 0,0
  *   Base:       W × H @ 0,0
  *   Mid:        W × H @ 0,0
- *   Edge:       W × H @ 0,0
  *   Wisp:       W × H @ 0,0
  *
- *   Visible Now: X   (should be 7 for an interior tile at FOV 1)
+ *   Visible Now: X   (7 for an interior tile; fewer at map boundaries — OK)
  *   Explored:    X
  *   Unexplored:  X
  *   FOV:         X
  *
  * ── Layer toggle buttons ───────────────────────────────────────────────────────
  *
- *   [B]  [M]  [E]  [W]  [MSK]
- *   ↑    ↑    ↑    ↑    ↑
- *   Base Mid  Edge Wisp Mask
+ *   [B]  [M]  [W]  [MSK]
+ *   ↑    ↑    ↑    ↑
+ *   Base Mid  Wisp Mask
  *
- * Tap a button to toggle that layer ON/OFF.  Use the test sequence:
+ * FogEdge has been removed from the stack.  The organic edge is now produced
+ * procedurally by Base + Mid via eraseOrganicFogCluster().
  *
- *   A.  Base ON,  Mid OFF, Edge OFF, Wisp OFF  → baseline
- *   B.  Base ON,  Mid ON,  Edge OFF, Wisp OFF  → + Mid
- *   C.  Base ON,  Mid ON,  Edge ON,  Wisp OFF  → + Edge
- *   D.  All ON                                 → full stack
- *
- * Identify the first stage where a horizontal band, rectangular seam, or
- * unexpected opacity appears — that layer contains the compositing bug.
+ * Test sequence:
+ *   A.  Base ON,  Mid OFF, Wisp OFF  → baseline organic clearing
+ *   B.  Base ON,  Mid ON,  Wisp OFF  → + Mid texture layering
+ *   C.  Base ON,  Mid ON,  Wisp ON   → full stack
  *
  * ── Usage ─────────────────────────────────────────────────────────────────────
  *
@@ -58,7 +55,6 @@ import type { HexMapTile } from '@/src/game/journeyMap/fixture';
 export interface FogLayerToggles {
   base: boolean;
   mid:  boolean;
-  edge: boolean;
   wisp: boolean;
   mask: boolean;
 }
@@ -122,18 +118,17 @@ export function FogDevDiagnostic({
   const H   = Math.round(worldHeight);
   const dim = `${W} × ${H} @ 0,0`;
 
+  // Edge is no longer a runtime layer — list only production layers.
   const layerRows: Array<{ label: string; value: string }> = [
     { label: 'Background', value: dim },
     { label: 'Base',       value: dim },
     { label: 'Mid',        value: dim },
-    { label: 'Edge',       value: dim },
     { label: 'Wisp',       value: dim },
   ];
 
   const toggleDefs: Array<{ key: FogLayerToggleKey; label: string }> = [
     { key: 'base', label: 'B' },
     { key: 'mid',  label: 'M' },
-    { key: 'edge', label: 'E' },
     { key: 'wisp', label: 'W' },
     { key: 'mask', label: 'MSK' },
   ];
@@ -165,10 +160,11 @@ export function FogDevDiagnostic({
       <View style={s.divider} />
 
       {/* Tile counts */}
+      {/* Visible Now: 7 for an interior tile at FOV 1, fewer at map boundaries — both are OK */}
       <DiagRow
         label="Visible Now"
         value={String(visibleCount)}
-        highlight={visibleCount === 7 ? 'good' : visibleCount > 0 ? 'warn' : 'bad'}
+        highlight={visibleCount > 0 ? 'good' : 'bad'}
       />
       <DiagRow label="Explored"   value={String(exploredCount)} />
       <DiagRow label="Unexplored" value={String(unexploredCount)} />
@@ -196,7 +192,7 @@ export function FogDevDiagnostic({
       </View>
 
       {/* Sequence hint */}
-      <Text style={s.hint}>A=B only  B=+M  C=+E  D=all</Text>
+      <Text style={s.hint}>A=B only  B=+M  C=+W (no Edge)</Text>
     </View>
   );
 }

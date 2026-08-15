@@ -46,7 +46,10 @@ import type { HexMapTile } from '../fixture';
 import type { HexWorldCoords } from '../../../components/journey/hexWorldCoords';
 
 // ── Asset source ───────────────────────────────────────────────────────────────
-const FOG_EDGE_DAY_SOURCE = JOURNEY_ASSETS.fog.edgeDay;
+// FogEdgeLayer retired — edge removed from JOURNEY_ASSETS registry.
+// This file is dead code; kept for git history only.
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const FOG_EDGE_DAY_SOURCE: number = require('../../../../public/assets/journey/fog/day/fog_edge_day_01.png') as number;
 
 // ── Layout constants ───────────────────────────────────────────────────────────
 

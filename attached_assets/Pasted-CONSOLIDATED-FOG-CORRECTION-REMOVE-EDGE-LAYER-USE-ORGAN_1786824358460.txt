@@ -1,0 +1,786 @@
+CONSOLIDATED FOG CORRECTION — REMOVE EDGE LAYER + USE ORGANIC DIRECT ERASURE + PRESERVE EXPLORED HAZE
+
+We have now isolated two important findings:
+
+1. The current direct destination-out architecture is preferable.
+2. FogEdgeLayer is definitively creating rectangular artifacts.
+
+Therefore:
+
+KEEP the direct destination-out architecture.
+
+REMOVE FogEdgeLayer from runtime entirely.
+
+Move the "organic edge" responsibility into FogBase + FogMid,
+with FogWisp providing fine atmospheric detail.
+
+==================================================
+FINAL PRODUCTION LAYER STACK
+==================================================
+
+MapViewport
+  overflow: hidden
+
+└── MapWorld
+    ChapterBackground
+    HexTerrain
+    WorldContent
+      - player
+      - encounters
+      - treasure
+      - Area Bosses
+      - Merchant
+      - Ward Events
+      - props
+
+    FogBase
+
+    Gate
+
+    FogMid
+
+    FogWisp
+
+No separate FogEdge runtime layer.
+
+Suggested z-order:
+
+BACKGROUND = 0
+TERRAIN / WORLD CONTENT = below fog
+
+FOG_BASE = 5000
+GATE = 5100
+FOG_MID = 5200
+FOG_WISP = 5300
+
+DEV UI = 19000+
+
+==================================================
+1. KEEP DIRECT destination-out ARCHITECTURE
+==================================================
+
+Approved rendering model:
+
+1. Draw the fog layer directly onto its own
+   worldWidth × worldHeight canvas.
+
+2. Switch:
+
+ctx.globalCompositeOperation = "destination-out";
+
+3. Erase visible/explored regions DIRECTLY from that same fog canvas.
+
+4. Restore:
+
+ctx.globalCompositeOperation = "source-over";
+
+Do NOT return to:
+
+- production mask canvas compositing
+- destination-in
+- black/white intermediate canvas
+- multiple compositing surfaces
+
+fogMask.ts may remain only for:
+
+- cache keys
+- dev mask visualization
+- diagnostics
+
+The production Base/Mid fog should not depend on a visible
+or composited mask canvas.
+
+==================================================
+2. REMOVE FogEdgeLayer COMPLETELY FROM RUNTIME
+==================================================
+
+Delete:
+
+<FogEdgeLayer />
+
+from MapWorld.
+
+Remove production references to:
+
+fog_edge_day_01.png
+
+from:
+
+- runtime registry
+- preloading
+- draw calls
+- render tree
+
+Do NOT physically delete the PNG yet.
+
+Keep it as an unused experimental/reference asset.
+
+Do not attempt to repair its square artifacts.
+
+The "edge" is now produced procedurally by Base + Mid.
+
+==================================================
+3. REMOVE E DEBUG TOGGLE
+==================================================
+
+Current development controls:
+
+B
+M
+E
+W
+MSK
+
+Change to:
+
+B
+M
+W
+MSK
+
+Meaning:
+
+B = Base
+M = Mid
+W = Wisp
+MSK = dev-only visibility diagnostic
+
+Update any keyboard shortcuts/debug states accordingly.
+
+==================================================
+4. UPDATE DIAGNOSTICS
+==================================================
+
+Change:
+
+Background
+Base
+Mid
+Edge
+Wisp
+
+to:
+
+Background
+Base
+Mid
+Wisp
+
+Example:
+
+FOG LAYERS
+
+Background: 382 × 351 @ 0,0
+Base:       382 × 351 @ 0,0
+Mid:        382 × 351 @ 0,0
+Wisp:       382 × 351 @ 0,0
+
+Visible Now: 6
+Explored: 20
+Unexplored: 4
+FOV: 1
+
+Do NOT force Visible Now to always equal 7.
+
+At map boundaries FOV 1 may produce fewer than 7 because
+only existing authored Chapter terrain cells count.
+
+==================================================
+5. CORRECT EXPLORED BEHAVIOR
+==================================================
+
+Current implementation reportedly performs:
+
+explored:
+solid destination-out erase
+alpha = 1
+
+REMOVE this behavior.
+
+Explored terrain must NOT become permanently completely clear.
+
+Canonical states:
+
+VISIBLE NOW:
+almost completely clear
+
+EXPLORED:
+light memory haze remains
+
+UNEXPLORED:
+dense fog
+
+Destination-out relationship:
+
+remainingAlpha =
+originalAlpha × (1 - eraseAlpha)
+
+Recommended starting erase strengths:
+
+--------------------------------
+FogBase
+--------------------------------
+
+visibleNow:
+eraseAlpha = 0.97–1.00
+
+explored:
+eraseAlpha = 0.60–0.75
+
+Result:
+approximately 25–40% Base haze remains in explored space.
+
+--------------------------------
+FogMid
+--------------------------------
+
+visibleNow:
+eraseAlpha = 0.97–1.00
+
+explored:
+eraseAlpha = 0.70–0.85
+
+Result:
+approximately 15–30% Mid texture remains.
+
+Combined visual target:
+
+Visible Now:
+0–5% fog
+
+Explored:
+20–40% haze
+
+Unexplored:
+80–95% fog
+
+==================================================
+6. REMOVE HARD EXPLORED CIRCLES
+==================================================
+
+Do not use:
+
+ctx.arc(...)
+ctx.fill()
+
+as a solid explored erase.
+
+Do not produce exact:
+
+- circles
+- hex holes
+- squares
+
+Hex mathematics determines gameplay visibility.
+
+It must NOT directly determine the visible silhouette of the fog.
+
+==================================================
+7. BUILD ONE ORGANIC ERASER FUNCTION
+==================================================
+
+Create/reuse a canonical helper:
+
+eraseOrganicFogCluster(...)
+
+Example interface:
+
+eraseOrganicFogCluster({
+  ctx,
+  x,
+  y,
+  radius,
+  strength,
+  seed,
+});
+
+The result should be composed from multiple feathered lobes.
+
+Use:
+
+1 central influence
++
+5–8 asymmetric secondary lobes
+
+Suggested deterministic ranges:
+
+secondary lobe count:
+5–8
+
+offsetX:
+-0.45R to +0.45R
+
+offsetY:
+-0.40R to +0.40R
+
+radius:
+0.40R to 0.85R
+
+strength:
+30–75% of parent strength
+
+Do not distribute lobes evenly.
+
+Do not create a flower pattern.
+
+==================================================
+8. SOFT LOBE PRIMITIVE
+==================================================
+
+A radial gradient may be used INTERNALLY as a brush primitive.
+
+That does NOT mean the final reveal may look circular.
+
+Example concept:
+
+function eraseSoftLobe(
+  ctx,
+  x,
+  y,
+  radius,
+  strength
+) {
+  const gradient =
+    ctx.createRadialGradient(
+      x,
+      y,
+      radius * 0.12,
+      x,
+      y,
+      radius
+    );
+
+  gradient.addColorStop(
+    0,
+    `rgba(0,0,0,${strength})`
+  );
+
+  gradient.addColorStop(
+    0.45,
+    `rgba(0,0,0,${strength * 0.92})`
+  );
+
+  gradient.addColorStop(
+    0.75,
+    `rgba(0,0,0,${strength * 0.45})`
+  );
+
+  gradient.addColorStop(
+    1,
+    "rgba(0,0,0,0)"
+  );
+
+  ctx.fillStyle = gradient;
+
+  ctx.fillRect(
+    x - radius,
+    y - radius,
+    radius * 2,
+    radius * 2
+  );
+}
+
+Then combine several overlapping irregular lobes.
+
+A single radial gradient is NOT sufficient.
+
+==================================================
+9. MERGE FOV HEXES INTO ONE ORGANIC CLEARING
+==================================================
+
+At FOV 1:
+
+current tile
++
+every valid adjacent authored Chapter tile
+
+contribute to visibility.
+
+Do NOT render each one as its own circular hole.
+
+All organic reveal influences must overlap enough to become:
+
+ONE contiguous mist clearing.
+
+Desired:
+
+        fog
+   ~~~~~~~~~~~~~
+~~~             ~~~
+~~    PLAYER      ~~
+~~~              ~~~
+   ~~~~       ~~~~
+       ~~~~~~~
+
+NOT:
+
+  O O
+ O O O
+  O O
+
+And NOT:
+
+⬡ ⬡
+ ⬡
+⬡ ⬡
+
+==================================================
+10. DETERMINISTIC ORGANIC SHAPE
+==================================================
+
+Do not use Math.random() during drawing.
+
+Use deterministic seeds such as:
+
+`${runSeed}:${tile.id}:fogReveal`
+
+The same tile during the same active JourneyRun should
+produce the same reveal character.
+
+The fog boundary should not jitter every React redraw.
+
+==================================================
+11. BASE DEFINES PRIMARY FOG BOUNDARY
+==================================================
+
+FogBase remains:
+
+ONE world-sized canvas
+ONE continuous atmospheric field
+
+Use:
+
+foundation veil
++
+fog_base_day_01.png
+
+Then directly erase it organically.
+
+Base responsibilities:
+
+UNEXPLORED:
+primary concealment
+
+EXPLORED:
+memory haze
+
+VISIBLE:
+main clear area
+
+Base should create the large-scale organic transition.
+
+==================================================
+12. MID BREAKS UP THE BASE TRANSITION
+==================================================
+
+FogMid remains:
+
+ONE world-sized canvas
+
+using:
+
+fog_mid_day_01.png
+
+No solid dark foundation.
+
+No grid stamping.
+
+No multiple rectangular cards.
+
+Mid uses the SAME organic reveal topology as Base.
+
+IMPORTANT:
+
+Base and Mid must use the SAME seeded lobe positions.
+
+They may differ in:
+
+- erase strength
+- slight radius multiplier
+- texture opacity
+
+They must NOT independently randomize their reveal shapes.
+
+Recommended:
+
+Base organic radius:
+R
+
+Mid organic radius:
+approximately 0.90R–1.03R
+
+This produces subtle irregular layering without creating
+two unrelated reveal regions.
+
+==================================================
+13. BASE + MID NOW CREATE THE "EDGE"
+==================================================
+
+There is NO FogEdge canvas.
+
+The fog edge comes from:
+
+Base feather falloff
++
+Mid feather falloff
++
+slightly different opacity/radius response
++
+organic asymmetric lobes
+
+This should create natural transition regions such as:
+
+dense fog
+→ broken medium mist
+→ thin haze
+→ visible terrain
+
+No explicit edge image required.
+
+==================================================
+14. WISP PROVIDES FINE EDGE DETAIL
+==================================================
+
+FogWisp remains a full-size world canvas:
+
+worldWidth × worldHeight @ 0,0
+
+But visible wisp artwork remains sparse.
+
+Use:
+
+fog_wisp_day_01.png
+
+Wisps should appear preferentially around:
+
+- visible/unexplored transitions
+- visible/explored transitions
+- occasional explored areas
+
+Visible center:
+almost no wisp coverage
+
+Player:
+must remain clearly readable
+
+Do not use wisps for primary concealment.
+
+==================================================
+15. WISP EXCLUSION SHOULD FOLLOW ORGANIC CLEARING
+==================================================
+
+Do not regress to the old:
+
+FOV × 0.18
+
+formula.
+
+Keep the corrected larger exclusion scale.
+
+Better:
+
+derive the wisp exclusion region from the same organic
+visibility footprint parameters used by Base/Mid.
+
+If exact organic clipping is too expensive in this pass,
+use the corrected FOV exclusion radius as approximation,
+but do not let wisps visibly refill the clear player area.
+
+==================================================
+16. ALL THREE FOG CANVASES REMAIN PERFECTLY ALIGNED
+==================================================
+
+Base:
+worldWidth × worldHeight @ 0,0
+
+Mid:
+worldWidth × worldHeight @ 0,0
+
+Wisp:
+worldWidth × worldHeight @ 0,0
+
+Same MapWorld.
+
+Same camera transform.
+
+No negative canvas offsets.
+
+No independent world transforms.
+
+No mini-canvases.
+
+==================================================
+17. DO NOT CHANGE CURRENT FOV CALCULATION
+==================================================
+
+Keep:
+
+calculateVisibleTileIds()
+
+It is functioning correctly.
+
+FOV 1 means:
+
+current tile
++
+all existing adjacent Chapter tiles
+
+Interior:
+usually 7
+
+Edge:
+possibly 6, 5, etc.
+
+This is expected.
+
+==================================================
+18. DEBUG TEST SEQUENCE
+==================================================
+
+After deleting Edge, test:
+
+--------------------------------
+TEST A
+--------------------------------
+
+B ON
+M OFF
+W OFF
+MSK OFF
+
+Expected:
+
+continuous Base fog
+
+one organic visible clearing
+
+explored terrain retains haze
+
+no circles
+
+no rectangular patches
+
+--------------------------------
+TEST B
+--------------------------------
+
+B ON
+M ON
+W OFF
+MSK OFF
+
+Expected:
+
+richer fog
+
+subtle broken transition
+
+memory haze gains texture
+
+no rectangular patch
+
+no giant dark crescent
+
+--------------------------------
+TEST C
+--------------------------------
+
+B ON
+M ON
+W ON
+MSK OFF
+
+Expected:
+
+same underlying clearing
+
+plus sparse fine wisps
+
+player remains readable
+
+--------------------------------
+TEST D
+--------------------------------
+
+MSK ON
+
+Dev-only visualization may show simplified visibility information.
+
+Turning MSK OFF must completely remove the debug surface.
+
+==================================================
+19. VISUAL TARGET BY STATE
+==================================================
+
+UNEXPLORED
+
+Dense blue-gray / teal-gray atmospheric fog.
+
+Terrain information mostly concealed.
+
+--------------------------------
+EXPLORED
+
+Previously visited area readable through light mist.
+
+Do NOT fully erase fog.
+
+Target:
+20–40% perceived haze.
+
+--------------------------------
+VISIBLE NOW
+
+Terrain and character clearly readable.
+
+Target:
+0–5% perceived fog in center.
+
+Very light isolated wisps are allowed near edges.
+
+--------------------------------
+TRANSITION
+
+Cloud-like
+asymmetric
+soft
+irregular
+seeded
+organic
+
+Absolutely no obvious:
+
+circles
+squares
+hex holes
+rectangular cards
+hard rings
+
+==================================================
+20. ACCEPTANCE CRITERIA
+==================================================
+
+PASS only if:
+
+[ ] FogEdgeLayer no longer renders
+[ ] fog_edge_day_01.png not loaded in production
+[ ] E toggle removed
+[ ] diagnostics no longer list Edge
+[ ] direct destination-out remains
+[ ] no destination-in production compositing
+[ ] Base is one continuous world field
+[ ] Mid is one continuous world layer
+[ ] Wisp is sparse
+[ ] explored terrain retains haze
+[ ] visible terrain is nearly clear
+[ ] FOV cells visually merge into one clearing
+[ ] no circles
+[ ] no squares
+[ ] no hard hex holes
+[ ] no rectangular Edge artifacts
+[ ] no giant dark crescent caused by reveal geometry
+[ ] same active run produces stable organic boundary
+
+Commit:
+
+refactor(journey): remove edge layer and use organic persistent fog erasure

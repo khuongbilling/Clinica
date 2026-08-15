@@ -64,9 +64,9 @@ export interface FogWispLayerProps {
   runSeed:     string;
 }
 
-/** z-index — above FogEdgeLayer (5300), topmost fog layer.
+/** z-index — topmost fog layer (FogEdge removed; Wisp now at 5300).
  *  Matches JOURNEY_Z.FOG_WISP. */
-export const FOG_WISP_Z = 5400;
+export const FOG_WISP_Z = 5300;
 
 // ── Component ─────────────────────────────────────────────────────────────────
 

@@ -409,6 +409,89 @@ export function drawFogMaskDev(
   }
 }
 
+// ── Public organic erasure API (used by fogBase.ts + fogMid.ts) ───────────────
+//
+// These two exports replace the old destination-in mask approach.
+// Both fog layers call them directly with destination-out already set.
+
+/**
+ * Soft-eraser lobe primitive used by eraseOrganicFogCluster.
+ *
+ * Uses fillRect (NOT ctx.arc) so overlapping lobes from different tiles
+ * can bleed at non-circular angles, contributing to the organic boundary.
+ *
+ * Inner start point radius * 0.12 keeps the core fully opaque without
+ * a pin-hole artifact at the exact center.
+ *
+ * @param ctx      CanvasRenderingContext2D with destination-out already set.
+ * @param x        World-space centre x.
+ * @param y        World-space centre y.
+ * @param radius   Influence radius in display px.
+ * @param strength Peak erase alpha (0 = no erase, 1 = full erase).
+ */
+export function eraseSoftLobe(
+  ctx:      CanvasRenderingContext2D,
+  x:        number,
+  y:        number,
+  radius:   number,
+  strength: number,
+): void {
+  if (radius <= 0 || strength <= 0) return;
+
+  const grad = ctx.createRadialGradient(x, y, radius * 0.12, x, y, radius);
+  grad.addColorStop(0,    `rgba(0,0,0,${strength.toFixed(3)})`);
+  grad.addColorStop(0.45, `rgba(0,0,0,${(strength * 0.92).toFixed(3)})`);
+  grad.addColorStop(0.75, `rgba(0,0,0,${(strength * 0.45).toFixed(3)})`);
+  grad.addColorStop(1,    'rgba(0,0,0,0)');
+
+  ctx.fillStyle = grad;
+  // fillRect (not arc) — allows gradient bleed at corners when lobes overlap,
+  // contributing to the irregular organic edge the spec requires.
+  ctx.fillRect(x - radius, y - radius, radius * 2, radius * 2);
+}
+
+/**
+ * Applies an organic multi-lobe erase influence at (cx, cy).
+ *
+ * One central lobe + seeded asymmetric secondary lobes from LOBE_PROFILES.
+ * The same tileId always produces the same profile (deterministic).
+ * Adjacent tiles' overlapping influences merge into one continuous clearing.
+ *
+ * Must be called with ctx.globalCompositeOperation = 'destination-out'.
+ *
+ * @param ctx      CanvasRenderingContext2D with destination-out already set.
+ * @param cx       World-space tile centre x.
+ * @param cy       World-space tile centre y.
+ * @param radius   Primary influence radius in display px.
+ * @param strength Primary peak erase alpha (0–1).
+ * @param tileId   Tile identifier — selects deterministic lobe profile.
+ * @param sz       Tile edge size in display px — scales secondary lobe offsets.
+ */
+export function eraseOrganicFogCluster(
+  ctx:      CanvasRenderingContext2D,
+  cx:       number,
+  cy:       number,
+  radius:   number,
+  strength: number,
+  tileId:   string,
+  sz:       number,
+): void {
+  // Central lobe
+  eraseSoftLobe(ctx, cx, cy, radius, strength);
+
+  // Seeded asymmetric secondary lobes
+  const lobes = seededOffsets(tileId);
+  for (const lobe of lobes) {
+    eraseSoftLobe(
+      ctx,
+      cx + lobe.dx * sz,
+      cy + lobe.dy * sz,
+      lobe.scale * sz,
+      strength * lobe.strength,
+    );
+  }
+}
+
 // ── Edge taper (deprecated — kept for fogMid.ts / fogWisp.ts compat) ─────────
 
 /**

@@ -7,26 +7,25 @@
  * ── Role ─────────────────────────────────────────────────────────────────────
  *
  * Mid Fog is NOT the primary concealment layer (that is Base Fog, Layer 2).
- * It adds broad atmospheric texture across the world canvas, giving depth
- * variation and a softer visual transition between fog tiers.
+ * It adds broad atmospheric texture, giving depth variation and a softer
+ * visual transition between fog tiers.
  *
  * Mid MUST NOT contain:
- *   • fillRect covering worldWidth × worldHeight      ← only Base gets that
- *   • solid blue/gray foundation fill                 ← same
- *   • opaque fallback rectangle                       ← same
+ *   • fillRect covering worldWidth × worldHeight   ← only Base gets that
+ *   • solid blue/gray foundation fill              ← same
  *
- * ── Opacity targets ──────────────────────────────────────────────────────────
+ * ── Three-state fog behavior ──────────────────────────────────────────────────
  *
- *   UNEXPLORED   → Mid alpha 0.35–0.55 (texture at MID_TEXTURE_ALPHA)
- *   EXPLORED     → transparent (fog erased by destination-out)
- *   VISIBLE_NOW  → transparent (fog erased by feathered gradient)
+ *   VISIBLE_NOW  → eraseStrength 0.98  → texture nearly gone
+ *   EXPLORED     → eraseStrength 0.78  → 15–25 % texture remains (adds haze depth)
+ *   UNEXPLORED   → no erasure          → full Mid texture (0.50 opacity)
  *
- * ── Direct erasure (no mask canvas) ──────────────────────────────────────────
+ * ── Shared organic topology ──────────────────────────────────────────────────
  *
- *   Uses the same destination-out erasure as FogBase — punches transparent
- *   holes directly in the fog canvas.  No separate mask canvas, no
- *   destination-in compositing.  Explored tiles are hard-erased; visible-now
- *   tiles get a feathered radial gradient.
+ *   Mid uses the SAME seeded lobe positions as Base (same tileId → same profile).
+ *   Only erase strength and radius multiplier differ (Mid ≈ 0.95× Base radius).
+ *   This produces subtle irregular layering without creating two unrelated reveal
+ *   regions — the transition zones overlap without perfectly coinciding.
  *
  * ── Platform ──────────────────────────────────────────────────────────────────
  *
@@ -35,24 +34,38 @@
 
 import { Asset } from 'expo-asset';
 import { JOURNEY_ASSETS } from '../assets';
+import { eraseOrganicFogCluster } from './fogMask';
 
 // ── Bundled asset source ───────────────────────────────────────────────────────
 const FOG_MID_DAY_SOURCE = JOURNEY_ASSETS.fog.midDay;
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
-/**
- * @deprecated Push 3: canvas is now exactly worldWidth × worldHeight at origin 0,0.
- * Kept as 0 so existing import references compile without changes.
- */
+/** @deprecated Push 3: kept for import compatibility; always 0. */
 export const FOG_MID_WORLD_PADDING = 0;
 
-/**
- * Opacity of the fog_mid texture drawn over the full world rect.
- * Lower than Base Fog's 0.80 — Mid is atmospheric detail, not concealment.
- * Base already provides 100 % opaque coverage; Mid adds texture variation.
- */
+/** Opacity of the fog_mid texture. Lower than Base — Mid is detail, not concealment. */
 const MID_TEXTURE_ALPHA = 0.50;
+
+/**
+ * Erase strength for EXPLORED tiles (Mid layer).
+ * Slightly higher than Base (0.78 vs 0.70) — Mid is lighter texture so
+ * more must be removed to keep the explored zone visually coherent.
+ * Residual ~20–25 % Mid texture adds depth to the Base haze.
+ */
+const MID_EXPLORED_STRENGTH = 0.78;
+
+/**
+ * Erase strength for VISIBLE_NOW tiles (Mid layer).
+ * Same as Base — terrain should be clearly readable in the visible zone.
+ */
+const MID_VISIBLE_STRENGTH = 0.98;
+
+/**
+ * Mid organic cluster radius is slightly narrower than Base (× 0.95).
+ * Same seeded lobe positions, subtly different extent → irregular layering.
+ */
+const MID_RADIUS_MULT = 0.95;
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -64,7 +77,7 @@ export interface FogMidParams {
   visibleNowIds:          ReadonlySet<string>;
   exploredIds:            ReadonlySet<string>;
   effectiveFieldOfVision: number;
-  /** JourneyRun.seed — kept for interface stability; not used inside draw. */
+  /** JourneyRun seed — threaded through as tile-id seed prefix. */
   runSeed:                string;
 }
 
@@ -104,17 +117,9 @@ function drawImageCover(
 ): void {
   const srcRatio  = image.width  / image.height;
   const destRatio = destWidth    / destHeight;
-
   let sx = 0, sy = 0, sw = image.width, sh = image.height;
-
-  if (srcRatio > destRatio) {
-    sw = image.height * destRatio;
-    sx = (image.width - sw) / 2;
-  } else {
-    sh = image.width / destRatio;
-    sy = (image.height - sh) / 2;
-  }
-
+  if (srcRatio > destRatio) { sw = image.height * destRatio; sx = (image.width - sw) / 2; }
+  else                      { sh = image.width / destRatio;  sy = (image.height - sh) / 2; }
   ctx.drawImage(image, sx, sy, sw, sh, destX, destY, destWidth, destHeight);
 }
 
@@ -123,37 +128,27 @@ function drawImageCover(
 /**
  * Draws the Mid Fog layer (Layer 3) onto `canvas`.
  *
- * Step 1: Size canvas SYNCHRONOUSLY — CSS + backing — before any image await.
+ * Step 1: Size canvas synchronously.
  * Step 2: Load fog_mid_day_01.png (cached after first call).
- * Step 3: ONE continuous atmospheric texture — fog_mid drawn cover-style.
- *         No foundation fill (only Base has that).
- * Step 4: Direct destination-out erasure — same geometry as FogBase.
- *           Explored tiles → hard full-erase circles (permanent clear).
- *           Visible-now tiles → feathered radial gradient erase.
+ * Step 3: Mid texture only — NO foundation fill (Base has that).
+ * Step 4: Direct destination-out organic erasure — same lobe topology as Base,
+ *         radius × 0.95, different strength → subtle irregular layering.
  *
- * No mask canvas.  No destination-in.  Transparent holes expose the layers
- * below (FogBase at z 5000, map terrain at z 100–400, etc.).
- *
- * Async — awaits image load on first call; subsequent calls use the cache.
- * Web only.
+ * Async — web only.
  */
 export async function drawFogMid(
   canvas: HTMLCanvasElement,
   params: FogMidParams,
 ): Promise<void> {
   const {
-    worldWidth,
-    worldHeight,
-    sz,
-    tileCenters,
-    visibleNowIds,
-    exploredIds,
-    effectiveFieldOfVision,
+    worldWidth, worldHeight, sz,
+    tileCenters, visibleNowIds, exploredIds,
+    effectiveFieldOfVision, runSeed,
   } = params;
 
   const DPR = typeof window !== 'undefined' ? (window.devicePixelRatio ?? 1) : 1;
 
-  // ── Step 1: Size canvas SYNCHRONOUSLY (before any await) ─────────────────
+  // Step 1: Size canvas synchronously
   canvas.style.position = 'absolute';
   canvas.style.left     = '0px';
   canvas.style.top      = '0px';
@@ -162,56 +157,39 @@ export async function drawFogMid(
   canvas.width  = Math.ceil(worldWidth  * DPR);
   canvas.height = Math.ceil(worldHeight * DPR);
 
-  // ── Step 2: Load fog_mid image (cached after first call) ─────────────────
+  // Step 2: Load fog_mid image
   const midImg = await loadBundledImage(FOG_MID_DAY_SOURCE);
 
-  // ── Step 3: Atmospheric texture (no foundation fill) ─────────────────────
   const ctx = canvas.getContext('2d');
   if (!ctx) return;
 
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
   ctx.clearRect(0, 0, worldWidth, worldHeight);
 
-  // NO fillRect here — only Base gets the opaque foundation.
+  // Step 3: Mid texture — NO foundation fill
   ctx.save();
   ctx.globalAlpha = MID_TEXTURE_ALPHA;
   drawImageCover(ctx, midImg, 0, 0, worldWidth, worldHeight);
   ctx.restore();
 
-  // ── Step 4: Direct destination-out erasure ────────────────────────────────
-  // Matches Base Fog geometry exactly — same fovScale, same radii.
+  // Step 4: Organic erasure — same seeded lobe positions as Base, radius × 0.95
   ctx.globalCompositeOperation = 'destination-out';
 
-  // Explored: hard permanent erase
-  const exploredR = sz * 0.88;
-  ctx.fillStyle = 'rgba(0,0,0,1)';
+  // Explored: partial erase (more haze remains than visible zone)
+  const exploredR = sz * 1.2 * MID_RADIUS_MULT;
   for (const id of exploredIds) {
     const c = tileCenters.get(id);
     if (!c) continue;
-    ctx.beginPath();
-    ctx.arc(c.cx, c.cy, exploredR, 0, Math.PI * 2);
-    ctx.fill();
+    eraseOrganicFogCluster(ctx, c.cx, c.cy, exploredR, MID_EXPLORED_STRENGTH, id, sz);
   }
 
-  // Visible-now: feathered gradient erase (soft edge at FOV boundary)
-  const fovScale  = 1 + (effectiveFieldOfVision - 1) * 0.55;
-  const fovInnerR = sz * 1.45 * fovScale;
-  const featherW  = sz * 0.60;
-  const fovOuterR = fovInnerR + featherW;
-  const innerFrac = fovInnerR / fovOuterR;
-
+  // Visible-now: strong erase (same fovScale formula as Base for consistency)
+  const fovScale = 1 + (effectiveFieldOfVision - 1) * 0.55;
+  const visibleR = sz * 1.45 * fovScale * MID_RADIUS_MULT;
   for (const id of visibleNowIds) {
     const c = tileCenters.get(id);
     if (!c) continue;
-
-    const grad = ctx.createRadialGradient(c.cx, c.cy, 0, c.cx, c.cy, fovOuterR);
-    grad.addColorStop(0,          'rgba(0,0,0,1)');
-    grad.addColorStop(innerFrac,  'rgba(0,0,0,1)');
-    grad.addColorStop(1,          'rgba(0,0,0,0)');
-    ctx.fillStyle = grad;
-    ctx.beginPath();
-    ctx.arc(c.cx, c.cy, fovOuterR, 0, Math.PI * 2);
-    ctx.fill();
+    eraseOrganicFogCluster(ctx, c.cx, c.cy, visibleR, MID_VISIBLE_STRENGTH, id, sz);
   }
 
   ctx.globalCompositeOperation = 'source-over';

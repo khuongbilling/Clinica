@@ -94,8 +94,9 @@ export const JOURNEY_ASSETS = {
     baseDay:  require('../../../public/assets/journey/fog/day/fog_base_day_01.png'),
     /** Layer 3 — Mid Fog atmospheric texture (PASS). */
     midDay:   require('../../../public/assets/journey/fog/day/fog_mid_day_01.png'),
-    /** Layer 4 — Edge fog (future push). */
-    edgeDay:  require('../../../public/assets/journey/fog/day/fog_edge_day_01.png'),
+    // edgeDay (fog_edge_day_01.png) removed from registry — FogEdgeLayer retired;
+    // organic edge is now produced procedurally by Base + Mid eraseOrganicFogCluster.
+    // PNG file retained in /assets/ as an unused asset.
     /** Layer 5 — Foreground wisps (future push). */
     wispDay:  require('../../../public/assets/journey/fog/day/fog_wisp_day_01.png'),
   },

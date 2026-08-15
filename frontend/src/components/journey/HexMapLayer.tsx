@@ -187,7 +187,6 @@ import {
 } from '@/src/game/journeyMap/fog/fogVision';
 import { FogBaseLayer }     from './FogBaseLayer';
 import { FogMidLayer }      from './FogMidLayer';
-import { FogEdgeLayer }     from './FogEdgeLayer';
 import { FogWispLayer }     from './FogWispLayer';
 import { FogDevDiagnostic } from './FogDevDiagnostic';
 import { JOURNEY_Z }    from './journeyZ';
@@ -1749,12 +1748,12 @@ export function HexMapLayer({
 
   // ── DEV: per-layer visibility toggles ────────────────────────────────────
   // Allow isolating individual fog layers to identify compositing bugs.
-  // Use sequence: A=Base only → B=+Mid → C=+Edge → D=All to pinpoint issues.
+  // Use sequence: A=Base only → B=+Mid → C=+Wisp to pinpoint issues.
+  // FogEdge removed — organic edge now produced by Base+Mid procedurally.
   // Always unconditional useState — __DEV__ gates only the toggle UI.
-  const [devFogBase,  setDevFogBase]  = useState(true);
-  const [devFogMid,   setDevFogMid]   = useState(true);
-  const [devFogEdge,  setDevFogEdge]  = useState(true);
-  const [devFogWisp,  setDevFogWisp]  = useState(true);
+  const [devFogBase,   setDevFogBase]   = useState(true);
+  const [devFogMid,    setDevFogMid]    = useState(true);
+  const [devFogWisp,   setDevFogWisp]   = useState(true);
   const [devFogMaskOn, setDevFogMaskOn] = useState(false);
   //
   // Push 8: split the old single tilesKeyRef into two independent signals so
@@ -2422,22 +2421,7 @@ export function HexMapLayer({
           />
         )}
 
-        {/* ── FogEdgeLayer — reveal boundary (JOURNEY_Z.FOG_EDGE = 5300) ───────
-          * Sparse edge sprites at the visibleNow / fog boundary only.
-          * Organic wispy tendrils — no full-world cover draw.
-          * Web only — native = null stub.
-          * __DEV__: toggle controlled by devFogEdge state (diagnostic panel). */}
-        {(!__DEV__ || devFogEdge) && (
-          <FogEdgeLayer
-            tiles={tiles}
-            coords={coords}
-            worldWidth={worldW}
-            worldHeight={worldH}
-            runSeed={runSeed ?? 'fixture-default'}
-          />
-        )}
-
-        {/* ── FogWispLayer — topmost mist (JOURNEY_Z.FOG_WISP = 5400) ─────────
+        {/* ── FogWispLayer — topmost mist (JOURNEY_Z.FOG_WISP = 5300) ─────────
           * Sparse wisp instances outside the VISIBLE_NOW exclusion zone.
           * Self-managing placement — no destination-in mask, no world fill.
           * Web only — native = null stub.
@@ -2454,10 +2438,8 @@ export function HexMapLayer({
 
         {/* ── FogDevDiagnostic — __DEV__ only (z 19999) ───────────────────────
           * Reports layer dimensions + tile counts in a top-right panel.
-          * Also provides Base/Mid/Edge/Wisp/Mask toggle buttons for the
-          * A → B → C → D compositing isolation test.
-          * Acceptance: all five layers show identical W × H @ 0,0;
-          * "Visible Now: 7" for an interior start at FOV 1.
+          * Provides Base/Mid/Wisp/Mask toggle buttons (Edge removed).
+          * Test sequence: A=B only → B=+M → C=+W.
           * Remove once visual compositing is confirmed correct. */}
         {__DEV__ && (
           <FogDevDiagnostic
@@ -2467,14 +2449,12 @@ export function HexMapLayer({
             fogToggles={{
               base: devFogBase,
               mid:  devFogMid,
-              edge: devFogEdge,
               wisp: devFogWisp,
               mask: devFogMaskOn,
             }}
             onToggle={(layer) => {
               if (layer === 'base') setDevFogBase(v => !v);
               else if (layer === 'mid')  setDevFogMid(v => !v);
-              else if (layer === 'edge') setDevFogEdge(v => !v);
               else if (layer === 'wisp') setDevFogWisp(v => !v);
               else if (layer === 'mask') setDevFogMaskOn(v => !v);
             }}
