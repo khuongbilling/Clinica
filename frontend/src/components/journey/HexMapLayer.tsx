@@ -177,7 +177,10 @@ import {
 } from 'react-native';
 import Svg, { Circle, Defs, Ellipse, Polygon, RadialGradient, Stop } from 'react-native-svg';
 
-import { buildFogMaskCacheKey, drawFogMaskDev } from '@/src/game/journeyMap/fog/fogMask';
+import {
+  buildFogMaskCacheKey,
+  drawFogAlphaDebug,
+} from '@/src/game/journeyMap/fog/fogMask';
 import {
   type FogVisibilityState,
   fogVisibilityFromTileState,
@@ -1747,14 +1750,17 @@ export function HexMapLayer({
   const fogMaskKeyRef   = useRef<string>('');
 
   // ── DEV: per-layer visibility toggles ────────────────────────────────────
-  // Allow isolating individual fog layers to identify compositing bugs.
-  // Use sequence: A=Base only → B=+Mid → C=+Wisp to pinpoint issues.
-  // FogEdge removed — organic edge now produced by Base+Mid procedurally.
+  // Isolate individual fog layers for compositing debugging.
+  // FogEdge removed — organic edge is now procedural (Base + Mid).
+  // Two diagnostic overlays replace the old monolithic MSK toggle:
+  //   STATE: translucent hex tints by visibility category (geometry check)
+  //   ALPHA: organic eraser field drawn as colored overlay (art check)
   // Always unconditional useState — __DEV__ gates only the toggle UI.
-  const [devFogBase,   setDevFogBase]   = useState(true);
-  const [devFogMid,    setDevFogMid]    = useState(true);
-  const [devFogWisp,   setDevFogWisp]   = useState(true);
-  const [devFogMaskOn, setDevFogMaskOn] = useState(false);
+  const [devFogBase,  setDevFogBase]  = useState(true);
+  const [devFogMid,   setDevFogMid]   = useState(true);
+  const [devFogWisp,  setDevFogWisp]  = useState(true);
+  const [devFogState, setDevFogState] = useState(false);
+  const [devFogAlpha, setDevFogAlpha] = useState(false);
   //
   // Push 8: split the old single tilesKeyRef into two independent signals so
   // the camera can distinguish "new run loaded" from "player moved one tile":
@@ -2022,19 +2028,20 @@ export function HexMapLayer({
   }, [onTilePress]);
 
   // ── Push 3: fog mask canvas — lifecycle (dev only, web only) ──────────────
-  // Effect A: create the imperative <canvas> when the toggle turns on;
+  // Effect A: create the imperative <canvas> when ALPHA toggle turns on;
   //           destroy it when the toggle turns off or the component unmounts.
   //           Camera pan does NOT touch these deps — no redraw on pan.
   useEffect(() => {
-    const showMask = __DEV__ && (devFogMaskOn || !!devOverlay?.fogMask);
-    if (!showMask || Platform.OS !== 'web') return;
+    const showAlpha = __DEV__ && (devFogAlpha || !!devOverlay?.fogMask);
+    if (!showAlpha || Platform.OS !== 'web') return;
     if (typeof document === 'undefined') return;
 
     const container = fogContainerRef.current as unknown as HTMLDivElement | null;
     if (!container) return;
 
     const canvas = document.createElement('canvas');
-    canvas.style.cssText = 'position:absolute;left:0;top:0;pointer-events:none;opacity:0.82;';
+    // Reduced opacity so the underlying map stays readable (ALPHA is diagnostic, not art).
+    canvas.style.cssText = 'position:absolute;left:0;top:0;pointer-events:none;opacity:0.90;';
     container.appendChild(canvas);
     fogCanvasRef.current  = canvas;
     fogMaskKeyRef.current = ''; // force a draw on first attach
@@ -2045,39 +2052,37 @@ export function HexMapLayer({
       fogMaskKeyRef.current = '';
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [devFogMaskOn, devOverlay?.fogMask]);
+  }, [devFogAlpha, devOverlay?.fogMask]);
 
-  // ── Push 3: fog mask canvas — redraw when visibility inputs change ─────────
+  // ── ALPHA debug canvas — redraw when visibility inputs change ──────────────
   // Effect B: runs whenever tiles / world dimensions / sz change.
   //           Uses buildFogMaskCacheKey to skip redraws when inputs are unchanged.
   //           Camera translation is NOT in these deps (pan = no redraw).
+  //
+  // drawFogAlphaDebug uses the SAME buildOrganicRevealInfluences lobe data
+  // that FogBase + FogMid use in production — the ALPHA overlay exactly
+  // represents the organic erase field (no giant radial circles).
   useEffect(() => {
-    const showMask = __DEV__ && (devFogMaskOn || !!devOverlay?.fogMask);
-    if (!showMask || Platform.OS !== 'web') return;
+    const showAlpha = __DEV__ && (devFogAlpha || !!devOverlay?.fogMask);
+    if (!showAlpha || Platform.OS !== 'web') return;
     const canvas = fogCanvasRef.current;
     if (!canvas) return;
 
     // Build tile centers and classify visibility from current tile state
-    const tileCenters  = new Map<string, { cx: number; cy: number }>();
+    const tileCenters   = new Map<string, { cx: number; cy: number }>();
     const visibleNowIds = new Set<string>();
     const exploredIds   = new Set<string>();
 
     for (const tile of tiles) {
       const { left, top } = coords.axialToWorld(tile.q, tile.r);
       tileCenters.set(tile.id, { cx: left + sz / 2, cy: top + sz / 2 });
-      // Push 2: use the central bridge helper — consistent with all other layers.
       const fs = fogVisibilityFromTileState(tile.visibility, tile.current);
       if (fs === 'visibleNow') visibleNowIds.add(tile.id);
       else if (fs === 'explored') exploredIds.add(tile.id);
     }
 
-    // Skip redraw if nothing changed (e.g. cosmetic re-render with same state).
-    // Push 3: buildFogMaskCacheKey now includes world dimensions + runId so
-    // viewport resizes correctly force regeneration (Push 3 cache bug fix).
-    const fov     = getEffectiveVisionRadius(DEFAULT_PLAYER_VISION_STATS);
-    // Use the run seed embedded in the tile data as the run identifier.
-    // HexMapLayer doesn't receive runSeed directly — derive a stable id from
-    // tile count + first tile id so different runs produce different keys.
+    // Skip redraw if nothing changed (cosmetic re-render, camera pan, etc.).
+    const fov      = getEffectiveVisionRadius(DEFAULT_PLAYER_VISION_STATS);
     const devRunId = tiles.length > 0 ? (tiles[0]?.id ?? '') : '';
     const nextKey  = buildFogMaskCacheKey({
       runId:                  devRunId,
@@ -2091,10 +2096,7 @@ export function HexMapLayer({
     if (nextKey === fogMaskKeyRef.current) return;
     fogMaskKeyRef.current = nextKey;
 
-    // drawFogMaskDev shows the three-state grayscale (dark/mid/light) so the
-    // organic reveal shape is visible without running the full fog sprite pipeline.
-    // This function must never be used in production rendering.
-    drawFogMaskDev(canvas, {
+    drawFogAlphaDebug(canvas, {
       worldWidth:             worldW,
       worldHeight:            worldH,
       sz,
@@ -2102,11 +2104,12 @@ export function HexMapLayer({
       visibleNowIds,
       exploredIds,
       effectiveFieldOfVision: fov,
+      runSeed:                devRunId,
     });
   // coords.axialToWorld is a pure function derived from tiles + containerWidth;
   // including coords would cause spurious redraws — sz + tiles are sufficient.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [devFogMaskOn, devOverlay?.fogMask, tiles, worldW, worldH, sz]);
+  }, [devFogAlpha, devOverlay?.fogMask, tiles, worldW, worldH, sz]);
 
   // ── Render order: iso-depth sort for TERRAIN PASS ────────────────────────────
   // Push 13: tighter spacing means tiles from adjacent staggered columns now
@@ -2438,8 +2441,9 @@ export function HexMapLayer({
 
         {/* ── FogDevDiagnostic — __DEV__ only (z 19999) ───────────────────────
           * Reports layer dimensions + tile counts in a top-right panel.
-          * Provides Base/Mid/Wisp/Mask toggle buttons (Edge removed).
-          * Test sequence: A=B only → B=+M → C=+W.
+          * Toggles: B/M/W for fog layers, STATE for hex geometry, ALPHA for
+          * organic eraser field overlay (same lobe data as production).
+          * Test sequence: A=B only → B=+M → C=+W → D=+STATE → E=+ALPHA.
           * Remove once visual compositing is confirmed correct. */}
         {__DEV__ && (
           <FogDevDiagnostic
@@ -2447,26 +2451,29 @@ export function HexMapLayer({
             worldWidth={worldW}
             worldHeight={worldH}
             fogToggles={{
-              base: devFogBase,
-              mid:  devFogMid,
-              wisp: devFogWisp,
-              mask: devFogMaskOn,
+              base:  devFogBase,
+              mid:   devFogMid,
+              wisp:  devFogWisp,
+              state: devFogState,
+              alpha: devFogAlpha,
             }}
             onToggle={(layer) => {
-              if (layer === 'base') setDevFogBase(v => !v);
-              else if (layer === 'mid')  setDevFogMid(v => !v);
-              else if (layer === 'wisp') setDevFogWisp(v => !v);
-              else if (layer === 'mask') setDevFogMaskOn(v => !v);
+              if      (layer === 'base')  setDevFogBase(v => !v);
+              else if (layer === 'mid')   setDevFogMid(v => !v);
+              else if (layer === 'wisp')  setDevFogWisp(v => !v);
+              else if (layer === 'state') setDevFogState(v => !v);
+              else if (layer === 'alpha') setDevFogAlpha(v => !v);
             }}
           />
         )}
 
-        {/* ── Dev fog mask (JOURNEY_Z.DEV_MASK = 14500) — __DEV__ only ─────────
+        {/* ── Dev ALPHA overlay (JOURNEY_Z.DEV_MASK = 14500) — __DEV__ only ────
           * Zero-size View whose DOM div hosts the imperative canvas drawn by
-          * Effect A.  Renders above all fog layers; below DEV_OVERLAY (19000).
+          * Effect B.  Shows organic eraser field as colored overlay (NOT the
+          * old black/white radial mask).  Above fog layers, below DEV_OVERLAY.
           * pointerEvents="none".  MUST NOT ship.
           */}
-        {__DEV__ && (devFogMaskOn || devOverlay?.fogMask) && (
+        {__DEV__ && (devFogAlpha || devOverlay?.fogMask) && (
           <View
             ref={fogContainerRef}
             pointerEvents="none"
@@ -2480,6 +2487,37 @@ export function HexMapLayer({
             }}
           />
         )}
+
+        {/* ── Dev STATE overlay — __DEV__ only ─────────────────────────────
+         * Translucent hex tinting by visibility category.
+         * GREEN  = visibleNow, AMBER = explored, BLUE = unexplored.
+         * Confirms calculateVisibleTileIds() geometry is correct.
+         * Completely separate from ALPHA (which shows fog art, not logic).
+         * MUST NOT ship — __DEV__ guard + devFogState toggle only.
+         */}
+        {__DEV__ && devFogState && sorted.map(tile => {
+          const { left: px, top: py } = coords.axialToWorld(tile.q, tile.r);
+          const vis = tile.visibility;
+          const tintColor =
+            vis === 'visibleNow'             ? 'rgba(74,222,128,0.20)' :
+            vis === 'exploredButOutOfVision'  ? 'rgba(234,179,8,0.18)' :
+                                               'rgba(59,130,246,0.22)';
+          return (
+            <View
+              key={`state-${tile.id}`}
+              pointerEvents="none"
+              style={{
+                position:        'absolute',
+                left:            px,
+                top:             py,
+                width:           sz,
+                height:          sz,
+                zIndex:          JOURNEY_Z.DEV_OVERLAY,
+                backgroundColor: tintColor,
+              }}
+            />
+          );
+        })}
 
         {/* ── Dev per-tile overlays (Push 0 — __DEV__ only) ────────────────
          * Rendered as a second pass over `sorted` so overlay text/dots always

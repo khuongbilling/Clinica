@@ -34,7 +34,7 @@
 
 import { Asset } from 'expo-asset';
 import { JOURNEY_ASSETS } from '../assets';
-import { eraseOrganicFogCluster } from './fogMask';
+import { buildOrganicRevealInfluences, eraseSoftLobe } from './fogMask';
 
 // ── Bundled asset source ───────────────────────────────────────────────────────
 const FOG_MID_DAY_SOURCE = JOURNEY_ASSETS.fog.midDay;
@@ -172,24 +172,25 @@ export async function drawFogMid(
   drawImageCover(ctx, midImg, 0, 0, worldWidth, worldHeight);
   ctx.restore();
 
-  // Step 4: Organic erasure — same seeded lobe positions as Base, radius × 0.95
+  // Step 4: Organic erasure — SAME seeded lobe positions as Base (same seed →
+  // same profile), radius × MID_RADIUS_MULT, layer-specific strengths.
+  // Uses buildOrganicRevealInfluences so Mid EXACTLY matches Base topology.
   ctx.globalCompositeOperation = 'destination-out';
 
-  // Explored: partial erase (more haze remains than visible zone)
-  const exploredR = sz * 1.2 * MID_RADIUS_MULT;
-  for (const id of exploredIds) {
-    const c = tileCenters.get(id);
-    if (!c) continue;
-    eraseOrganicFogCluster(ctx, c.cx, c.cy, exploredR, MID_EXPLORED_STRENGTH, id, sz);
-  }
+  const lobes = buildOrganicRevealInfluences({
+    tileCenters,
+    visibleNowIds,
+    exploredIds,
+    sz,
+    effectiveFieldOfVision,
+    runSeed,
+    exploredStrength: MID_EXPLORED_STRENGTH,
+    visibleStrength:  MID_VISIBLE_STRENGTH,
+    radiusMultiplier: MID_RADIUS_MULT,
+  });
 
-  // Visible-now: strong erase (same fovScale formula as Base for consistency)
-  const fovScale = 1 + (effectiveFieldOfVision - 1) * 0.55;
-  const visibleR = sz * 1.45 * fovScale * MID_RADIUS_MULT;
-  for (const id of visibleNowIds) {
-    const c = tileCenters.get(id);
-    if (!c) continue;
-    eraseOrganicFogCluster(ctx, c.cx, c.cy, visibleR, MID_VISIBLE_STRENGTH, id, sz);
+  for (const lobe of lobes) {
+    eraseSoftLobe(ctx, lobe.x, lobe.y, lobe.radius, lobe.strength);
   }
 
   ctx.globalCompositeOperation = 'source-over';

@@ -18,26 +18,35 @@
  *
  * ── Layer toggle buttons ───────────────────────────────────────────────────────
  *
- *   [B]  [M]  [W]  [MSK]
- *   ↑    ↑    ↑    ↑
- *   Base Mid  Wisp Mask
+ *   [B]  [M]  [W]  [STATE]  [ALPHA]
+ *   ↑    ↑    ↑    ↑        ↑
+ *   Base Mid  Wisp Hex tint Organic field
  *
- * FogEdge has been removed from the stack.  The organic edge is now produced
- * procedurally by Base + Mid via eraseOrganicFogCluster().
+ * STATE — translucent hex tinting by visibility category:
+ *   green  = visibleNow
+ *   amber  = explored
+ *   blue   = unexplored
+ *   Confirms GAMEPLAY calculation (calculateVisibleTileIds).
+ *
+ * ALPHA — draws the organic eraser field (buildOrganicRevealInfluences lobes)
+ *   as a semi-transparent color overlay.  Confirms FOG ART interpretation.
+ *   The map remains visible — this is NOT an opaque black/white mask.
+ *
+ * Both diagnostics are dev-only.  Neither is production artwork.
+ * FogEdge has been removed from the stack (organic edge is procedural).
  *
  * Test sequence:
  *   A.  Base ON,  Mid OFF, Wisp OFF  → baseline organic clearing
  *   B.  Base ON,  Mid ON,  Wisp OFF  → + Mid texture layering
- *   C.  Base ON,  Mid ON,  Wisp ON   → full stack
+ *   C.  Base ON,  Mid ON,  Wisp ON   → full production stack
+ *   D.  + STATE                      → verify hex logic
+ *   E.  + ALPHA                      → verify organic art matches logic
  *
  * ── Usage ─────────────────────────────────────────────────────────────────────
  *
  *   Rendered inside HexMapLayer inside MapWorld, wrapped in {__DEV__ && ...}.
  *   zIndex: 19999 — topmost layer, above all fog and dev overlays.
  *   position: absolute, top-right corner of MapWorld.
- *   pointerEvents set on the panel itself — buttons are tappable; rest passes through.
- *
- *   Remove or gate-off once visual compositing is confirmed correct.
  */
 
 import React, { useMemo } from 'react';
@@ -53,22 +62,22 @@ import type { HexMapTile } from '@/src/game/journeyMap/fixture';
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 export interface FogLayerToggles {
-  base: boolean;
-  mid:  boolean;
-  wisp: boolean;
-  mask: boolean;
+  base:  boolean;
+  mid:   boolean;
+  wisp:  boolean;
+  /** STATE: translucent hex tinting by visibility category (dev geometry check). */
+  state: boolean;
+  /** ALPHA: organic eraser field overlay (dev art check — same lobes as production). */
+  alpha: boolean;
 }
 
 export type FogLayerToggleKey = keyof FogLayerToggles;
 
 export interface FogDevDiagnosticProps {
-  /** All tiles in the active run. */
   tiles:       readonly HexMapTile[];
   worldWidth:  number;
   worldHeight: number;
-  /** Current toggle state for each layer. */
   fogToggles:  FogLayerToggles;
-  /** Called when the user taps a toggle button. */
   onToggle:    (layer: FogLayerToggleKey) => void;
 }
 
@@ -118,7 +127,6 @@ export function FogDevDiagnostic({
   const H   = Math.round(worldHeight);
   const dim = `${W} × ${H} @ 0,0`;
 
-  // Edge is no longer a runtime layer — list only production layers.
   const layerRows: Array<{ label: string; value: string }> = [
     { label: 'Background', value: dim },
     { label: 'Base',       value: dim },
@@ -127,10 +135,11 @@ export function FogDevDiagnostic({
   ];
 
   const toggleDefs: Array<{ key: FogLayerToggleKey; label: string }> = [
-    { key: 'base', label: 'B' },
-    { key: 'mid',  label: 'M' },
-    { key: 'wisp', label: 'W' },
-    { key: 'mask', label: 'MSK' },
+    { key: 'base',  label: 'B' },
+    { key: 'mid',   label: 'M' },
+    { key: 'wisp',  label: 'W' },
+    { key: 'state', label: 'STATE' },
+    { key: 'alpha', label: 'ALPHA' },
   ];
 
   return (
@@ -143,13 +152,11 @@ export function FogDevDiagnostic({
         backgroundColor: 'rgba(0,0,0,0.82)',
         borderRadius:    6,
         padding:         8,
-        minWidth:        210,
+        minWidth:        220,
       }}
     >
-      {/* Header */}
       <Text style={s.header}>FOG LAYERS</Text>
 
-      {/* Layer dimension rows */}
       {layerRows.map(({ label, value }) => (
         <View key={label} style={s.row}>
           <Text style={s.label}>{label}:</Text>
@@ -159,8 +166,7 @@ export function FogDevDiagnostic({
 
       <View style={s.divider} />
 
-      {/* Tile counts */}
-      {/* Visible Now: 7 for an interior tile at FOV 1, fewer at map boundaries — both are OK */}
+      {/* VisibleNow < 7 at map boundaries is expected — don't warn */}
       <DiagRow
         label="Visible Now"
         value={String(visibleCount)}
@@ -172,18 +178,28 @@ export function FogDevDiagnostic({
 
       <View style={s.divider} />
 
-      {/* Layer toggle buttons */}
       <Text style={s.toggleHeader}>TOGGLE LAYERS</Text>
       <View style={s.toggleRow}>
         {toggleDefs.map(({ key, label }) => {
           const on = fogToggles[key];
+          const isDebug = key === 'state' || key === 'alpha';
           return (
             <Pressable
               key={key}
               onPress={() => onToggle(key)}
-              style={[s.toggleBtn, on ? s.toggleBtnOn : s.toggleBtnOff]}
+              style={[
+                s.toggleBtn,
+                on
+                  ? (isDebug ? s.toggleBtnDebugOn : s.toggleBtnOn)
+                  : s.toggleBtnOff,
+              ]}
             >
-              <Text style={[s.toggleLabel, on ? s.toggleLabelOn : s.toggleLabelOff]}>
+              <Text style={[
+                s.toggleLabel,
+                on
+                  ? (isDebug ? s.toggleLabelDebugOn : s.toggleLabelOn)
+                  : s.toggleLabelOff,
+              ]}>
                 {label}
               </Text>
             </Pressable>
@@ -191,13 +207,13 @@ export function FogDevDiagnostic({
         })}
       </View>
 
-      {/* Sequence hint */}
-      <Text style={s.hint}>A=B only  B=+M  C=+W (no Edge)</Text>
+      <Text style={s.hint}>A=B only  B=+M  C=+W  D=+STATE  E=+ALPHA</Text>
+      <Text style={s.hint2}>STATE=hex logic  ALPHA=fog art (same lobes as prod)</Text>
     </View>
   );
 }
 
-// ── DiagRow helper ─────────────────────────────────────────────────────────────
+// ── DiagRow ────────────────────────────────────────────────────────────────────
 
 function DiagRow({
   label,
@@ -213,7 +229,6 @@ function DiagRow({
     highlight === 'warn' ? '#f5c842' :
     highlight === 'bad'  ? '#ff6b6b' :
     '#e0dfe0';
-
   return (
     <View style={s.row}>
       <Text style={s.label}>{label}:</Text>
@@ -226,78 +241,29 @@ function DiagRow({
 
 const s = {
   header: {
-    color:         '#a0cfff',
-    fontSize:      10,
-    fontWeight:    '700' as const,
-    letterSpacing: 1.2,
-    marginBottom:  4,
-    fontFamily:    'monospace',
+    color: '#a0cfff', fontSize: 10, fontWeight: '700' as const,
+    letterSpacing: 1.2, marginBottom: 4, fontFamily: 'monospace',
   },
-  row: {
-    flexDirection:  'row' as const,
-    justifyContent: 'space-between' as const,
-    marginBottom:   2,
-  },
-  label: {
-    color:       '#999',
-    fontSize:    10,
-    fontFamily:  'monospace',
-    marginRight: 8,
-  },
-  value: {
-    color:      '#e0dfe0',
-    fontSize:   10,
-    fontFamily: 'monospace',
-  },
-  divider: {
-    height:          1,
-    backgroundColor: 'rgba(255,255,255,0.15)',
-    marginVertical:  5,
-  },
+  row: { flexDirection: 'row' as const, justifyContent: 'space-between' as const, marginBottom: 2 },
+  label: { color: '#999', fontSize: 10, fontFamily: 'monospace', marginRight: 8 },
+  value: { color: '#e0dfe0', fontSize: 10, fontFamily: 'monospace' },
+  divider: { height: 1, backgroundColor: 'rgba(255,255,255,0.15)', marginVertical: 5 },
   toggleHeader: {
-    color:         '#a0cfff',
-    fontSize:      9,
-    fontWeight:    '700' as const,
-    letterSpacing: 1.0,
-    marginBottom:  4,
-    fontFamily:    'monospace',
+    color: '#a0cfff', fontSize: 9, fontWeight: '700' as const,
+    letterSpacing: 1.0, marginBottom: 4, fontFamily: 'monospace',
   },
-  toggleRow: {
-    flexDirection:  'row' as const,
-    gap:            4,
-    marginBottom:   4,
-    flexWrap:       'wrap' as const,
-  },
+  toggleRow: { flexDirection: 'row' as const, gap: 4, marginBottom: 4, flexWrap: 'wrap' as const },
   toggleBtn: {
-    paddingHorizontal: 6,
-    paddingVertical:   3,
-    borderRadius:      3,
-    borderWidth:       1,
-    minWidth:          28,
-    alignItems:        'center' as const,
+    paddingHorizontal: 6, paddingVertical: 3, borderRadius: 3, borderWidth: 1,
+    minWidth: 28, alignItems: 'center' as const,
   },
-  toggleBtnOn: {
-    backgroundColor: 'rgba(64,200,140,0.25)',
-    borderColor:     '#40c88c',
-  },
-  toggleBtnOff: {
-    backgroundColor: 'rgba(255,80,80,0.15)',
-    borderColor:     '#cc4444',
-  },
-  toggleLabel: {
-    fontSize:   9,
-    fontWeight: '700' as const,
-    fontFamily: 'monospace',
-  },
-  toggleLabelOn: {
-    color: '#40c88c',
-  },
-  toggleLabelOff: {
-    color: '#cc6666',
-  },
-  hint: {
-    color:      '#666',
-    fontSize:   8,
-    fontFamily: 'monospace',
-  },
+  toggleBtnOn:      { backgroundColor: 'rgba(64,200,140,0.25)',  borderColor: '#40c88c' },
+  toggleBtnDebugOn: { backgroundColor: 'rgba(168,85,247,0.25)',  borderColor: '#a855f7' },
+  toggleBtnOff:     { backgroundColor: 'rgba(255,80,80,0.15)',   borderColor: '#cc4444' },
+  toggleLabel: { fontSize: 9, fontWeight: '700' as const, fontFamily: 'monospace' },
+  toggleLabelOn:      { color: '#40c88c' },
+  toggleLabelDebugOn: { color: '#c084fc' },
+  toggleLabelOff:     { color: '#cc6666' },
+  hint:  { color: '#666', fontSize: 8, fontFamily: 'monospace', marginBottom: 1 },
+  hint2: { color: '#555', fontSize: 7, fontFamily: 'monospace' },
 } as const;

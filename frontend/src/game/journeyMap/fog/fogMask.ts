@@ -492,6 +492,249 @@ export function eraseOrganicFogCluster(
   }
 }
 
+// ── Canonical organic reveal field builder ────────────────────────────────────
+//
+// buildOrganicRevealInfluences is the SINGLE SOURCE OF TRUTH for the organic
+// visibility field shape.  It returns lobe DATA only — no drawing.
+//
+// Production (Base, Mid) and debug (ALPHA) all consume the same lobes so
+// the debug screen EXACTLY represents what production renders.
+//
+// Naming: "OrganicRevealField" / "influence" deliberately avoids "mask" to
+// prevent future code from conflating this with the retired destination-in
+// mask architecture.
+
+/** One organic erase influence (central lobe or secondary lobe). */
+export interface OrganicRevealLobe {
+  /** World-space centre x. */
+  x:        number;
+  /** World-space centre y. */
+  y:        number;
+  /** Fully-scaled display-pixel radius. */
+  radius:   number;
+  /** Peak erase / overlay alpha (0–1). */
+  strength: number;
+  /** Which visibility tier produced this lobe. */
+  tier:     'visible' | 'explored';
+}
+
+/** Input to buildOrganicRevealInfluences. */
+export interface OrganicRevealInfluenceParams {
+  tileCenters:            ReadonlyMap<string, { cx: number; cy: number }>;
+  visibleNowIds:          ReadonlySet<string>;
+  exploredIds:            ReadonlySet<string>;
+  sz:                     number;
+  effectiveFieldOfVision: number;
+  /** Per-run seed — incorporated into the per-tile hash so the same tile
+   *  may get a different lobe profile in a different run. */
+  runSeed:                string;
+  /**
+   * Peak erase alpha for explored tiles.
+   * FogBase: 0.70 (default). FogMid: 0.78.
+   */
+  exploredStrength?:  number;
+  /**
+   * Peak erase alpha for visible-now tiles.
+   * Both Base and Mid use 0.98 (default).
+   */
+  visibleStrength?:   number;
+  /**
+   * Uniform multiplier applied to ALL radii (primary + secondary).
+   * FogBase: 1.0 (default). FogMid: 0.95 — same topology, slightly narrower,
+   * creates subtle layering without two unrelated reveal regions.
+   */
+  radiusMultiplier?:  number;
+}
+
+/**
+ * Build the deterministic organic reveal influence field for all visible and
+ * explored tiles.
+ *
+ * Returns one central lobe plus 4–5 seeded asymmetric secondary lobes per tile.
+ * The same runSeed + tileId always produces the same lobe set (no Math.random).
+ * Adjacent visible tiles' lobes overlap into ONE contiguous clearing at FOV 1.
+ *
+ * Seed formula: `${runSeed}:${tileId}:fogReveal`
+ *
+ * Base primary radii:
+ *   explored  → sz × 1.2   × radiusMultiplier
+ *   visible   → sz × 1.45  × fovScale × radiusMultiplier
+ *
+ * Secondary lobe radii (from LOBE_PROFILES):
+ *   lobe.scale × sz × radiusMultiplier
+ *
+ * Strengths:
+ *   primary  → exploredStrength / visibleStrength (as appropriate)
+ *   secondary → primaryStrength × lobe.strength
+ */
+export function buildOrganicRevealInfluences({
+  tileCenters,
+  visibleNowIds,
+  exploredIds,
+  sz,
+  effectiveFieldOfVision,
+  runSeed,
+  exploredStrength = 0.70,
+  visibleStrength  = 0.98,
+  radiusMultiplier = 1.0,
+}: OrganicRevealInfluenceParams): OrganicRevealLobe[] {
+  const lobes: OrganicRevealLobe[] = [];
+
+  // ── Explored tiles (partial erase — haze remains) ───────────────────────
+  const exploredPrimaryR = sz * 1.2 * radiusMultiplier;
+  for (const id of exploredIds) {
+    const c = tileCenters.get(id);
+    if (!c) continue;
+    const tileKey = `${runSeed}:${id}:fogReveal`;
+
+    // Central lobe
+    lobes.push({ x: c.cx, y: c.cy, radius: exploredPrimaryR, strength: exploredStrength, tier: 'explored' });
+
+    // Seeded asymmetric secondary lobes
+    for (const lobe of seededOffsets(tileKey)) {
+      lobes.push({
+        x:        c.cx + lobe.dx * sz,
+        y:        c.cy + lobe.dy * sz,
+        radius:   lobe.scale * sz * radiusMultiplier,
+        strength: exploredStrength * lobe.strength,
+        tier:     'explored',
+      });
+    }
+  }
+
+  // ── Visible-now tiles (strong erase → one merged organic clearing) ───────
+  // fovScale: each extra FOV point extends the clearing by ~sz × 0.8.
+  //   FOV=1 → radius ≈ sz × 1.45 (7-tile cluster → one continuous clearing)
+  //   FOV=2 → radius ≈ sz × 2.25
+  const fovScale        = 1 + (effectiveFieldOfVision - 1) * 0.55;
+  const visiblePrimaryR = sz * 1.45 * fovScale * radiusMultiplier;
+  for (const id of visibleNowIds) {
+    const c = tileCenters.get(id);
+    if (!c) continue;
+    const tileKey = `${runSeed}:${id}:fogReveal`;
+
+    // Central lobe
+    lobes.push({ x: c.cx, y: c.cy, radius: visiblePrimaryR, strength: visibleStrength, tier: 'visible' });
+
+    // Seeded asymmetric secondary lobes
+    for (const lobe of seededOffsets(tileKey)) {
+      lobes.push({
+        x:        c.cx + lobe.dx * sz,
+        y:        c.cy + lobe.dy * sz,
+        radius:   lobe.scale * sz * radiusMultiplier,
+        strength: visibleStrength * lobe.strength,
+        tier:     'visible',
+      });
+    }
+  }
+
+  return lobes;
+}
+
+// ── ALPHA debug visualisation ──────────────────────────────────────────────────
+//
+// Draws the same organic influence field that Base + Mid use in production,
+// but as a semi-transparent colored overlay (NOT destination-out).
+// This lets the developer see the exact organic erase footprint while the
+// underlying map remains visible.
+//
+//   VISIBLE NOW → pale green  ~20 % overlay
+//   EXPLORED    → amber/gold  ~15 % overlay
+//   UNEXPLORED  → dark blue   ~22 % base tint (foundation wash)
+//
+// Call drawFogAlphaDebug from HexMapLayer's Effect B when ALPHA mode is on.
+// MUST NOT be called in production rendering.
+
+/** Draws one soft colored lobe (source-over, no destination-out). */
+function drawColorLobe(
+  ctx:      CanvasRenderingContext2D,
+  x:        number,
+  y:        number,
+  radius:   number,
+  strength: number,
+  r:        number,
+  g:        number,
+  b:        number,
+): void {
+  if (radius <= 0 || strength <= 0) return;
+
+  const grad = ctx.createRadialGradient(x, y, radius * 0.08, x, y, radius);
+  grad.addColorStop(0,    `rgba(${r},${g},${b},${strength.toFixed(3)})`);
+  grad.addColorStop(0.45, `rgba(${r},${g},${b},${(strength * 0.88).toFixed(3)})`);
+  grad.addColorStop(0.75, `rgba(${r},${g},${b},${(strength * 0.38).toFixed(3)})`);
+  grad.addColorStop(1,    `rgba(${r},${g},${b},0)`);
+
+  ctx.fillStyle = grad;
+  // fillRect matches eraseSoftLobe so the overlay footprint is identical.
+  ctx.fillRect(x - radius, y - radius, radius * 2, radius * 2);
+}
+
+/** Parameters for drawFogAlphaDebug — extends influence params with canvas size. */
+export interface FogAlphaDebugParams extends OrganicRevealInfluenceParams {
+  worldWidth:  number;
+  worldHeight: number;
+}
+
+/**
+ * DEV ONLY — draws the organic reveal influence field as a colored overlay.
+ *
+ * Uses the SAME buildOrganicRevealInfluences data that FogBase + FogMid use
+ * in production, so the ALPHA diagnostic shows exactly what production erases.
+ *
+ * The map beneath remains visible — this is a semi-transparent overlay,
+ * NOT an opaque black/white mask.
+ *
+ * Color key:
+ *   Unexplored foundation → dark blue ~22 % tint
+ *   Explored lobes        → amber     ~15 % tint
+ *   Visible-now lobes     → green     ~20 % tint
+ *
+ * @param canvas  Dev overlay canvas (positioned absolute, world-space).
+ * @param params  Same inputs as buildOrganicRevealInfluences + world size.
+ */
+export function drawFogAlphaDebug(
+  canvas: HTMLCanvasElement,
+  params: FogAlphaDebugParams,
+): void {
+  const { worldWidth, worldHeight } = params;
+  const DPR = typeof window !== 'undefined' ? (window.devicePixelRatio ?? 1) : 1;
+
+  canvas.style.position = 'absolute';
+  canvas.style.left     = '0px';
+  canvas.style.top      = '0px';
+  canvas.style.width    = `${worldWidth}px`;
+  canvas.style.height   = `${worldHeight}px`;
+  canvas.width  = Math.ceil(worldWidth  * DPR);
+  canvas.height = Math.ceil(worldHeight * DPR);
+
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return;
+
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  ctx.clearRect(0, 0, worldWidth, worldHeight);
+
+  // Unexplored base tint — dark navy wash (22 %)
+  ctx.fillStyle = 'rgba(30, 58, 100, 0.22)';
+  ctx.fillRect(0, 0, worldWidth, worldHeight);
+
+  ctx.globalCompositeOperation = 'source-over';
+
+  const lobes = buildOrganicRevealInfluences(params);
+
+  // Draw explored lobes in amber (15 % overlay)
+  for (const lobe of lobes) {
+    if (lobe.tier !== 'explored') continue;
+    drawColorLobe(ctx, lobe.x, lobe.y, lobe.radius, lobe.strength * 0.20, 234, 179, 8);
+  }
+
+  // Draw visible lobes in green (22 % overlay) — on top of amber so
+  // visible-over-explored zones show clearly.
+  for (const lobe of lobes) {
+    if (lobe.tier !== 'visible') continue;
+    drawColorLobe(ctx, lobe.x, lobe.y, lobe.radius, lobe.strength * 0.26, 74, 222, 128);
+  }
+}
+
 // ── Edge taper (deprecated — kept for fogMid.ts / fogWisp.ts compat) ─────────
 
 /**

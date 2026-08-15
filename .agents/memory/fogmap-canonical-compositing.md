@@ -1,6 +1,6 @@
 ---
 name: Fog-map canonical compositing
-description: Approved architecture for how fog reveal is drawn — direct destination-out with organic multi-lobe clusters; no mask canvas, no destination-in.
+description: Approved architecture for how fog reveal is drawn — direct destination-out with organic multi-lobe clusters; single data builder; two-mode debug system replacing old MSK.
 ---
 
 # Fog-Map Canonical Compositing Architecture
@@ -11,6 +11,22 @@ No `destination-in`. The old two-canvas architecture (draw fog → apply black
 mask via destination-in) produces visible artifacts when the mask canvas is in
 any transient state.
 
+## Single source of truth — buildOrganicRevealInfluences()
+
+`buildOrganicRevealInfluences(params): OrganicRevealLobe[]` in `fogMask.ts` is
+the ONE function that determines lobe positions. It accepts:
+- `exploredStrength` / `visibleStrength` / `radiusMultiplier` so Base and Mid
+  can each pass their own values while keeping the SAME seed → same positions.
+- Seed per tile: `${runSeed}:${tileId}:fogReveal`
+
+**All three consumers MUST use this function:**
+1. `fogBase.ts` — destination-out erasure (strength 0.70/0.98, mult 1.0)
+2. `fogMid.ts`  — destination-out erasure (strength 0.78/0.98, mult 0.95)
+3. `drawFogAlphaDebug` — colored overlay for ALPHA diagnostic mode
+
+`eraseSoftLobe(ctx, x, y, radius, strength)` is the draw primitive (fillRect, not arc).
+`eraseOrganicFogCluster` is a legacy wrapper — prefer `buildOrganicRevealInfluences` + loop.
+
 ## Three-tier haze system
 
 | Tile state   | Base strength | Mid strength | Visual result            |
@@ -19,25 +35,27 @@ any transient state.
 | EXPLORED     | 0.70          | 0.78         | 20–40 % haze remains     |
 | UNEXPLORED   | no erase      | no erase     | Dense fog                |
 
-## Organic erase primitives (fogMask.ts)
+## Debug system (replaced old monolithic MSK)
 
-Two exported functions are the only approved way to erase fog:
+`FogLayerToggles` has these keys: `base`, `mid`, `wisp`, `state`, `alpha`.
+**No `mask` or `edge` keys.**
 
-- `eraseSoftLobe(ctx, x, y, radius, strength)` — radial gradient via `fillRect`
-  (not arc). Gradient stops: 0→strength, 0.45→strength×0.92, 0.75→strength×0.45, 1→0.
-- `eraseOrganicFogCluster(ctx, cx, cy, radius, strength, tileId, sz)` — central
-  lobe + 4–5 seeded asymmetric secondary lobes from LOBE_PROFILES.
+**STATE toggle** — translucent React Views per tile:
+  green=visibleNow, amber=explored, blue=unexplored.
+  Checks GAMEPLAY calculation (calculateVisibleTileIds).
+  Rendered in HexMapLayer as a separate sorted.map block.
 
-Both Base and Mid use the SAME tileId as lobe seed → identical lobe positions,
-only radius (Mid ≈ 0.95× Base) and strength differ. This creates subtle
-layering without two unrelated reveal regions.
+**ALPHA toggle** — canvas overlay via `drawFogAlphaDebug`:
+  Uses the SAME buildOrganicRevealInfluences lobes as production.
+  green (~20%) for visible lobes, amber (~15%) for explored lobes.
+  Map remains visible (semi-transparent, not opaque black/white).
+  Canvas mounted/unmounted by Effect A (deps: `devFogAlpha`).
+  Redrawn by Effect B (deps: `devFogAlpha`, tiles, worldW, worldH, sz).
 
 ## FogEdge layer retired
 
-`FogEdgeLayer` is permanently unmounted from `HexMapLayer.tsx`.
-`fog_edge_day_01.png` is retained as an unused asset (PNG on disk).
-`edgeDay` removed from `JOURNEY_ASSETS.fog` registry.
-`fogEdge.ts` is dead code — direct-require so it compiles but doesn't register.
+`FogEdgeLayer` is permanently unmounted. `fog_edge_day_01.png` retained as
+unused asset. `edgeDay` removed from JOURNEY_ASSETS.fog. `fogEdge.ts` is dead code.
 
 ## Z-index table (current)
 
@@ -46,21 +64,22 @@ layering without two unrelated reveal regions.
 | FOG_BASE    | 5000  |
 | GATE        | 5100  |
 | FOG_MID     | 5200  |
-| FOG_WISP    | 5300  ← was 5400; filled Edge's old slot |
+| FOG_WISP    | 5300  |
 | DEV_MASK    | 14500 |
 | DEV_OVERLAY | 19000 |
 
-## Debug diagnostic
+## Test sequence
 
-`FogDevDiagnostic` has toggles B/M/W/MSK (no Edge toggle).
-Test sequence: A=Base only → B=+Mid → C=+Wisp.
-VisibleNow count of < 7 is NOT an error — boundary tiles have fewer neighbors.
+A. B only → B. +M → C. +W (production appearance, all debug OFF)
+D. +STATE → verify hex geometry (green/amber/blue tints match tiles)
+E. +ALPHA → verify organic art (no giant circles; adjacent visible tiles merge)
 
-**Why:** Two-canvas destination-in compositing produced hard-edged visible
-shapes whenever the mask canvas was in a transient or misaligned state.
-Direct destination-out on the fog canvas eliminates the intermediate surface
-and therefore eliminates the artifact class entirely.
+**Why direct destination-out:** Two-canvas destination-in compositing produced
+hard-edged visible shapes whenever the mask canvas was in transient state.
+Direct destination-out on the fog canvas eliminates the intermediate surface.
 
-**How to apply:** Any future fog layer must use `eraseOrganicFogCluster` (or
-`eraseSoftLobe` for simple cases) with destination-out already set on the
-fog canvas directly. Never introduce a mask canvas or destination-in.
+**Why separate STATE + ALPHA debug:** The old MSK was misleading because it used
+legacy radial circles — not the same algorithm as production. Developers were
+tuning the wrong geometry. The two-mode system cleanly separates gameplay logic
+verification (STATE) from fog art verification (ALPHA), and both show the map
+beneath rather than obscuring it with opaque shapes.

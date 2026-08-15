@@ -42,7 +42,7 @@
 
 import { Asset } from 'expo-asset';
 import { JOURNEY_ASSETS } from '../assets';
-import { eraseOrganicFogCluster } from './fogMask';
+import { buildOrganicRevealInfluences, eraseSoftLobe } from './fogMask';
 
 // ── Bundled asset source ──────────────────────────────────────────────────────
 const FOG_BASE_DAY_SOURCE = JOURNEY_ASSETS.fog.baseDay;
@@ -145,6 +145,9 @@ function drawImageCover(
 /**
  * Applies destination-out organic erasure to the fog canvas for all revealed tiles.
  *
+ * Uses buildOrganicRevealInfluences (the single source of truth for lobe data)
+ * so the production erase footprint EXACTLY matches the ALPHA debug overlay.
+ *
  * EXPLORED tiles:
  *   Partial erase (strength 0.70) → ~25–35 % haze remains.
  *   Memory-fog: terrain readable but distinctly veiled.
@@ -153,9 +156,6 @@ function drawImageCover(
  *   Strong erase (strength 0.98) → nearly clear center.
  *   Adjacent tile clusters overlap into ONE organic clearing (no hex holes).
  *   Soft feathered boundary produced by asymmetric secondary lobes.
- *
- * Both tiers use eraseOrganicFogCluster from fogMask.ts so Base and Mid
- * share the same seeded lobe positions (same tileId → same profile).
  */
 function applyFogErasure(
   ctx:                    CanvasRenderingContext2D,
@@ -168,24 +168,20 @@ function applyFogErasure(
 ): void {
   ctx.globalCompositeOperation = 'destination-out';
 
-  // ── Explored: partial organic erase (haze remains) ───────────────────────
-  const exploredR = sz * BASE_EXPLORED_RADIUS_MULT;
-  for (const id of exploredIds) {
-    const c = tileCenters.get(id);
-    if (!c) continue;
-    eraseOrganicFogCluster(ctx, c.cx, c.cy, exploredR, BASE_EXPLORED_STRENGTH, id, sz);
-  }
+  const lobes = buildOrganicRevealInfluences({
+    tileCenters,
+    visibleNowIds,
+    exploredIds,
+    sz,
+    effectiveFieldOfVision,
+    runSeed,
+    exploredStrength: BASE_EXPLORED_STRENGTH,
+    visibleStrength:  BASE_VISIBLE_STRENGTH,
+    radiusMultiplier: 1.0,
+  });
 
-  // ── Visible-now: strong organic erase (one merged clearing) ─────────────
-  // fovScale extends the clearing radius for FOV > 1:
-  //   FOV=1 → radius ≈ sz × 1.45 (merges 7-tile cluster into one clearing)
-  //   FOV=2 → radius ≈ sz × 2.25
-  const fovScale  = 1 + (effectiveFieldOfVision - 1) * 0.55;
-  const visibleR  = sz * BASE_VISIBLE_RADIUS_MULT * fovScale;
-  for (const id of visibleNowIds) {
-    const c = tileCenters.get(id);
-    if (!c) continue;
-    eraseOrganicFogCluster(ctx, c.cx, c.cy, visibleR, BASE_VISIBLE_STRENGTH, id, sz);
+  for (const lobe of lobes) {
+    eraseSoftLobe(ctx, lobe.x, lobe.y, lobe.radius, lobe.strength);
   }
 
   ctx.globalCompositeOperation = 'source-over';
