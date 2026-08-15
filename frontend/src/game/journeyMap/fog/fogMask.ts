@@ -191,13 +191,27 @@ export function getOrDrawCanonicalMask(
  * Draws the fog visibility mask onto `canvas`.
  *
  * OFFSCREEN CONTROL SURFACE — never display this canvas in production.
- * It is composited onto the fog sprite canvas with destination-in, which
- * multiplies each sprite pixel's alpha by the mask value.
+ * Composited onto the fog sprite canvas with destination-in:
+ *   mask alpha=1 (opaque) → fog fully preserved.
+ *   mask alpha=0 (transparent) → fog completely erased.
  *
- * After this call:
- *   • UNEXPLORED areas remain opaque white  → fog fully preserved.
- *   • EXPLORED areas are ~30 % opaque       → light memory haze.
- *   • VISIBLE_NOW areas are ~3 % opaque     → fog nearly gone.
+ * ── Algorithm: permanent-erasure model ────────────────────────────────────────
+ *
+ *   The mask starts as opaque BLACK (alpha=1 everywhere = full fog).
+ *
+ *   Step 2 — EXPLORED tiles: hard destination-out at full alpha (1.0).
+ *     Result: mask permanently transparent at all explored positions.
+ *     Effect: fog COMPLETELY erased — no residual haze, no white cloud.
+ *     These areas stay clear for the rest of the attempt regardless of where
+ *     the hero moves (because exploredIds grows monotonically this run).
+ *
+ *   Step 3 — VISIBLE_NOW tiles: feathered destination-out.
+ *     Inner zone (0 → fovInnerR): alpha=1 — full erase, crystal-clear terrain.
+ *     Outer feather (fovInnerR → fovOuterR): alpha fades 1→0 — soft boundary.
+ *     Outside fovOuterR: alpha=0 — no erase, full fog.
+ *     Effect: visible zone looks like fog was cut away with a soft eraser, NOT
+ *     a white cloud — the boundary is the only partially-transparent area and
+ *     it transitions cleanly from clear terrain into the dark fog mass.
  *
  * Canvas is sized to exactly worldWidth × worldHeight (no padding).
  * Backing store uses devicePixelRatio for crisp retina gradient edges.
@@ -217,63 +231,94 @@ export function drawFogMask(
     exploredIds,
     effectiveFieldOfVision,
   } = params;
-  // params.padding is intentionally ignored — mask is always exact world size.
+  // params.padding intentionally ignored — mask is always exact world size.
 
   const DPR = typeof window !== 'undefined' ? (window.devicePixelRatio ?? 1) : 1;
 
   // ── Size canvas: exact world dimensions, DPR-backed ───────────────────────
   canvas.width  = Math.ceil(worldWidth  * DPR);
   canvas.height = Math.ceil(worldHeight * DPR);
-  // CSS display size matches world units exactly.
   canvas.style.width  = `${worldWidth}px`;
   canvas.style.height = `${worldHeight}px`;
 
   const ctx = canvas.getContext('2d');
   if (!ctx) return;
 
-  // Scale context so all coordinates are in world units.
   ctx.scale(DPR, DPR);
 
-  // ── Step 1: opaque white base — full fog everywhere ───────────────────────
+  // ── Step 1: opaque BLACK base — fog covers the entire world ───────────────
+  // BLACK (not white) so the partially-transparent areas at the feathered edge
+  // are dark (invisible when composited via destination-in), not light gray.
+  // destination-in: result_alpha = dest_alpha × src_alpha.
+  //   src_alpha=1 (black opaque) → dest fog preserved.
+  //   src_alpha=0 (transparent)  → dest fog erased.
   ctx.clearRect(0, 0, worldWidth, worldHeight);
-  ctx.fillStyle = 'rgba(255,255,255,1)';
+  ctx.globalCompositeOperation = 'source-over';
+  ctx.fillStyle = 'rgba(0,0,0,1)';
   ctx.fillRect(0, 0, worldWidth, worldHeight);
 
-  // ── Step 2: erase fog with destination-out ────────────────────────────────
-  //
-  // Higher erase alpha = less mask remaining = more reveal.
-  // Targets (after primary + sub-lobe accumulation at tile center):
-  //   EXPLORED   → remaining mask ≈ 0.28–0.38  (25–40 % fog haze)
-  //   VISIBLE_NOW → remaining mask ≈ 0.02–0.05  (nearly clear)
-  //
+  // ── Step 2: EXPLORED tiles — hard permanent full erase ────────────────────
+  // Alpha=1 destination-out fully removes the black mask pixel at each
+  // explored tile centre, permanently clearing that area regardless of where
+  // the hero is now.  No feathering, no haze residue.
+  const exploredClearR = sz * 0.88; // covers hex body; adjacent tiles naturally overlap
+
   ctx.globalCompositeOperation = 'destination-out';
+  ctx.fillStyle = 'rgba(0,0,0,1)'; // alpha=1 = full erase
 
-  const fovScale = 1 + (effectiveFieldOfVision - 1) * 0.18;
-
-  // Primary radii — large enough to merge all 7 visible tiles (current + 6
-  // neighbours) into one continuous clearing, not seven separate circles.
-  // visiblePrimaryR raised from 1.35 → 1.45 so the reveal zone fully covers
-  // the hex body including its edges without any residual fog veil.
-  const visiblePrimaryR  = sz * 1.45 * fovScale;
-  const exploredPrimaryR = sz * 1.15;
-
-  // ── EXPLORED tiles first (lighter clearing, painted before VISIBLE_NOW) ───
   for (const id of exploredIds) {
     const c = tileCenters.get(id);
     if (!c) continue;
-    applyOrganicReveal(ctx, c.cx, c.cy, exploredPrimaryR, 0.65, id, sz);
+    ctx.beginPath();
+    ctx.arc(c.cx, c.cy, exploredClearR, 0, Math.PI * 2);
+    ctx.fill();
   }
 
-  // ── VISIBLE_NOW tiles on top (strong clearing, near-fully transparent) ────
-  // strength raised 0.97 → 0.99 so the visible region reaches ~1 % residual
-  // at the lobe center — effectively transparent through all fog layers.
+  // ── Step 3: VISIBLE_NOW tiles — feathered erase (soft outer edge only) ────
+  // FOV=1 → clears current hex + 6 adjacent (7 tiles). fovScale extends the
+  // inner clear radius for FOV > 1.  The feather zone is ONLY at the outer
+  // boundary so the center and explored areas are crystal-clear with no cloud.
+  //
+  //   fovScale grows by 0.55 per additional FOV point so each extra ring
+  //   (hex distance = 1) adds approximately sz * 0.8 to the clear radius:
+  //     FOV=1 → fovInnerR ≈ sz * 1.45  (covers 7-tile cluster, confirmed)
+  //     FOV=2 → fovInnerR ≈ sz * 2.25
+  //     FOV=3 → fovInnerR ≈ sz * 3.05
+  //
+  // The radial gradient fades from full-erase (alpha=1) at the inner edge
+  // to no-erase (alpha=0) at the outer edge — a photoshop soft-eraser effect.
+  // Overlapping gradients from adjacent visible tiles accumulate correctly
+  // because destination-out is additive (each pass erases more).
+  //
+  // Explored tiles outside the FOV were already fully erased in step 2;
+  // applying destination-out on alpha=0 pixels is a no-op (0 × anything = 0).
+  const fovScale  = 1 + (effectiveFieldOfVision - 1) * 0.55;
+  const fovInnerR = sz * 1.45 * fovScale;   // hard clear zone — fog fully erased inside
+  const featherW  = sz * 0.60;              // width of soft edge transition
+  const fovOuterR = fovInnerR + featherW;   // fog unchanged beyond this radius
+
   for (const id of visibleNowIds) {
     const c = tileCenters.get(id);
     if (!c) continue;
-    applyOrganicReveal(ctx, c.cx, c.cy, visiblePrimaryR, 0.99, id, sz);
+
+    // Radial gradient: full erase at center, none at fovOuterR.
+    // color stop at fovInnerR/fovOuterR = the fraction where feather begins.
+    const innerFrac = fovInnerR / fovOuterR;
+    const grad = ctx.createRadialGradient(
+      c.cx, c.cy, 0,
+      c.cx, c.cy, fovOuterR,
+    );
+    grad.addColorStop(0,          'rgba(0,0,0,1)'); // center: full erase
+    grad.addColorStop(innerFrac,  'rgba(0,0,0,1)'); // inner edge: still full
+    grad.addColorStop(1,          'rgba(0,0,0,0)'); // outer edge: no erase
+
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.arc(c.cx, c.cy, fovOuterR, 0, Math.PI * 2);
+    ctx.fill();
   }
 
-  // ── Reset compositing mode ─────────────────────────────────────────────────
+  // ── Reset compositing ─────────────────────────────────────────────────────
   ctx.globalCompositeOperation = 'source-over';
 }
 
@@ -321,30 +366,46 @@ export function drawFogMaskDev(
 
   ctx.scale(DPR, DPR);
 
-  // Fill with UNEXPLORED base — dark
+  // ── Dev visualization matches the production mask's new semantics ───────────
+  //   WHITE  = fog preserved  (unexplored)
+  //   BLACK  = fog erased     (explored — permanently clear)
+  //   gradient at edge        (feathered FOV boundary)
+  //
+  // Fill with WHITE (= fog everywhere in unexplored areas).
   ctx.clearRect(0, 0, worldWidth, worldHeight);
-  ctx.fillStyle = '#1a1a1a';
+  ctx.fillStyle = '#ffffff';
   ctx.fillRect(0, 0, worldWidth, worldHeight);
 
-  // source-over: paint lighter regions on top
+  // EXPLORED tiles — hard BLACK (permanently clear, no haze)
   ctx.globalCompositeOperation = 'source-over';
-
-  const fovScale = 1 + (effectiveFieldOfVision - 1) * 0.18;
-  const visiblePrimaryR  = sz * 1.35 * fovScale;
-  const exploredPrimaryR = sz * 1.15;
-
-  // EXPLORED — mid gray
+  const exploredClearR = sz * 0.88;
+  ctx.fillStyle = '#111111';
   for (const id of exploredIds) {
     const c = tileCenters.get(id);
     if (!c) continue;
-    applyOrganicRevealColour(ctx, c.cx, c.cy, exploredPrimaryR, id, sz, '#777777');
+    ctx.beginPath();
+    ctx.arc(c.cx, c.cy, exploredClearR, 0, Math.PI * 2);
+    ctx.fill();
   }
 
-  // VISIBLE_NOW — near white
+  // VISIBLE_NOW tiles — feathered gradient (dark center → white at outer edge)
+  const fovScale  = 1 + (effectiveFieldOfVision - 1) * 0.55;
+  const fovInnerR = sz * 1.45 * fovScale;
+  const featherW  = sz * 0.60;
+  const fovOuterR = fovInnerR + featherW;
+
   for (const id of visibleNowIds) {
     const c = tileCenters.get(id);
     if (!c) continue;
-    applyOrganicRevealColour(ctx, c.cx, c.cy, visiblePrimaryR, id, sz, '#f0f0f0');
+    const innerFrac = fovInnerR / fovOuterR;
+    const grad = ctx.createRadialGradient(c.cx, c.cy, 0, c.cx, c.cy, fovOuterR);
+    grad.addColorStop(0,          '#111111'); // center: fully clear
+    grad.addColorStop(innerFrac,  '#111111'); // inner edge: still clear
+    grad.addColorStop(1,          '#ffffff'); // outer edge: full fog
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.arc(c.cx, c.cy, fovOuterR, 0, Math.PI * 2);
+    ctx.fill();
   }
 }
 

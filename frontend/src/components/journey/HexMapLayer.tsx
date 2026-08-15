@@ -1914,25 +1914,29 @@ export function HexMapLayer({
       cameraAnim.setValue({ x: destX, y: destY });
     } else {
       // Case B — ease camera toward the player's new tile after movement.
+      // Uses Animated.timing at 230 ms to stay in sync with the hero sprite
+      // animation (220 ms, Easing.out(Easing.quad) in HexObjectLayer).
+      // Timing produces a clean deterministic follow that always arrives near
+      // the same frame as the sprite — no overshoot, no spring bounce lag.
       AccessibilityInfo.isReduceMotionEnabled()
         .then(reduceMotion => {
           if (reduceMotion) {
             cameraAnim.setValue({ x: destX, y: destY });
           } else {
-            Animated.spring(cameraAnim, {
-              toValue:          { x: destX, y: destY },
-              useNativeDriver:  false,
-              friction:         8,
-              tension:          100,
+            Animated.timing(cameraAnim, {
+              toValue:         { x: destX, y: destY },
+              duration:        230,
+              useNativeDriver: false,
+              easing:          Easing.out(Easing.quad),
             }).start();
           }
         })
         .catch(() => {
-          Animated.spring(cameraAnim, {
+          Animated.timing(cameraAnim, {
             toValue:         { x: destX, y: destY },
+            duration:        230,
             useNativeDriver: false,
-            friction:        8,
-            tension:         100,
+            easing:          Easing.out(Easing.quad),
           }).start();
         });
     }
