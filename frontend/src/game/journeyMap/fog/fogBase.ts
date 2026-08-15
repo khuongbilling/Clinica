@@ -15,14 +15,19 @@
  *   2. fog_base_day_01.png drawn cover-style across the FULL world rect.
  *      ONE draw call.  No grid.  No repeated panels.  No visible seams.
  *
- *   3. Canonical visibility mask (destination-in) punches organic clear / haze
- *      areas for VISIBLE_NOW and EXPLORED tiles respectively.
+ *   3. Direct destination-out erasure for revealed tiles.
+ *      destination-out punches transparent holes in the fog canvas itself —
+ *      NO separate mask canvas, NO destination-in compositing.
+ *      Explored tiles → hard solid-circle erase (permanent clear, no residue).
+ *      Visible-now tiles → feathered radial gradient erase (soft boundary).
  *
- * ── Shared canonical mask ─────────────────────────────────────────────────────
+ * ── Why direct destination-out (not mask + destination-in) ──────────────────
  *
- *   Uses getOrDrawCanonicalMask() — one shared offscreen canvas per visibility
- *   state, keyed by buildFogMaskCacheKey.  Base, Mid and Wisp all receive the
- *   SAME canvas reference → pixel-perfect geometric identity.
+ *   The old mask approach created an offscreen BLACK canvas and composited it
+ *   via destination-in.  If the mask canvas size, DPR, or timing was off even
+ *   slightly, the raw black canvas was visible as a hard-edged opaque shape.
+ *   Direct destination-out eliminates the intermediate surface entirely —
+ *   the fog texture is punched directly, like a photoshop soft eraser.
  *
  * ── Approved DAY runtime assets ──────────────────────────────────────────────
  *
@@ -36,11 +41,6 @@
 
 import { Asset } from 'expo-asset';
 import { JOURNEY_ASSETS } from '../assets';
-import {
-  buildFogMaskCacheKey,
-  getOrDrawCanonicalMask,
-  type FogMaskParams,
-} from './fogMask';
 
 // ── Bundled asset source ──────────────────────────────────────────────────────
 const FOG_BASE_DAY_SOURCE = JOURNEY_ASSETS.fog.baseDay;
@@ -70,13 +70,13 @@ const BASE_TEXTURE_ALPHA = 0.80;
 export interface FogBaseParams {
   worldWidth:             number;
   worldHeight:            number;
-  /** Hex tile size (px) — used by the mask, not by the base draw. */
+  /** Hex tile size (px). */
   sz:                     number;
   tileCenters:            ReadonlyMap<string, { cx: number; cy: number }>;
   visibleNowIds:          ReadonlySet<string>;
   exploredIds:            ReadonlySet<string>;
   effectiveFieldOfVision: number;
-  /** JourneyRun.seed — used for canonical mask cache key. */
+  /** JourneyRun.seed — kept for interface stability; not used inside draw. */
   runSeed:                string;
 }
 
@@ -154,6 +154,73 @@ function drawImageCover(
   ctx.drawImage(image, sx, sy, sw, sh, destX, destY, destWidth, destHeight);
 }
 
+// ── Reveal helpers ────────────────────────────────────────────────────────────
+
+/**
+ * Applies destination-out erasure to `ctx` for all revealed tiles.
+ *
+ * destination-out subtracts alpha from the fog canvas directly — no mask
+ * canvas, no destination-in.  The fog is punched like a photoshop soft eraser.
+ *
+ *   EXPLORED tiles   → hard solid-circle erase at alpha=1 (permanent clear)
+ *   VISIBLE_NOW tiles → feathered radial gradient erase (soft FOV boundary)
+ *
+ * Both sets are drawn with destination-out so their effects accumulate — an
+ * explored tile inside the visible zone is simply erased twice, which is fine.
+ */
+function applyFogErasure(
+  ctx:                    CanvasRenderingContext2D,
+  sz:                     number,
+  tileCenters:            ReadonlyMap<string, { cx: number; cy: number }>,
+  exploredIds:            ReadonlySet<string>,
+  visibleNowIds:          ReadonlySet<string>,
+  effectiveFieldOfVision: number,
+): void {
+  ctx.globalCompositeOperation = 'destination-out';
+
+  // ── Explored: hard permanent erase (no haze residue) ─────────────────────
+  // Radius sz × 0.88 covers the hex body.  Adjacent explored tiles overlap
+  // naturally, merging into one continuous clear region.
+  const exploredR = sz * 0.88;
+  ctx.fillStyle = 'rgba(0,0,0,1)';
+
+  for (const id of exploredIds) {
+    const c = tileCenters.get(id);
+    if (!c) continue;
+    ctx.beginPath();
+    ctx.arc(c.cx, c.cy, exploredR, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // ── Visible-now: feathered gradient erase (soft edge at FOV boundary) ────
+  // fovScale extends the inner clear radius for FOV > 1.
+  //   FOV=1 → fovInnerR ≈ sz × 1.45  (current tile + 6 adjacent)
+  //   FOV=2 → fovInnerR ≈ sz × 2.25
+  // The gradient is alpha=1 from center → fovInnerR, then fades to 0 at
+  // fovOuterR — a soft-eraser ring only at the outer boundary.
+  const fovScale  = 1 + (effectiveFieldOfVision - 1) * 0.55;
+  const fovInnerR = sz * 1.45 * fovScale;
+  const featherW  = sz * 0.60;
+  const fovOuterR = fovInnerR + featherW;
+  const innerFrac = fovInnerR / fovOuterR;
+
+  for (const id of visibleNowIds) {
+    const c = tileCenters.get(id);
+    if (!c) continue;
+
+    const grad = ctx.createRadialGradient(c.cx, c.cy, 0, c.cx, c.cy, fovOuterR);
+    grad.addColorStop(0,          'rgba(0,0,0,1)'); // center: full erase
+    grad.addColorStop(innerFrac,  'rgba(0,0,0,1)'); // inner edge: still full
+    grad.addColorStop(1,          'rgba(0,0,0,0)'); // outer edge: no erase
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.arc(c.cx, c.cy, fovOuterR, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  ctx.globalCompositeOperation = 'source-over';
+}
+
 // ── Main draw function ────────────────────────────────────────────────────────
 
 /**
@@ -164,11 +231,12 @@ function drawImageCover(
  * Step 3: Render ONE continuous atmospheric field:
  *           a. Solid atmospheric foundation fill (no transparent gaps possible).
  *           b. fog_base texture drawn cover-style across the full world rect.
- * Step 4: Apply the CANONICAL visibility mask with `destination-in` to reveal
- *         explored / visible-now areas.
+ * Step 4: Punch transparent holes with destination-out directly on this canvas:
+ *           a. Explored tiles → hard full-erase circles (permanent clear).
+ *           b. Visible-now tiles → feathered radial gradient erase (soft edge).
  *
- * The canonical mask is shared with Mid and Wisp via getOrDrawCanonicalMask()
- * so all three layers erase EXACTLY the same geometry.
+ * No mask canvas.  No destination-in.  Transparent holes show the map layer
+ * beneath this canvas (z < 5000) — terrain, player sprite, encounters.
  *
  * Async — awaits image load on first call; subsequent calls use the cache.
  * Web only — wraps HTMLCanvasElement.getContext('2d').
@@ -185,7 +253,6 @@ export async function drawFogBase(
     visibleNowIds,
     exploredIds,
     effectiveFieldOfVision,
-    runSeed,
   } = params;
 
   const DPR = typeof window !== 'undefined' ? (window.devicePixelRatio ?? 1) : 1;
@@ -219,31 +286,9 @@ export async function drawFogBase(
   drawImageCover(ctx, baseImg, 0, 0, worldWidth, worldHeight);
   ctx.restore();
 
-  // ── Step 4: Apply CANONICAL visibility mask (destination-in) ─────────────
-  // getOrDrawCanonicalMask returns (or creates) a shared offscreen canvas so
-  // Base, Mid and Wisp erase EXACTLY the same pixels for the same game state.
-  const maskParams: FogMaskParams = {
-    worldWidth,
-    worldHeight,
-    sz,
-    tileCenters,
-    visibleNowIds,
-    exploredIds,
-    effectiveFieldOfVision,
-  };
-  const maskCacheKey = buildFogMaskCacheKey({
-    runId:                  runSeed,
-    worldWidth,
-    worldHeight,
-    tileSize:               sz,
-    effectiveFieldOfVision,
-    visibleNowIds,
-    exploredIds,
-  });
-  const maskCanvas = getOrDrawCanonicalMask(maskCacheKey, maskParams);
-
-  ctx.globalCompositeOperation = 'destination-in';
-  ctx.globalAlpha = 1;
-  ctx.drawImage(maskCanvas, 0, 0, worldWidth, worldHeight);
-  ctx.globalCompositeOperation = 'source-over';
+  // ── Step 4: Direct destination-out erasure ────────────────────────────────
+  // Punches transparent holes in the fog canvas for explored / visible tiles.
+  // The canvas is fully opaque after Step 3; after Step 4 the punched regions
+  // are transparent, exposing the map (terrain / player / encounters) below.
+  applyFogErasure(ctx, sz, tileCenters, exploredIds, visibleNowIds, effectiveFieldOfVision);
 }

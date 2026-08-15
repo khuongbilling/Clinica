@@ -192,8 +192,10 @@ export async function drawFogWisp(
   ctx.scale(DPR, DPR);
 
   // ── Build VISIBLE_NOW center list for exclusion-zone checks ───────────────
-  // Matches fogMask.ts: primaryR = sz * 1.45 * fovScale.
-  const fovScale        = 1 + (effectiveFieldOfVision - 1) * 0.18;
+  // Matches fogBase.ts / fogMid.ts: fovInnerR = sz * 1.45 * fovScale.
+  // fovScale uses the same 0.55 multiplier as Base/Mid so wisps stay outside
+  // the actual cleared fog area (was 0.18 — left wisps inside the clear zone).
+  const fovScale        = 1 + (effectiveFieldOfVision - 1) * 0.55;
   const maskPrimaryR    = sz * 1.45 * fovScale;
   const exclusionR      = maskPrimaryR * EXCLUSION_RADIUS_MULT;
   const boundaryROuter  = maskPrimaryR * BOUNDARY_OUTER_MULT;

@@ -17,15 +17,16 @@
  *
  * ── Opacity targets ──────────────────────────────────────────────────────────
  *
- *   UNEXPLORED   → Mid alpha 0.35–0.55  (texture at MID_TEXTURE_ALPHA × mask 1.0)
- *   EXPLORED     → Mid alpha 0.10–0.20  (texture × mask ~0.28–0.38 residual)
- *   VISIBLE_NOW  → Mid alpha 0–0.03     (texture × mask ~0.01 residual — clear)
+ *   UNEXPLORED   → Mid alpha 0.35–0.55 (texture at MID_TEXTURE_ALPHA)
+ *   EXPLORED     → transparent (fog erased by destination-out)
+ *   VISIBLE_NOW  → transparent (fog erased by feathered gradient)
  *
- * ── Shared canonical mask ─────────────────────────────────────────────────────
+ * ── Direct erasure (no mask canvas) ──────────────────────────────────────────
  *
- *   Uses getOrDrawCanonicalMask() — the SAME shared offscreen canvas as
- *   FogBase.  Pixel-perfect geometric identity: both layers erase EXACTLY
- *   the same region.
+ *   Uses the same destination-out erasure as FogBase — punches transparent
+ *   holes directly in the fog canvas.  No separate mask canvas, no
+ *   destination-in compositing.  Explored tiles are hard-erased; visible-now
+ *   tiles get a feathered radial gradient.
  *
  * ── Platform ──────────────────────────────────────────────────────────────────
  *
@@ -34,11 +35,6 @@
 
 import { Asset } from 'expo-asset';
 import { JOURNEY_ASSETS } from '../assets';
-import {
-  buildFogMaskCacheKey,
-  getOrDrawCanonicalMask,
-  type FogMaskParams,
-} from './fogMask';
 
 // ── Bundled asset source ───────────────────────────────────────────────────────
 const FOG_MID_DAY_SOURCE = JOURNEY_ASSETS.fog.midDay;
@@ -68,6 +64,7 @@ export interface FogMidParams {
   visibleNowIds:          ReadonlySet<string>;
   exploredIds:            ReadonlySet<string>;
   effectiveFieldOfVision: number;
+  /** JourneyRun.seed — kept for interface stability; not used inside draw. */
   runSeed:                string;
 }
 
@@ -130,12 +127,15 @@ function drawImageCover(
  * Step 2: Load fog_mid_day_01.png (cached after first call).
  * Step 3: ONE continuous atmospheric texture — fog_mid drawn cover-style.
  *         No foundation fill (only Base has that).
- *         No grid, no repeated panels, no visible seams.
- * Step 4: Apply the CANONICAL visibility mask (destination-in).
- *         Same shared canvas as FogBase — identical erase geometry.
+ * Step 4: Direct destination-out erasure — same geometry as FogBase.
+ *           Explored tiles → hard full-erase circles (permanent clear).
+ *           Visible-now tiles → feathered radial gradient erase.
+ *
+ * No mask canvas.  No destination-in.  Transparent holes expose the layers
+ * below (FogBase at z 5000, map terrain at z 100–400, etc.).
  *
  * Async — awaits image load on first call; subsequent calls use the cache.
- * Web only — wraps HTMLCanvasElement.getContext('2d').
+ * Web only.
  */
 export async function drawFogMid(
   canvas: HTMLCanvasElement,
@@ -149,7 +149,6 @@ export async function drawFogMid(
     visibleNowIds,
     exploredIds,
     effectiveFieldOfVision,
-    runSeed,
   } = params;
 
   const DPR = typeof window !== 'undefined' ? (window.devicePixelRatio ?? 1) : 1;
@@ -174,36 +173,46 @@ export async function drawFogMid(
   ctx.clearRect(0, 0, worldWidth, worldHeight);
 
   // NO fillRect here — only Base gets the opaque foundation.
-  // Mid is broad atmospheric texture only.
   ctx.save();
   ctx.globalAlpha = MID_TEXTURE_ALPHA;
   drawImageCover(ctx, midImg, 0, 0, worldWidth, worldHeight);
   ctx.restore();
 
-  // ── Step 4: Apply CANONICAL visibility mask (destination-in) ─────────────
-  // Same shared canvas as FogBase — guaranteed identical erase geometry.
-  const maskParams: FogMaskParams = {
-    worldWidth,
-    worldHeight,
-    sz,
-    tileCenters,
-    visibleNowIds,
-    exploredIds,
-    effectiveFieldOfVision,
-  };
-  const maskCacheKey = buildFogMaskCacheKey({
-    runId:                  runSeed,
-    worldWidth,
-    worldHeight,
-    tileSize:               sz,
-    effectiveFieldOfVision,
-    visibleNowIds,
-    exploredIds,
-  });
-  const maskCanvas = getOrDrawCanonicalMask(maskCacheKey, maskParams);
+  // ── Step 4: Direct destination-out erasure ────────────────────────────────
+  // Matches Base Fog geometry exactly — same fovScale, same radii.
+  ctx.globalCompositeOperation = 'destination-out';
 
-  ctx.globalCompositeOperation = 'destination-in';
-  ctx.globalAlpha = 1;
-  ctx.drawImage(maskCanvas, 0, 0, worldWidth, worldHeight);
+  // Explored: hard permanent erase
+  const exploredR = sz * 0.88;
+  ctx.fillStyle = 'rgba(0,0,0,1)';
+  for (const id of exploredIds) {
+    const c = tileCenters.get(id);
+    if (!c) continue;
+    ctx.beginPath();
+    ctx.arc(c.cx, c.cy, exploredR, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Visible-now: feathered gradient erase (soft edge at FOV boundary)
+  const fovScale  = 1 + (effectiveFieldOfVision - 1) * 0.55;
+  const fovInnerR = sz * 1.45 * fovScale;
+  const featherW  = sz * 0.60;
+  const fovOuterR = fovInnerR + featherW;
+  const innerFrac = fovInnerR / fovOuterR;
+
+  for (const id of visibleNowIds) {
+    const c = tileCenters.get(id);
+    if (!c) continue;
+
+    const grad = ctx.createRadialGradient(c.cx, c.cy, 0, c.cx, c.cy, fovOuterR);
+    grad.addColorStop(0,          'rgba(0,0,0,1)');
+    grad.addColorStop(innerFrac,  'rgba(0,0,0,1)');
+    grad.addColorStop(1,          'rgba(0,0,0,0)');
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.arc(c.cx, c.cy, fovOuterR, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
   ctx.globalCompositeOperation = 'source-over';
 }
