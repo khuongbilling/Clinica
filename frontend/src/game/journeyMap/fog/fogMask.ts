@@ -142,6 +142,49 @@ export function fogMaskCacheKey(params: {
   return `v=${vis}|e=${exp}|fov=${params.effectiveFieldOfVision}|sz=${params.sz}`;
 }
 
+// ── Canonical mask canvas cache ────────────────────────────────────────────────
+//
+// All four fog draw functions (Base, Mid, Edge, Wisp) must share ONE offscreen
+// canvas per visibility state.  Using a shared canvas guarantees pixel-perfect
+// geometric identity — no floating-point divergence between independent renders.
+//
+// Keyed by buildFogMaskCacheKey output.  LRU-by-insertion: oldest entry evicted
+// when the cache exceeds CANONICAL_MASK_CACHE_MAX entries.
+const canonicalMaskCache = new Map<string, HTMLCanvasElement>();
+const CANONICAL_MASK_CACHE_MAX = 8;
+
+/**
+ * Return the cached canonical fog mask canvas for `cacheKey`, creating and
+ * caching it from `params` on the first call for that key.
+ *
+ * ALL four fog draw functions MUST use this instead of creating their own
+ * offscreen canvas + calling drawFogMask independently.  One shared canvas
+ * guarantees that Base, Mid, and Wisp erase EXACTLY the same geometry.
+ *
+ * Web only — throws if `document` is unavailable.
+ */
+export function getOrDrawCanonicalMask(
+  cacheKey: string,
+  params:   FogMaskParams,
+): HTMLCanvasElement {
+  const hit = canonicalMaskCache.get(cacheKey);
+  if (hit) return hit;
+
+  if (typeof document === 'undefined') {
+    throw new Error('getOrDrawCanonicalMask: document unavailable (web only)');
+  }
+  const canvas = document.createElement('canvas');
+  drawFogMask(canvas, params);
+
+  // LRU-by-insertion: evict the oldest key when over limit.
+  if (canonicalMaskCache.size >= CANONICAL_MASK_CACHE_MAX) {
+    const firstKey = canonicalMaskCache.keys().next().value;
+    if (firstKey !== undefined) canonicalMaskCache.delete(firstKey);
+  }
+  canonicalMaskCache.set(cacheKey, canvas);
+  return canvas;
+}
+
 // ── Main draw function ─────────────────────────────────────────────────────────
 
 /**
@@ -209,7 +252,9 @@ export function drawFogMask(
 
   // Primary radii — large enough to merge all 7 visible tiles (current + 6
   // neighbours) into one continuous clearing, not seven separate circles.
-  const visiblePrimaryR  = sz * 1.35 * fovScale;
+  // visiblePrimaryR raised from 1.35 → 1.45 so the reveal zone fully covers
+  // the hex body including its edges without any residual fog veil.
+  const visiblePrimaryR  = sz * 1.45 * fovScale;
   const exploredPrimaryR = sz * 1.15;
 
   // ── EXPLORED tiles first (lighter clearing, painted before VISIBLE_NOW) ───
@@ -220,10 +265,12 @@ export function drawFogMask(
   }
 
   // ── VISIBLE_NOW tiles on top (strong clearing, near-fully transparent) ────
+  // strength raised 0.97 → 0.99 so the visible region reaches ~1 % residual
+  // at the lobe center — effectively transparent through all fog layers.
   for (const id of visibleNowIds) {
     const c = tileCenters.get(id);
     if (!c) continue;
-    applyOrganicReveal(ctx, c.cx, c.cy, visiblePrimaryR, 0.97, id, sz);
+    applyOrganicReveal(ctx, c.cx, c.cy, visiblePrimaryR, 0.99, id, sz);
   }
 
   // ── Reset compositing mode ─────────────────────────────────────────────────

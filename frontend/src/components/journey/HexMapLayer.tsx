@@ -161,6 +161,7 @@ import {
   useLayoutEffect,
   useMemo,
   useRef,
+  useState,
   type MutableRefObject,
 } from 'react';
 import {
@@ -1745,6 +1746,16 @@ export function HexMapLayer({
   const fogContainerRef = useRef<View>(null);
   const fogCanvasRef    = useRef<HTMLCanvasElement | null>(null);
   const fogMaskKeyRef   = useRef<string>('');
+
+  // ── DEV: per-layer visibility toggles ────────────────────────────────────
+  // Allow isolating individual fog layers to identify compositing bugs.
+  // Use sequence: A=Base only → B=+Mid → C=+Edge → D=All to pinpoint issues.
+  // Always unconditional useState — __DEV__ gates only the toggle UI.
+  const [devFogBase,  setDevFogBase]  = useState(true);
+  const [devFogMid,   setDevFogMid]   = useState(true);
+  const [devFogEdge,  setDevFogEdge]  = useState(true);
+  const [devFogWisp,  setDevFogWisp]  = useState(true);
+  const [devFogMaskOn, setDevFogMaskOn] = useState(false);
   //
   // Push 8: split the old single tilesKeyRef into two independent signals so
   // the camera can distinguish "new run loaded" from "player moved one tile":
@@ -2012,7 +2023,8 @@ export function HexMapLayer({
   //           destroy it when the toggle turns off or the component unmounts.
   //           Camera pan does NOT touch these deps — no redraw on pan.
   useEffect(() => {
-    if (!__DEV__ || !devOverlay?.fogMask || Platform.OS !== 'web') return;
+    const showMask = __DEV__ && (devFogMaskOn || !!devOverlay?.fogMask);
+    if (!showMask || Platform.OS !== 'web') return;
     if (typeof document === 'undefined') return;
 
     const container = fogContainerRef.current as unknown as HTMLDivElement | null;
@@ -2030,14 +2042,15 @@ export function HexMapLayer({
       fogMaskKeyRef.current = '';
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [devOverlay?.fogMask]);
+  }, [devFogMaskOn, devOverlay?.fogMask]);
 
   // ── Push 3: fog mask canvas — redraw when visibility inputs change ─────────
   // Effect B: runs whenever tiles / world dimensions / sz change.
   //           Uses buildFogMaskCacheKey to skip redraws when inputs are unchanged.
   //           Camera translation is NOT in these deps (pan = no redraw).
   useEffect(() => {
-    if (!__DEV__ || !devOverlay?.fogMask || Platform.OS !== 'web') return;
+    const showMask = __DEV__ && (devFogMaskOn || !!devOverlay?.fogMask);
+    if (!showMask || Platform.OS !== 'web') return;
     const canvas = fogCanvasRef.current;
     if (!canvas) return;
 
@@ -2090,7 +2103,7 @@ export function HexMapLayer({
   // coords.axialToWorld is a pure function derived from tiles + containerWidth;
   // including coords would cause spurious redraws — sz + tiles are sufficient.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [devOverlay?.fogMask, tiles, worldW, worldH, sz]);
+  }, [devFogMaskOn, devOverlay?.fogMask, tiles, worldW, worldH, sz]);
 
   // ── Render order: iso-depth sort for TERRAIN PASS ────────────────────────────
   // Push 13: tighter spacing means tiles from adjacent staggered columns now
@@ -2236,14 +2249,17 @@ export function HexMapLayer({
           * (3000–4900).  destination-in compositing punches transparent holes
           * at visibleNow / exploredButOutOfVision tile centres so terrain and
           * objects show through without z-poke-through.
-          * Web only — native = null stub.  Camera pan does not trigger redraw. */}
-        <FogBaseLayer
-          tiles={tiles}
-          coords={coords}
-          worldWidth={worldW}
-          worldHeight={worldH}
-          runSeed={runSeed ?? 'fixture-default'}
-        />
+          * Web only — native = null stub.  Camera pan does not trigger redraw.
+          * __DEV__: toggle controlled by devFogBase state (diagnostic panel). */}
+        {(!__DEV__ || devFogBase) && (
+          <FogBaseLayer
+            tiles={tiles}
+            coords={coords}
+            worldWidth={worldW}
+            worldHeight={worldH}
+            runSeed={runSeed ?? 'fixture-default'}
+          />
+        )}
 
         {/* ── Gate art overlay (JOURNEY_Z.GATE = 5100) ────────────────────────
          * Push 22: spatially anchored to the template-fixed gate tile inside
@@ -2389,50 +2405,75 @@ export function HexMapLayer({
 
         {/* ── FogMidLayer — atmospheric detail (JOURNEY_Z.FOG_MID = 5200) ─────
           * Above Gate (5100) — upper mist veils the gate landmark.
-          * Density variation at opacity 0.30–0.60; finer grid than FogBase.
-          * Web only — native = null stub. */}
-        <FogMidLayer
-          tiles={tiles}
-          coords={coords}
-          worldWidth={worldW}
-          worldHeight={worldH}
-          runSeed={runSeed ?? 'fixture-default'}
-        />
+          * Atmospheric texture at 0.50 opacity; NO foundation fill (Base only).
+          * Web only — native = null stub.
+          * __DEV__: toggle controlled by devFogMid state (diagnostic panel). */}
+        {(!__DEV__ || devFogMid) && (
+          <FogMidLayer
+            tiles={tiles}
+            coords={coords}
+            worldWidth={worldW}
+            worldHeight={worldH}
+            runSeed={runSeed ?? 'fixture-default'}
+          />
+        )}
 
         {/* ── FogEdgeLayer — reveal boundary (JOURNEY_Z.FOG_EDGE = 5300) ───────
-          * Sparse edge sprites at the visibleNow / fog boundary.
-          * Organic wispy tendrils disguise the mathematical reveal radius.
-          * Web only — native = null stub. */}
-        <FogEdgeLayer
-          tiles={tiles}
-          coords={coords}
-          worldWidth={worldW}
-          worldHeight={worldH}
-          runSeed={runSeed ?? 'fixture-default'}
-        />
+          * Sparse edge sprites at the visibleNow / fog boundary only.
+          * Organic wispy tendrils — no full-world cover draw.
+          * Web only — native = null stub.
+          * __DEV__: toggle controlled by devFogEdge state (diagnostic panel). */}
+        {(!__DEV__ || devFogEdge) && (
+          <FogEdgeLayer
+            tiles={tiles}
+            coords={coords}
+            worldWidth={worldW}
+            worldHeight={worldH}
+            runSeed={runSeed ?? 'fixture-default'}
+          />
+        )}
 
         {/* ── FogWispLayer — topmost mist (JOURNEY_Z.FOG_WISP = 5400) ─────────
-          * Fine surface wisps at 0.20–0.45 opacity above all other fog layers.
-          * Same visibility mask — clears over visibleNow / exploredButOutOfVision.
-          * Web only — native = null stub. */}
-        <FogWispLayer
-          tiles={tiles}
-          coords={coords}
-          worldWidth={worldW}
-          worldHeight={worldH}
-          runSeed={runSeed ?? 'fixture-default'}
-        />
+          * Sparse wisp instances outside the VISIBLE_NOW exclusion zone.
+          * Self-managing placement — no destination-in mask, no world fill.
+          * Web only — native = null stub.
+          * __DEV__: toggle controlled by devFogWisp state (diagnostic panel). */}
+        {(!__DEV__ || devFogWisp) && (
+          <FogWispLayer
+            tiles={tiles}
+            coords={coords}
+            worldWidth={worldW}
+            worldHeight={worldH}
+            runSeed={runSeed ?? 'fixture-default'}
+          />
+        )}
 
         {/* ── FogDevDiagnostic — __DEV__ only (z 19999) ───────────────────────
-          * Reports layer dimensions and tile counts in a top-right panel.
+          * Reports layer dimensions + tile counts in a top-right panel.
+          * Also provides Base/Mid/Edge/Wisp/Mask toggle buttons for the
+          * A → B → C → D compositing isolation test.
           * Acceptance: all five layers show identical W × H @ 0,0;
           * "Visible Now: 7" for an interior start at FOV 1.
-          * Remove once visual alignment is confirmed. */}
+          * Remove once visual compositing is confirmed correct. */}
         {__DEV__ && (
           <FogDevDiagnostic
             tiles={tiles}
             worldWidth={worldW}
             worldHeight={worldH}
+            fogToggles={{
+              base: devFogBase,
+              mid:  devFogMid,
+              edge: devFogEdge,
+              wisp: devFogWisp,
+              mask: devFogMaskOn,
+            }}
+            onToggle={(layer) => {
+              if (layer === 'base') setDevFogBase(v => !v);
+              else if (layer === 'mid')  setDevFogMid(v => !v);
+              else if (layer === 'edge') setDevFogEdge(v => !v);
+              else if (layer === 'wisp') setDevFogWisp(v => !v);
+              else if (layer === 'mask') setDevFogMaskOn(v => !v);
+            }}
           />
         )}
 
@@ -2441,7 +2482,7 @@ export function HexMapLayer({
           * Effect A.  Renders above all fog layers; below DEV_OVERLAY (19000).
           * pointerEvents="none".  MUST NOT ship.
           */}
-        {__DEV__ && devOverlay?.fogMask && (
+        {__DEV__ && (devFogMaskOn || devOverlay?.fogMask) && (
           <View
             ref={fogContainerRef}
             pointerEvents="none"

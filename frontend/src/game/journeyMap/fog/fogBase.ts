@@ -4,40 +4,29 @@
  * Canonical visual reference:
  * /assets/dev-reference/fog_system_design_reference.png  (REFERENCE ONLY)
  *
- * ── Corrective Push: one continuous world field ───────────────────────────────
+ * ── Role ─────────────────────────────────────────────────────────────────────
  *
- * Previous approach stamped many small rectangular sprite copies across the
- * canvas.  This produced visible overlapping fog cards and relied on sprite
- * overlap for coverage (leaving transparent gaps between instances).
- *
- * Current approach:
+ * FogBase is the ONLY layer allowed to guarantee complete unexplored coverage.
  *
  *   1. Atmospheric foundation fill  rgba(62, 82, 96, 0.68)
  *      Guarantees 100 % opaque coverage in unexplored space.
  *      No transparent gaps possible regardless of image content.
  *
- *   2. fog_base_day_01.png drawn cover-style across the FULL world rect
+ *   2. fog_base_day_01.png drawn cover-style across the FULL world rect.
  *      ONE draw call.  No grid.  No repeated panels.  No visible seams.
  *
- *   3. Visibility mask (destination-in) punches organic clear / haze areas
- *      for VISIBLE_NOW and EXPLORED tiles respectively.
+ *   3. Canonical visibility mask (destination-in) punches organic clear / haze
+ *      areas for VISIBLE_NOW and EXPLORED tiles respectively.
  *
- * ── Removed: fog_bank_day_01.png ─────────────────────────────────────────────
+ * ── Shared canonical mask ─────────────────────────────────────────────────────
  *
- *   fog_bank_day_01.png is a reference-sheet image that contains text labels
- *   ("BASE FOG", "FOREGROUND WISPS", asset filenames, etc.).  It was visibly
- *   painting those labels into the live game map.  It is NOT a fog texture.
- *
- *   Do NOT add it back until a clean, label-free asset is generated with
- *   removeBackground:true.  Until then it must live only at:
- *   /assets/dev-reference/fog_bank_system_reference.png
+ *   Uses getOrDrawCanonicalMask() — one shared offscreen canvas per visibility
+ *   state, keyed by buildFogMaskCacheKey.  Base, Mid and Wisp all receive the
+ *   SAME canvas reference → pixel-perfect geometric identity.
  *
  * ── Approved DAY runtime assets ──────────────────────────────────────────────
  *
  *   fog_base_day_01.png — primary Base Fog texture (PASS)
- *   fog_mid_day_01.png  — Mid Fog texture  (handled by fogMid.ts)
- *   fog_edge_day_01.png — Edge fog         (handled by fogEdge.ts)
- *   fog_wisp_day_01.png — Foreground wisps (handled by fogWisp.ts)
  *
  * ── Platform ──────────────────────────────────────────────────────────────────
  *
@@ -47,11 +36,13 @@
 
 import { Asset } from 'expo-asset';
 import { JOURNEY_ASSETS } from '../assets';
-import { drawFogMask, type FogMaskParams } from './fogMask';
+import {
+  buildFogMaskCacheKey,
+  getOrDrawCanonicalMask,
+  type FogMaskParams,
+} from './fogMask';
 
 // ── Bundled asset source ──────────────────────────────────────────────────────
-// Metro-bundled require() number resolved via expo-asset.
-// DO NOT use Image.resolveAssetSource — react-native-web throws on Expo web.
 const FOG_BASE_DAY_SOURCE = JOURNEY_ASSETS.fog.baseDay;
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -66,13 +57,11 @@ export const FOG_WORLD_PADDING = 0;
  * Day-time atmospheric foundation colour.
  * Applied as a solid fillRect before the texture so unexplored areas are
  * never transparent regardless of image alpha content.
- * Tuning value — adjust for different shifts once per-shift assets exist.
  */
 const DAY_FOUNDATION_COLOR = 'rgba(62, 82, 96, 0.68)';
 
 /**
  * Opacity of the fog_base texture drawn over the foundation.
- * The foundation shows through slightly, softening the single-image look.
  */
 const BASE_TEXTURE_ALPHA = 0.80;
 
@@ -87,7 +76,7 @@ export interface FogBaseParams {
   visibleNowIds:          ReadonlySet<string>;
   exploredIds:            ReadonlySet<string>;
   effectiveFieldOfVision: number;
-  /** JourneyRun.seed — used by the caller's cache key; not consumed here. */
+  /** JourneyRun.seed — used for canonical mask cache key. */
   runSeed:                string;
 }
 
@@ -99,11 +88,6 @@ const imageCache = new Map<string, Promise<HTMLImageElement>>();
  * Resolve a Metro-bundled require() number to a web URI via expo-asset, then
  * load it into an HTMLImageElement for canvas drawImage().  Cached per URI.
  *
- * WHY expo-asset and not Image.resolveAssetSource from react-native:
- * react-native-web does not implement resolveAssetSource — it throws
- * "not a function" on Expo web.  expo-asset's Asset.fromModule() has its
- * own cross-platform resolver that works correctly in the Metro dev server.
- *
  * Defensive guard: throws if the URI contains "reference" so a mis-registered
  * reference sheet can never silently render as game fog.
  */
@@ -112,7 +96,6 @@ async function loadBundledImage(source: number): Promise<HTMLImageElement> {
   if (!asset.uri) await asset.downloadAsync();
   const uri = asset.uri ?? '';
 
-  // Refuse to load reference / design-sheet images as runtime fog.
   if (
     uri.includes('reference') ||
     uri.includes('system_reference') ||
@@ -146,9 +129,6 @@ async function loadBundledImage(source: number): Promise<HTMLImageElement> {
 /**
  * Draws `image` into the destination rectangle using CSS cover semantics:
  * the image fills the entire destination, centred and cropped as needed.
- * No distortion, no letterboxing.
- *
- * All coordinates are in world units (ctx already has DPR scale applied).
  */
 function drawImageCover(
   ctx:        CanvasRenderingContext2D,
@@ -164,11 +144,9 @@ function drawImageCover(
   let sx = 0, sy = 0, sw = image.width, sh = image.height;
 
   if (srcRatio > destRatio) {
-    // Image is wider than dest proportionally — crop left/right.
     sw = image.height * destRatio;
     sx = (image.width - sw) / 2;
   } else {
-    // Image is taller than dest proportionally — crop top/bottom.
     sh = image.width / destRatio;
     sy = (image.height - sh) / 2;
   }
@@ -182,17 +160,15 @@ function drawImageCover(
  * Draws the Base Fog layer (Layer 2) onto `canvas`.
  *
  * Step 1: Size canvas synchronously — CSS + backing — before any image await.
- *         Eliminates the DPR first-frame oversize flash (canvas.style.width/height
- *         was previously set only after the async image load resolved).
- *
  * Step 2: Load fog_base_day_01.png (cached after first call).
- *
  * Step 3: Render ONE continuous atmospheric field:
  *           a. Solid atmospheric foundation fill (no transparent gaps possible).
  *           b. fog_base texture drawn cover-style across the full world rect.
- *
- * Step 4: Apply the visibility mask with `destination-in` to reveal
+ * Step 4: Apply the CANONICAL visibility mask with `destination-in` to reveal
  *         explored / visible-now areas.
+ *
+ * The canonical mask is shared with Mid and Wisp via getOrDrawCanonicalMask()
+ * so all three layers erase EXACTLY the same geometry.
  *
  * Async — awaits image load on first call; subsequent calls use the cache.
  * Web only — wraps HTMLCanvasElement.getContext('2d').
@@ -209,19 +185,17 @@ export async function drawFogBase(
     visibleNowIds,
     exploredIds,
     effectiveFieldOfVision,
+    runSeed,
   } = params;
 
   const DPR = typeof window !== 'undefined' ? (window.devicePixelRatio ?? 1) : 1;
 
   // ── Step 1: Size canvas SYNCHRONOUSLY (before any await) ─────────────────
-  // Setting CSS dimensions here — not after the image-load await — means the
-  // canvas is the correct display size on every frame from first paint.
   canvas.style.position = 'absolute';
   canvas.style.left     = '0px';
   canvas.style.top      = '0px';
   canvas.style.width    = `${worldWidth}px`;
   canvas.style.height   = `${worldHeight}px`;
-  // Assigning .width/.height resets the canvas context; do it before getContext().
   canvas.width  = Math.ceil(worldWidth  * DPR);
   canvas.height = Math.ceil(worldHeight * DPR);
 
@@ -232,28 +206,22 @@ export async function drawFogBase(
   const ctx = canvas.getContext('2d');
   if (!ctx) return;
 
-  // setTransform on a freshly-sized canvas (no accumulated scale from prior draw).
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
   ctx.clearRect(0, 0, worldWidth, worldHeight);
 
   // 3a. Foundation fill — guarantees 100 % opaque coverage everywhere.
-  //     The mask (Step 4) will erase it over visible / explored tiles.
-  //     Without this fill, transparent PNG edges leave gaps in unexplored fog.
   ctx.fillStyle = DAY_FOUNDATION_COLOR;
   ctx.fillRect(0, 0, worldWidth, worldHeight);
 
   // 3b. fog_base texture — ONE cover-scale draw across the full world.
-  //     No grid.  No repeated rectangular panels.  No visible seams.
   ctx.save();
   ctx.globalAlpha = BASE_TEXTURE_ALPHA;
   drawImageCover(ctx, baseImg, 0, 0, worldWidth, worldHeight);
   ctx.restore();
 
-  // ── Step 4: Apply visibility mask (destination-in) ────────────────────────
-  // drawFogMask produces a DPR-backed offscreen canvas exactly worldWidth ×
-  // worldHeight.  We draw it at world coords (ctx already has DPR scale applied)
-  // by passing explicit world-unit dest dimensions so it maps 1:1.
-  const maskCanvas = document.createElement('canvas');
+  // ── Step 4: Apply CANONICAL visibility mask (destination-in) ─────────────
+  // getOrDrawCanonicalMask returns (or creates) a shared offscreen canvas so
+  // Base, Mid and Wisp erase EXACTLY the same pixels for the same game state.
   const maskParams: FogMaskParams = {
     worldWidth,
     worldHeight,
@@ -263,7 +231,16 @@ export async function drawFogBase(
     exploredIds,
     effectiveFieldOfVision,
   };
-  drawFogMask(maskCanvas, maskParams);
+  const maskCacheKey = buildFogMaskCacheKey({
+    runId:                  runSeed,
+    worldWidth,
+    worldHeight,
+    tileSize:               sz,
+    effectiveFieldOfVision,
+    visibleNowIds,
+    exploredIds,
+  });
+  const maskCanvas = getOrDrawCanonicalMask(maskCacheKey, maskParams);
 
   ctx.globalCompositeOperation = 'destination-in';
   ctx.globalAlpha = 1;
