@@ -1,5 +1,5 @@
 /**
- * FogEdgeLayer — Layer 3.5 Organic Reveal-Edge Fog (Push 6)
+ * FogEdgeLayer — Layer 3.5 Organic Reveal-Edge Fog
  *
  * Canonical visual reference:
  * /assets/dev-reference/fog_system_design_reference.png  (REFERENCE ONLY)
@@ -19,6 +19,17 @@
  * VISIBLE_NOW and unexplored / explored terrain.  Its job is to make the
  * reveal boundary look hand-painted rather than mathematically perfect.
  *
+ * The canvas is a full worldWidth × worldHeight sheet at (0,0) — a full-map
+ * layer — but only boundary-adjacent pixels are painted into it (sparse).
+ *
+ * ── Shared FOV source of truth ────────────────────────────────────────────────
+ *
+ *   Uses calculateVisibleTileIds() — same as FogBaseLayer and FogMidLayer —
+ *   so the visible-now set is IDENTICAL across all fog layers.
+ *   fogVisibilityFromTileState() must NOT be used here: it maps only
+ *   tile.current === true → visibleNow (1-tile hole), which disagrees with
+ *   FogBase/FogMid's correct FOV-1 clearing of up to 7 tiles.
+ *
  * ── Redraw triggers ───────────────────────────────────────────────────────────
  *
  *   • tiles change (player moves → visibleNow set changes)
@@ -37,7 +48,11 @@ import React, { useEffect, useRef } from 'react';
 import { Platform, View } from 'react-native';
 
 import { drawFogEdge } from '@/src/game/journeyMap/fog/fogEdge';
-import { fogVisibilityFromTileState } from '@/src/game/journeyMap/fog/fogVision';
+import {
+  calculateVisibleTileIds,
+  getEffectiveVisionRadius,
+  DEFAULT_PLAYER_VISION_STATS,
+} from '@/src/game/journeyMap/fog/fogVision';
 import type { HexMapTile } from '@/src/game/journeyMap/fixture';
 import type { HexWorldCoords } from './hexWorldCoords';
 
@@ -100,19 +115,23 @@ export function FogEdgeLayer({
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    // Build the visibleNow set for boundary detection.
-    const visibleNowIds = new Set<string>();
+    // Build the visibleNow set for boundary detection using the SHARED FOV
+    // source of truth (calculateVisibleTileIds), not fogVisibilityFromTileState.
+    // fogVisibilityFromTileState gives a 1-tile hole while all other layers
+    // use FOV-1 = up to 7 tiles; this disagreement created mismatched boundary art.
+    let currentCoord: { q: number; r: number } | undefined;
     for (const tile of tiles) {
-      // Central fog-visibility resolver — no direct tile.visibility comparisons.
-      if (fogVisibilityFromTileState(tile.visibility, tile.current) === 'visibleNow') {
-        visibleNowIds.add(tile.id);
-      }
+      if (tile.current) { currentCoord = { q: tile.q, r: tile.r }; break; }
     }
 
+    const fov = getEffectiveVisionRadius(DEFAULT_PLAYER_VISION_STATS);
+    const visibleNowIds: ReadonlySet<string> = currentCoord
+      ? calculateVisibleTileIds({ currentTile: currentCoord, tiles, visionRadius: fov })
+      : new Set<string>();
+
     // Cache key: redraw when the visibleNow set, tile-size, or world dimensions change.
-    // Push 3: world dimensions added so a viewport resize correctly forces regeneration
-    // even when tile visibility and tile size are unchanged.
-    const nextKey = `v=${[...visibleNowIds].sort().join(',')}|sz=${coords.sz}|w=${Math.round(worldWidth)}|h=${Math.round(worldHeight)}`;
+    // World dimensions included — a resize must force regeneration.
+    const nextKey = `fov=${fov}|v=${[...visibleNowIds].sort().join(',')}|sz=${coords.sz}|w=${Math.round(worldWidth)}|h=${Math.round(worldHeight)}`;
     if (nextKey === cacheKeyRef.current) return;
     cacheKeyRef.current = nextKey;
 
@@ -141,6 +160,7 @@ export function FogEdgeLayer({
         width:    worldWidth,
         height:   worldHeight,
         zIndex:   FOG_EDGE_Z,
+        overflow: 'hidden',
       }}
     />
   );

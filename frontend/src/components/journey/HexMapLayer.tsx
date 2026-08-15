@@ -184,10 +184,11 @@ import {
   getEffectiveVisionRadius,
   DEFAULT_PLAYER_VISION_STATS,
 } from '@/src/game/journeyMap/fog/fogVision';
-import { FogBaseLayer } from './FogBaseLayer';
-import { FogMidLayer }  from './FogMidLayer';
-import { FogEdgeLayer } from './FogEdgeLayer';
-import { FogWispLayer } from './FogWispLayer';
+import { FogBaseLayer }     from './FogBaseLayer';
+import { FogMidLayer }      from './FogMidLayer';
+import { FogEdgeLayer }     from './FogEdgeLayer';
+import { FogWispLayer }     from './FogWispLayer';
+import { FogDevDiagnostic } from './FogDevDiagnostic';
 import { JOURNEY_Z }    from './journeyZ';
 import { type HexMapTile, JOURNEY_MAP_FIXTURE } from '@/src/game/journeyMap/fixture';
 import { UI, SERIF } from '@/src/theme/ui';
@@ -2421,6 +2422,19 @@ export function HexMapLayer({
           worldHeight={worldH}
           runSeed={runSeed ?? 'fixture-default'}
         />
+
+        {/* ── FogDevDiagnostic — __DEV__ only (z 19999) ───────────────────────
+          * Reports layer dimensions and tile counts in a top-right panel.
+          * Acceptance: all five layers show identical W × H @ 0,0;
+          * "Visible Now: 7" for an interior start at FOV 1.
+          * Remove once visual alignment is confirmed. */}
+        {__DEV__ && (
+          <FogDevDiagnostic
+            tiles={tiles}
+            worldWidth={worldW}
+            worldHeight={worldH}
+          />
+        )}
 
         {/* ── Dev fog mask (JOURNEY_Z.DEV_MASK = 14500) — __DEV__ only ─────────
           * Zero-size View whose DOM div hosts the imperative canvas drawn by

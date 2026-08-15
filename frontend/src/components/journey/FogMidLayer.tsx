@@ -1,5 +1,5 @@
 /**
- * FogMidLayer — Layer 3 Mid Fog renderer (Push 5)
+ * FogMidLayer — Layer 3 Mid Fog renderer
  *
  * Canonical visual reference:
  * /assets/dev-reference/fog_system_design_reference.png  (REFERENCE ONLY)
@@ -16,9 +16,17 @@
  *   FogWispLayer         (z 5400)
  *
  * Mid Fog sits directly above Base Fog in world space.  Both layers clear in
- * the same way (same visibility mask) — the behavioural difference comes purely
- * from the lower instance opacity (0.30–0.60 vs Base's 0.70–0.90) and smaller
- * instance scale, giving atmospheric layering in unexplored terrain.
+ * the same way (same visibility mask, same FOV source) — the behavioural
+ * difference comes purely from the lower texture opacity (0.50 vs Base's 0.80)
+ * giving atmospheric layering in unexplored terrain.
+ *
+ * ── Shared FOV source of truth ────────────────────────────────────────────────
+ *
+ *   Uses calculateVisibleTileIds() — same as FogBaseLayer — so the visibility
+ *   clearing is IDENTICAL across all fog layers.
+ *   fogVisibilityFromTileState() must NOT be used here: it maps only
+ *   tile.current === true → visibleNow (1-tile hole), which disagrees with
+ *   FogBase's correct FOV-1 clearing of up to 7 tiles.
  *
  * ── Redraw triggers ───────────────────────────────────────────────────────────
  *
@@ -37,7 +45,7 @@ import { Platform, View } from 'react-native';
 import { drawFogMid } from '@/src/game/journeyMap/fog/fogMid';
 import { buildFogMaskCacheKey } from '@/src/game/journeyMap/fog/fogMask';
 import {
-  fogVisibilityFromTileState,
+  calculateVisibleTileIds,
   getEffectiveVisionRadius,
   DEFAULT_PLAYER_VISION_STATS,
 } from '@/src/game/journeyMap/fog/fogVision';
@@ -80,7 +88,6 @@ export function FogMidLayer({
     if (!container) return;
 
     const canvas = document.createElement('canvas');
-    // Offset by −padding so the extended canvas bleeds past all world edges.
     // Push 3: canvas is exactly worldWidth × worldHeight at origin 0,0.
     canvas.style.cssText = `position:absolute;left:0;top:0;pointer-events:none;`;
     container.appendChild(canvas);
@@ -104,20 +111,28 @@ export function FogMidLayer({
     const { sz } = coords;
 
     // Build tile centres and classify visibility for the mask.
-    const tileCenters   = new Map<string, { cx: number; cy: number }>();
-    const visibleNowIds = new Set<string>();
-    const exploredIds   = new Set<string>();
+    const tileCenters = new Map<string, { cx: number; cy: number }>();
+    const exploredIds = new Set<string>();
+    let   currentCoord: { q: number; r: number } | undefined;
 
     for (const tile of tiles) {
       const { left, top } = coords.axialToWorld(tile.q, tile.r);
       tileCenters.set(tile.id, { cx: left + sz / 2, cy: top + sz / 2 });
-      // Central fog-visibility resolver — no direct tile.visibility comparisons.
-      const fs = fogVisibilityFromTileState(tile.visibility, tile.current);
-      if (fs === 'visibleNow') visibleNowIds.add(tile.id);
-      else if (fs === 'explored') exploredIds.add(tile.id);
+      // Find the current tile so we can run the canonical FOV calculation.
+      if (tile.current) currentCoord = { q: tile.q, r: tile.r };
+      // Explored = previously visited tiles now outside the FOV window.
+      if (tile.visibility === 'exploredButOutOfVision') exploredIds.add(tile.id);
     }
 
-    const fov     = getEffectiveVisionRadius(DEFAULT_PLAYER_VISION_STATS);
+    // FOV: use calculateVisibleTileIds — SHARED source of truth with FogBaseLayer.
+    // fogVisibilityFromTileState() must NOT be used here: it gives a 1-tile hole
+    // (only tile.current === true → visibleNow), which disagrees with FogBase's
+    // correct FOV-1 clearing of the current hex + up to 6 adjacent tiles.
+    const fov = getEffectiveVisionRadius(DEFAULT_PLAYER_VISION_STATS);
+    const visibleNowIds: ReadonlySet<string> = currentCoord
+      ? calculateVisibleTileIds({ currentTile: currentCoord, tiles, visionRadius: fov })
+      : new Set<string>();
+
     const nextKey = buildFogMaskCacheKey({
       runId:                  runSeed,
       worldWidth,
@@ -156,6 +171,7 @@ export function FogMidLayer({
         width:    worldWidth,
         height:   worldHeight,
         zIndex:   FOG_MID_Z,
+        overflow: 'hidden',
       }}
     />
   );
