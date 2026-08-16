@@ -1,5 +1,5 @@
 ---
-name: FogOfWarLayer push state (Pushes 1–3)
+name: FogOfWarLayer push state (Pushes 1–3 + Corrective Push A)
 description: Architecture decisions, commit refs, and what each push added to the new single-canvas fog system.
 ---
 
@@ -24,14 +24,38 @@ description: Architecture decisions, commit refs, and what each push added to th
 - FogOfWarParams extended with `exploredTileIds?` + `visibleTileIds?` (accepted, not used for drawing yet)
 - Full prop chain: fog-map.tsx (computes fogVisibleTileIds via useMemo + calculateVisibleTileIds) → HexMapLayer (fogExploredTileIds, fogVisibleTileIds passthrough) → FogOfWarLayer → drawFogOfWar
 
-## Push 4 plan
-Add destination-out erasure inside `drawFogOfWar`:
+## Corrective Push A (a32c591)
+
+### Root cause
+`computeHexWorldCoords(tiles, containerWidth)` derived sz to fit the tile set within the viewport,
+producing worldW ≈ containerW. maxCameraX = max(0, worldW−viewportW) = 0 → camera locked at 0,0.
+Additionally, Ch1 had negative-q tiles silently dropped: worldOriginX was centred from q=0 (not minQ),
+placing tile q=−2 at left=−75px (off-canvas left edge).
+
+### Fixes
+- `AUTHORED_MAP_TILE_SZ = 150` exported from hexWorldCoords.ts — canonical tile size for world sizing, independent of viewport
+- `computeHexWorldCoords(tiles, containerWidth, szOverride?)` — new third param; when provided delegates to `_computeAuthoredWorldCoords`
+- `_computeAuthoredWorldCoords`: uses minQ (not 0) for worldOriginX; worldWidth = round((maxQ−minQ)×Q_STEP×sz)+sz+2×MARGIN; no viewport padding term
+- `HexMapLayerProps`: `worldTileSize?: number` and `onMetricsUpdate?: (m) => void`
+- `HexMapWorldMetrics`: extended with viewportW/H, playerWorldX/Y, desiredCamX/Y, maxCamX/maxCamY
+- fog-map.tsx: passes `worldTileSize={AUTHORED_MAP_TILE_SZ}` to HexMapLayer; `CameraDiagnosticsPanel` in mapOuter (NOT inside MapWorld, so stays fixed during camera pan)
+
+### Expected values for Ch1 at AUTHORED_MAP_TILE_SZ=150
+- Viewport:   ~382 × ~351
+- MapWorld:   ~710 × ~585
+- Max camera: ~328 × ~234
+
+### Recenter correctness
+Recenter uses `initialCamRef.current` which is set to `{x:destX, y:destY}` (player-centred) in Effect 2.
+It does NOT reset to 0,0. No change needed.
+
+## Push 4 plan (destination-out erasure in drawFogOfWar)
 - After foundation + texture: erase lobes for `exploredTileIds` (feathered, persistent memory)
 - Then erase for `visibleTileIds` (sharper, current FOV)
 - Follow the `buildOrganicRevealInfluences` + `eraseSoftLobe` pattern from fogBase.ts
 - Need tile coordinate lookup: pass tile coord map or derive from id ("q,r" format)
+- coords.axialToWorld already threaded to FogOfWarLayer via props — Pass coords object down
 
 ## Screenshot tool limitation
 - fog-map route requires AsyncStorage player session — screenshot tool always starts fresh
-- `?debug=12` mode renders synthetic tiles but canvas fires after layout → onLayout gives worldW AFTER screenshot capture → always shows blank
 - Verification must be done in the live app with a real session
