@@ -1,0 +1,427 @@
+PUSH 3 — CREATE A PROCEDURAL MAP ARCHETYPE GRAMMAR
+
+Do NOT define Chapter maps as a small collection of fixed layouts.
+
+Instead create a MAP DNA / ARCHETYPE GRAMMAR that can generate many
+structurally different maps while preserving the University /
+Simulation Era visual theme.
+
+The purpose is:
+
+SAME WORLD THEME
++
+DIFFERENT MAP GEOMETRY
+
+==================================================
+1. MAP DNA
+==================================================
+
+Create:
+
+interface ChapterMapDNA {
+  seed: string;
+
+  topologyFamily: MapTopologyFamily;
+
+  aspectRatio:
+    | "wide"
+    | "portrait"
+    | "balanced";
+
+  symmetry:
+    | "none"
+    | "partial"
+    | "strong";
+
+  primaryLaneWidth: number;
+
+  secondaryLaneWidth: number;
+
+  branchCount: number;
+
+  loopCount: number;
+
+  hubCount: number;
+
+  clearingPattern: ClearingPattern;
+
+  obstaclePattern: ObstaclePattern;
+
+  startGateRelationship:
+    | "opposite"
+    | "diagonal"
+    | "offset"
+    | "indirect";
+
+  routeBias:
+    | "open"
+    | "branching"
+    | "looping"
+    | "progressive"
+    | "mixed";
+}
+
+==================================================
+2. TOPOLOGY FAMILIES
+==================================================
+
+Support a broader family pool.
+
+These are NOT fixed maps.
+
+They describe the high-level geometry.
+
+A. OPEN PLAZA
+
+Broad open traversal field.
+
+Typical:
+- many route choices
+- minimal chokepoints
+- scattered environmental islands
+- 4–7 clearings
+
+Good for:
+introductory simulation spaces.
+
+--------------------------------
+
+B. ACADEMIC QUAD
+
+Multiple circulation lanes wrapping around academic/garden blocks.
+
+Typical:
+- crossing routes
+- loops
+- central interchange
+- several side clearings
+
+--------------------------------
+
+C. SIMULATION COMPLEX
+
+Structured central route with multiple training wings.
+
+Typical:
+- stronger directional progression
+- broad branches
+- side training bays
+- destination clearings
+
+--------------------------------
+
+D. HUB AND SPOKE
+
+One larger central training hub connected to multiple wings.
+
+Example concept:
+
+          CLEARING
+             |
+CLEARING — HUB — CLEARING
+          /     \
+     CLEARING   ROUTE
+                  |
+                GATE
+
+Do not make every spoke symmetrical.
+
+--------------------------------
+
+E. TWIN HUB
+
+Two large clearing areas connected by multiple possible routes.
+
+Concept:
+
+   HUB A
+   / | \
+ route route
+   \ | /
+   HUB B
+   /   \
+ side   gate
+
+Excellent for maps with:
+- early simulation zone
+- advanced simulation zone
+
+--------------------------------
+
+F. BRAIDED PATHWAYS
+
+2–3 broad routes travel generally toward the same destination,
+crossing/reconnecting several times.
+
+Concept:
+
+START
+ |\ \
+ | \ \
+ | / |
+ |/  |
+ |\  |
+ | \ |
+  GATE
+
+Good for:
+player route choice without permanent branch lockout.
+
+--------------------------------
+
+G. CAMPUS PROMENADE
+
+Longer environmental map with multiple consecutive open plazas.
+
+Concept:
+
+START
+  |
+PLAZA
+ / \
+paths
+ \ /
+PLAZA
+ / \
+paths
+ \ /
+FINAL CLEARING
+
+Good for:
+larger 60–70 tile maps.
+
+--------------------------------
+
+H. RADIAL TRAINING CENTER
+
+A partial radial pattern around a major university simulation facility.
+
+Important:
+NOT a decorative circular courtyard.
+
+Routes radiate from an offset hub and reconnect around it.
+
+Use asymmetric spokes and open wedges.
+
+--------------------------------
+
+I. STAGGERED ACADEMIC BLOCKS
+
+Several large non-walkable building / garden blocks produce an irregular
+street-like circulation network.
+
+This creates:
+
+- L-shaped paths
+- broad corners
+- multiple intersections
+- asymmetric clearings
+
+Good for making the campus feel architectural.
+
+--------------------------------
+
+J. CLUSTERED TRAINING BAYS
+
+Several open simulation rooms / practice areas connected through wide
+shared circulation spaces.
+
+Think:
+
+[TRAINING]
+    ||
+====HALL====
+ ||      ||
+LAB    SIM BAY
+ ||      ||
+====HALL====
+     |
+    GATE
+
+But represented as open outdoor / fantasy-university simulation spaces
+where appropriate.
+
+--------------------------------
+
+K. SERPENTINE CAMPUS WALK
+
+Broad route bends through several environment zones.
+
+Do NOT make this a single narrow corridor.
+
+Every bend should have:
+- alternate short branches
+- small loops
+- encounter clearings
+
+--------------------------------
+
+L. MULTI-COURT CAMPUS
+
+Several separate courtyards / training courts connected together.
+
+This avoids having ONE giant circular courtyard.
+
+Example:
+
+COURT A
+  ||
+connector
+ /  \
+COURT B — side area
+  ||
+COURT C
+  ||
+GATE
+
+==================================================
+3. ARCHETYPE ≠ FIXED LAYOUT
+==================================================
+
+Critical:
+
+"Academic Quad" must NOT correspond to one stored pattern.
+
+It is a GENERATION FAMILY.
+
+Two Academic Quad maps might differ in:
+
+- aspect ratio
+- number of obstacle islands
+- hub location
+- branch count
+- clearing arrangement
+- start location
+- gate location
+- symmetry
+- path loops
+
+Example:
+
+Academic Quad Chapter A:
+
+wide
+partial symmetry
+2 loops
+6 clearings
+
+Academic Quad Chapter B:
+
+portrait
+asymmetric
+3 loops
+7 clearings
+
+They should not look like the same map.
+
+==================================================
+4. MAP DNA GENERATION
+==================================================
+
+Use deterministic seeded generation.
+
+Example:
+
+mapSeed =
+  hash(
+    sagaId +
+    bookId +
+    chapterId +
+    "map-layout-v1"
+  );
+
+Generate DNA from this seed.
+
+Once generated and accepted:
+
+persist the ChapterMapDNA / blueprint.
+
+Do NOT regenerate physical geometry on rechallenge.
+
+Rechallenge randomizes encounters only.
+
+==================================================
+5. DIVERSITY RULES
+==================================================
+
+Within a Book:
+
+Do not use the same topologyFamily in consecutive Chapters.
+
+Prefer not to use the same family more than twice within Chapters 1–10.
+
+More importantly:
+
+compare structural signatures.
+
+Create something like:
+
+MapStructureSignature {
+  topologyFamily;
+  aspectRatio;
+  branchBand;
+  loopBand;
+  hubCount;
+  clearingPattern;
+  startGateRelationship;
+}
+
+Reject a newly generated blueprint if it is too structurally similar
+to another map in the same Book.
+
+For example:
+
+same topology
+same aspect
+same hub count
+same branch count
+same start/gate orientation
+
+should trigger regeneration.
+
+==================================================
+6. CHAPTER 1–10 THEME POOL
+==================================================
+
+All maps remain:
+
+UNIVERSITY
++
+CLINICAL SIMULATION
++
+FANTASY MEDICAL ACADEMY
+
+Possible environmental identities:
+
+- Clinical Simulation Commons
+- Academic Training Quad
+- Skills Practice Plaza
+- Standardized Patient Pavilion
+- Mock Ward Campus
+- Diagnostic Training Center
+- Anatomy Learning Garden
+- Emergency Simulation Court
+- Clinical Skills Complex
+- Capstone Simulation Campus
+
+The geometry can differ substantially while the art direction stays coherent.
+
+==================================================
+7. DO NOT BUILD SCENERY YET
+==================================================
+
+This push generates structural MapDNA only.
+
+Do NOT:
+
+generate raster background
+place shrubs
+place columns
+place buildings
+place encounters
+
+yet.
+
+Commit:
+
+feat(journey): create procedural chapter map DNA and topology grammar

@@ -122,6 +122,132 @@ export interface ChapterMapTemplate {
   environmentId: string;
 }
 
+// ── DNA / Topology-Grammar types (Push 3) ────────────────────────────────────
+
+/**
+ * Twelve structural topology families that describe the HIGH-LEVEL GEOMETRY
+ * of a chapter map.  A family is a GENERATION FAMILY, not a fixed layout.
+ * Two maps in the same family may differ substantially in aspect ratio,
+ * branch count, clearing arrangement, hub position, symmetry, and path loops.
+ *
+ * A. open_plaza               — broad traversal field, many route choices
+ * B. academic_quad            — crossing lanes wrapping garden/academic blocks
+ * C. simulation_complex       — directional progression, training wings
+ * D. hub_and_spoke            — central hub connected to multiple wings
+ * E. twin_hub                 — two large clearing areas, multiple cross-routes
+ * F. braided_pathways         — 2–3 broad routes crossing/reconnecting toward gate
+ * G. campus_promenade         — consecutive open plazas, linear spine (60–70 tile)
+ * H. radial_training_center   — asymmetric spokes radiating from an offset hub
+ * I. staggered_academic_blocks — irregular street network from non-walkable blocks
+ * J. clustered_training_bays  — open rooms connected via shared circulation halls
+ * K. serpentine_campus_walk   — broad winding route with branches/loops at each bend
+ * L. multi_court_campus       — several courtyards connected through corridors
+ */
+export type MapTopologyFamily =
+  | 'open_plaza'
+  | 'academic_quad'
+  | 'simulation_complex'
+  | 'hub_and_spoke'
+  | 'twin_hub'
+  | 'braided_pathways'
+  | 'campus_promenade'
+  | 'radial_training_center'
+  | 'staggered_academic_blocks'
+  | 'clustered_training_bays'
+  | 'serpentine_campus_walk'
+  | 'multi_court_campus';
+
+/** How clearings are distributed across the map footprint. */
+export type ClearingPattern =
+  | 'scattered'    // clearings spread throughout the footprint
+  | 'clustered'    // clearings concentrated in 1–2 regions
+  | 'linear'       // clearings arranged along the main route spine
+  | 'radial'       // clearings arranged around a central hub
+  | 'twin_pole';   // two anchor clearing zones (start-side and gate-side)
+
+/** How non-walkable obstacle zones are distributed (for future art pipeline). */
+export type ObstaclePattern =
+  | 'none'     // no obstacle zones reserved
+  | 'islands'  // small scattered environmental islands
+  | 'walls'    // longer barrier-style obstacles
+  | 'blocks'   // large building / garden blocks
+  | 'mixed';   // combination of islands + blocks
+
+/** Route-flow personality of the map. */
+export type RouteBias =
+  | 'open'         // all routes accessible, minimal chokepoints
+  | 'branching'    // many branches, moderate chokepoints
+  | 'looping'      // loops dominate, multiple return paths
+  | 'progressive'  // strong directional flow toward the gate
+  | 'mixed';       // balanced combination
+
+/**
+ * Structural DNA of a chapter's map.
+ *
+ * The DNA is the SOURCE DOCUMENT for map generation.
+ * It is authored once (or generated deterministically from a per-chapter seed)
+ * and must never be regenerated on rechallenge.
+ *
+ * SEED FORMULA
+ * ─────────────
+ *   seed = `${sagaId}|${bookId}|${chapterId}|map-layout-v1`
+ *
+ * DIVERSITY RULES (within a Book)
+ * ─────────────────────────────────
+ * • No consecutive chapters share the same topologyFamily.
+ * • No topologyFamily appears more than twice in chapters 1–10.
+ * • Newly generated DNA is rejected (and regenerated) if its
+ *   MapStructureSignature matches an existing chapter on ≥ 5 dimensions.
+ */
+export interface ChapterMapDNA {
+  /** Chapter number (1-based). */
+  chapterId: number;
+  /**
+   * The seed string used to derive this DNA.
+   * Equals `${sagaId}|${bookId}|${chapterId}|map-layout-v1`.
+   */
+  seed: string;
+  /** Human-readable thematic identity for this chapter's environment. */
+  themeName: string;
+  topologyFamily: MapTopologyFamily;
+  aspectRatio: 'wide' | 'portrait' | 'balanced';
+  symmetry: 'none' | 'partial' | 'strong';
+  /** Width in tiles of the primary traversal lanes. */
+  primaryLaneWidth: number;
+  /** Width in tiles of secondary / branch lanes. */
+  secondaryLaneWidth: number;
+  /** Number of distinct branch paths departing from the main spine. */
+  branchCount: number;
+  /** Number of path loops (routes that reconnect to the same spine). */
+  loopCount: number;
+  /** Number of open hub / interchange nodes. */
+  hubCount: number;
+  clearingPattern: ClearingPattern;
+  obstaclePattern: ObstaclePattern;
+  /** Spatial relationship between the start tile and the gate tile. */
+  startGateRelationship: 'opposite' | 'diagonal' | 'offset' | 'indirect';
+  routeBias: RouteBias;
+}
+
+/**
+ * Compressed structural fingerprint used for diversity comparison.
+ *
+ * Two maps are considered "too similar" when their signatures match
+ * on ≥ SIMILARITY_REJECT_THRESHOLD dimensions (currently 5 out of 7).
+ * A too-similar candidate is rejected and a new one generated.
+ */
+export interface MapStructureSignature {
+  topologyFamily:       MapTopologyFamily;
+  aspectRatio:          'wide' | 'portrait' | 'balanced';
+  /** Branch count bucket: low=1–2, mid=3–4, high=5+. */
+  branchBand:           'low' | 'mid' | 'high';
+  /** Loop count bucket: low=0–1, mid=2–3, high=4+. */
+  loopBand:             'low' | 'mid' | 'high';
+  hubCount:             number;
+  clearingPattern:      ClearingPattern;
+  startGateRelationship: 'opposite' | 'diagonal' | 'offset' | 'indirect';
+}
+
 // ── Blueprint types (Push 2: Navigation-First) ────────────────────────────────
 
 /**
