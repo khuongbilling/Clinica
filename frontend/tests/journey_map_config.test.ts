@@ -59,32 +59,32 @@ function eq(a: number, b: number, label: string): void {
 console.log('\n── getChapterTerrainCellCount ──');
 
 // Required spec cases
-eq(getChapterTerrainCellCount(1),   30, 'ch 1  → 30');
-eq(getChapterTerrainCellCount(5),   30, 'ch 5  → 30');
-eq(getChapterTerrainCellCount(6),   35, 'ch 6  → 35');
-eq(getChapterTerrainCellCount(10),  35, 'ch 10 → 35');
-eq(getChapterTerrainCellCount(11),  40, 'ch 11 → 40');
-eq(getChapterTerrainCellCount(20),  40, 'ch 20 → 40');
-eq(getChapterTerrainCellCount(21),  45, 'ch 21 → 45');
-eq(getChapterTerrainCellCount(31),  50, 'ch 31 → 50');
-eq(getChapterTerrainCellCount(41),  55, 'ch 41 → 55');
-eq(getChapterTerrainCellCount(51),  60, 'ch 51 → 60');
+eq(getChapterTerrainCellCount(1),    60, 'ch 1  →  60');
+eq(getChapterTerrainCellCount(5),    60, 'ch 5  →  60');
+eq(getChapterTerrainCellCount(6),    70, 'ch 6  →  70');
+eq(getChapterTerrainCellCount(10),   70, 'ch 10 →  70');
+eq(getChapterTerrainCellCount(11),   80, 'ch 11 →  80');
+eq(getChapterTerrainCellCount(20),   80, 'ch 20 →  80');
+eq(getChapterTerrainCellCount(21),   90, 'ch 21 →  90');
+eq(getChapterTerrainCellCount(31),  100, 'ch 31 → 100');
+eq(getChapterTerrainCellCount(41),  110, 'ch 41 → 110');
+eq(getChapterTerrainCellCount(51),  120, 'ch 51 → 120');
 
 // Additional band-edge coverage
-eq(getChapterTerrainCellCount(3),   30, 'ch 3  → 30');
-eq(getChapterTerrainCellCount(30),  45, 'ch 30 → 45');
-eq(getChapterTerrainCellCount(40),  50, 'ch 40 → 50');
-eq(getChapterTerrainCellCount(50),  55, 'ch 50 → 55');
-eq(getChapterTerrainCellCount(60),  60, 'ch 60 → 60');
-eq(getChapterTerrainCellCount(100), 80, 'ch 100 → 80');
+eq(getChapterTerrainCellCount(3),    60, 'ch 3  →  60');
+eq(getChapterTerrainCellCount(30),   90, 'ch 30 →  90');
+eq(getChapterTerrainCellCount(40),  100, 'ch 40 → 100');
+eq(getChapterTerrainCellCount(50),  110, 'ch 50 → 110');
+eq(getChapterTerrainCellCount(60),  120, 'ch 60 → 120');
+eq(getChapterTerrainCellCount(100), 160, 'ch 100 → 160');
 
-// +5 per band boundary (ch 11, 21, 31 … 91)
+// +10 per band boundary (ch 11, 21, 31 … 91)
 for (let base = 11; base <= 91; base += 10) {
   const atBand  = getChapterTerrainCellCount(base);
   const preBand = getChapterTerrainCellCount(base - 1);
   check(
-    `ch${base} is 5 more than ch${base - 1}`,
-    atBand === preBand + 5,
+    `ch${base} is 10 more than ch${base - 1}`,
+    atBand === preBand + 10,
     `ch${base - 1}=${preBand}, ch${base}=${atBand}`,
   );
 }

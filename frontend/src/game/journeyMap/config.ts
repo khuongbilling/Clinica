@@ -35,24 +35,29 @@ const BP = 10_000;
  *   • 1 Chapter Boss Gate anchor cell
  *   • (N − 2) traversable encounter-eligible cells
  *
- * So for Chapter 1: total = 30, encounterEligible = 28.
+ * So for Chapter 1: total = 60, encounterEligible = 58.
  *
  * Band table:
- *   Ch  1– 5 → 30
- *   Ch  6–10 → 35
- *   Ch 11–20 → 40
- *   Ch 21–30 → 45
- *   Ch 31–40 → 50
- *   Ch 41–50 → 55
- *   Ch 51–60 → 60  … +5 per ten-chapter band thereafter
+ *   Ch  1– 5 →  60
+ *   Ch  6–10 →  70
+ *   Ch 11–20 →  80
+ *   Ch 21–30 →  90
+ *   Ch 31–40 → 100
+ *   Ch 41–50 → 110
+ *   … +10 per ten-chapter band thereafter
  *
- * Formula for ch ≥ 11: 40 + 5 × floor((chapter − 11) / 10)
+ * Formula for ch ≥ 11: 80 + 10 × floor((chapter − 11) / 10)
  */
 export function getChapterTerrainCellCount(chapter: number): number {
-  if (chapter <= 5)  return 30;
-  if (chapter <= 10) return 35;
+  if (chapter <= 5)  return 60;
+  if (chapter <= 10) return 70;
 
-  return 40 + 5 * Math.floor((chapter - 11) / 10);
+  return 80 + 10 * Math.floor((chapter - 11) / 10);
+}
+
+/** Alias exported for callers that use the old name — see chapterTileCount. */
+export function chapterTileCount(chapter: number): number {
+  return getChapterTerrainCellCount(chapter);
 }
 
 /** @deprecated Renamed to getChapterTerrainCellCount. Remove usages; this

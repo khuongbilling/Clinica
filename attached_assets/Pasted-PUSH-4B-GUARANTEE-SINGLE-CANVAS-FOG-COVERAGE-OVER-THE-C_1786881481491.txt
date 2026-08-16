@@ -1,0 +1,175 @@
+PUSH 4B — GUARANTEE SINGLE-CANVAS FOG COVERAGE OVER THE COMPLETE MAPWORLD
+
+Do NOT change organic reveal yet.
+
+The goal of this push is:
+
+BEFORE ERASURE,
+FogOfWar must completely cover the same full authored world rectangle
+as the Chapter background.
+
+==================================================
+A. DIMENSION INVARIANT
+==================================================
+
+The following must all use the exact same:
+
+worldWidth
+worldHeight
+origin 0,0
+
+MapWorld
+ChapterBackground
+FogOfWarLayer container
+FogOfWar canvas
+
+Add dev assertion:
+
+backgroundWidth === worldWidth
+backgroundHeight === worldHeight
+
+fogCssWidth === worldWidth
+fogCssHeight === worldHeight
+
+fogLeft === 0
+fogTop === 0
+
+==================================================
+B. FULL WORLD FOG FOUNDATION
+==================================================
+
+Keep the current single-canvas architecture.
+
+Drawing order:
+
+1. clear complete canvas
+2. DPR transform
+3. full world foundation fill
+4. fog_base_day_01 drawn ONCE using cover
+5. reveal erasure
+
+The existing foundation concept is correct:
+
+full-world fillRect
++
+one full-world cover texture
+
+Do not reintroduce:
+- grids
+- stamps
+- multiple square fog images
+- FogBase legacy canvas
+- FogMid legacy canvas
+- FogWisp legacy canvas
+
+==================================================
+C. TEXTURE FAILURE MUST NOT CANCEL FOG LOGIC
+==================================================
+
+There is a current bug:
+
+if fog_base_day_01 fails to load,
+the draw function returns before reveal erasure.
+
+Change behavior to:
+
+draw foundation
+
+try to load texture
+
+if texture loads:
+  draw it
+
+if texture fails:
+  log warning
+  CONTINUE
+
+then always run reveal erasure.
+
+The foundation itself must remain a complete valid fog surface.
+
+==================================================
+D. COVERAGE TEST BEFORE ERASURE
+==================================================
+
+Add a DEV-only pre-erasure check.
+
+Sample canvas alpha across the world using a modest grid.
+
+Before destination-out:
+
+there must be NO transparent holes.
+
+Target:
+
+minimum alpha before erasure > 0.60
+
+If any sample has near-zero alpha:
+
+FOG COVERAGE FAIL
+
+This verifies that the full-map foundation is truly present.
+
+==================================================
+E. WORLD EDGE
+==================================================
+
+Fog ends exactly at Chapter world boundaries.
+
+No:
+- +200 padding
+- -200 offset
+- fog strips beyond background
+- edge taper
+- transparent lower strip
+
+MapViewport clips the complete MapWorld.
+
+==================================================
+F. DIAGNOSTIC
+==================================================
+
+Display:
+
+WORLD COVERAGE
+
+Viewport:    ...
+MapWorld:    ...
+Background:  ...
+Fog CSS:     ...
+Fog backing: ...
+DPR:         ...
+
+Pre-erase minimum alpha: ...
+
+PASS only when:
+
+MapWorld == Background == Fog CSS dimensions
+
+and:
+
+pre-erase minimum alpha >= 0.60
+
+==================================================
+ACCEPTANCE
+==================================================
+
+Temporarily disable reveal erasure in DEV diagnostic mode.
+
+When "FULL FOG" is selected:
+
+the ENTIRE Chapter background must be covered by fog.
+
+No bright exposed strip:
+- top
+- bottom
+- left
+- right
+
+No clear terrain anywhere.
+
+Then restore erasure.
+
+Commit:
+
+fix(journey): guarantee full-world fog coverage before reveal

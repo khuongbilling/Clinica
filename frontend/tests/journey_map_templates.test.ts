@@ -64,18 +64,18 @@ for (let ch = 1; ch <= 10; ch++) {
 
 // ── 2. Canonical tile count band table ───────────────────────────────────────
 const BAND_CASES: [number, number][] = [
-  [1, 30], [5, 30], [6, 35], [10, 35],
-  [11, 40], [20, 40], [21, 45], [30, 45],
-  [31, 50], [40, 50],
+  [1,  60], [5,  60], [6,  70], [10,  70],
+  [11, 80], [20, 80], [21, 90], [30,  90],
+  [31, 100], [40, 100],
 ];
 for (const [ch, expected] of BAND_CASES) {
   check(`[ch${ch}] canonical tile count ${expected}`, getChapterTerrainCellCount(ch) === expected);
 }
 
 // ── 3. Geometry fixed across seeds / shifts (authored chapters only) ──────────
-// Ch1 is production-authored: seed and shift must not affect coordinates.
-// Unauth'd chapters (ch2+) use procedural generation — they vary by seed.
-for (const ch of [1]) {  // extend this list as chapters are authored + added to PRODUCTION_AUTHORED_CHAPTERS
+// All Ch1–10 are production-authored: seed and shift must not affect coordinates.
+// Unauth'd chapters (ch11+) use procedural generation — they vary by seed.
+for (const ch of [1, 5, 10]) {
   const a = generateRunData(ch, 'seed-aaaa', 'day');
   const b = generateRunData(ch, 'seed-bbbb', 'night');
   check(`[ch${ch}] identical coordinates across seeds+shifts`,
@@ -83,8 +83,8 @@ for (const ch of [1]) {  // extend this list as chapters are authored + added to
   check(`[ch${ch}] identical start tile`, a.topology.startTileId === b.topology.startTileId);
   check(`[ch${ch}] identical gate tile`,  a.topology.gateAnchorId === b.topology.gateAnchorId);
 }
-// Unauth'd chapters: different seeds → different geometry (procedural fallback).
-for (const ch of [4, 7, 10]) {
+// Unauth'd chapters (ch11+): different seeds → different geometry (procedural fallback).
+for (const ch of [12, 15]) {
   const a = generateRunData(ch, 'seed-aaaa', 'day');
   const b = generateRunData(ch, 'seed-bbbb', 'day');
   check(`[ch${ch}] (unauth'd) geometry varies between seeds`,
@@ -140,10 +140,10 @@ for (const ch of [1, 5, 10, 12]) {
 // ── 9. Push 3 acceptance criteria ────────────────────────────────────────────
 //
 // Chapter 1: authored geometry — seed / attempt / shift have no effect on layout.
-// Other chapters: procedural geometry — different seeds → different coords.
+// All Ch1–10 are authored; Ch11+ use procedural generation.
 {
-  const CH1_START = '-1,2';   // Push 3: lower-left wing, 4 exploration dirs
-  const CH1_GATE  = '3,0';    // Push 3: far-right terminus of the atrium hall
+  const CH1_START = '0,3';    // Push 1 (doubled): lower-centre of radius-4 atrium
+  const CH1_GATE  = '0,-4';   // Push 1 (doubled): top-centre cap — ceremonial arch
   const coordsOf  = (r: ReturnType<typeof generateRunData>) =>
     r.topology.tiles.map(t => `${t.q},${t.r}`).sort().join('|');
 
@@ -191,57 +191,62 @@ for (const ch of [1, 5, 10, 12]) {
     check('[push3 AC5] ch1 start always at authored coord', r.topology.startTileId === CH1_START);
   }
 
-  // AC6: isAuthoredChapter routing — Ch1 uses template, Ch2+ use procedural.
-  //   Procedural chapters produce different geometry for different seeds.
+  // AC6: isAuthoredChapter routing — Ch1–10 use template, Ch11+ use procedural.
   {
     const { isAuthoredChapter } = require('../src/game/journeyMap/chapterMapTemplates');
-    check('[push3 AC6] isAuthoredChapter(1) true',  isAuthoredChapter(1)  === true);
-    check('[push3 AC6] isAuthoredChapter(2) false', isAuthoredChapter(2)  === false);
-    check('[push3 AC6] isAuthoredChapter(10) false', isAuthoredChapter(10) === false);
+    check('[push3 AC6] isAuthoredChapter(1) true',   isAuthoredChapter(1)  === true);
+    check('[push3 AC6] isAuthoredChapter(5) true',   isAuthoredChapter(5)  === true);
+    check('[push3 AC6] isAuthoredChapter(10) true',  isAuthoredChapter(10) === true);
+    check('[push3 AC6] isAuthoredChapter(11) false', isAuthoredChapter(11) === false);
 
-    const ch2a = generateRunData(2, 'seed-aaa', 'day');
-    const ch2b = generateRunData(2, 'seed-bbb', 'day');
-    check('[push3 AC6] ch2 (unauth) geometry varies between seeds',
-      coordsOf(ch2a) !== coordsOf(ch2b));
+    const ch12a = generateRunData(12, 'seed-aaa', 'day');
+    const ch12b = generateRunData(12, 'seed-bbb', 'day');
+    check('[push3 AC6] ch12 (unauth) geometry varies between seeds',
+      coordsOf(ch12a) !== coordsOf(ch12b));
   }
 }
 
 // ── 10. Chapter 1 coordinate SNAPSHOT ────────────────────────────────────────
 //
-// These coordinates are the PERMANENT authored hexagonal battlefield (Push 2).
+// These coordinates are the PERMANENT authored hexagonal battlefield (Push 1 doubled).
 // They must NEVER change regardless of run seed, attempt number, or TimeOfDay.
 // If this test fails after a code change, it means the Chapter 1 canonical
 // footprint was accidentally mutated — revert AUTHORED_CHAPTER_MAPS[1] in
 // chapterMapTemplates.ts.
 //
-// Layout: 7 rows, widths 3+4+5+6+5+4+3 = 30 cells.
-//   r=-3: q= 0  1  2   (top cap)
-//   r=-2: q=-1  0  1  2
-//   r=-1: q=-1  0  1  2  3
-//   r= 0: q=-2 -1  0  1  2  3   (widest)
-//   r= 1: q=-2 -1  0  1  2      (start at q=0)
-//   r= 2: q=-1  0  1  2
-//   r= 3: q=-1  0  1   (bottom cap)
+// Layout: 9 rows, widths 5+6+7+8+8+8+7+6+5 = 60 cells.
+//   r=-4: q= 0..4    (top cap, 5)
+//   r=-3: q=-1..4    (6)
+//   r=-2: q=-2..4    (7)
+//   r=-1: q=-3..4    (8)
+//   r= 0: q=-4..3    (8 — corner (4,0) dropped)
+//   r= 1: q=-4..3    (8)
+//   r= 2: q=-4..2    (7)
+//   r= 3: q=-4..1    (6)   Start (0,3)
+//   r= 4: q=-4..0    (5)
 {
-  // Sorted canonical coordinate set for Chapter 1 (30 tiles, hexagonal battlefield).
+  // Sorted canonical coordinate set for Chapter 1 (60 tiles, radius-4 circular atrium).
   const CH1_SNAPSHOT = [
-    '-1,-1', '-1,-2', '-1,0', '-1,1', '-1,2', '-1,3',
-    '-2,0',  '-2,1',
-     '0,-1',  '0,-2', '0,-3', '0,0',  '0,1',  '0,2',  '0,3',
-     '1,-1',  '1,-2', '1,-3', '1,0',  '1,1',  '1,2',  '1,3',
-     '2,-1',  '2,-2', '2,-3', '2,0',  '2,1',  '2,2',
-     '3,-1',  '3,0',
+    '-1,-1','-1,-2','-1,-3','-1,0','-1,1','-1,2','-1,3','-1,4',
+    '-2,-1','-2,-2','-2,0','-2,1','-2,2','-2,3','-2,4',
+    '-3,-1','-3,0','-3,1','-3,2','-3,3','-3,4',
+    '-4,0', '-4,1', '-4,2', '-4,3', '-4,4',
+    '0,-1', '0,-2', '0,-3', '0,-4', '0,0', '0,1', '0,2', '0,3', '0,4',
+    '1,-1', '1,-2', '1,-3', '1,-4', '1,0', '1,1', '1,2', '1,3',
+    '2,-1', '2,-2', '2,-3', '2,-4', '2,0', '2,1', '2,2',
+    '3,-1', '3,-2', '3,-3', '3,-4', '3,0', '3,1',
+    '4,-1', '4,-2', '4,-3', '4,-4',
   ].sort().join('|');
 
-  const CH1_START    = '-1,2';   // Push 3: lower-left wing, 4 exploration dirs
-  const CH1_GATE     = '3,0';    // Push 3: far-right terminus of the atrium hall
-  const CH1_ENV      = 'atrium-approach';
+  const CH1_START = '0,3';    // lower-centre of the atrium floor, 6 neighbours
+  const CH1_GATE  = '0,-4';   // top-centre cap — ceremonial entrance arch
+  const CH1_ENV   = 'atrium-approach';
 
   // Template API.
   const tpl = getChapterMapTemplate(1);
   const tplCoords = tpl.tiles.map(t => t.id).sort().join('|');
   check('[ch1 snapshot] template coords match authored set', tplCoords === CH1_SNAPSHOT,
-    tplCoords);
+    `got ${tpl.tiles.length} tiles`);
   check('[ch1 snapshot] template startTileId fixed',    tpl.startTileId   === CH1_START);
   check('[ch1 snapshot] template gateTileId fixed',     tpl.gateTileId    === CH1_GATE);
   check('[ch1 snapshot] template environmentId fixed',  tpl.environmentId === CH1_ENV);
@@ -252,7 +257,7 @@ for (const ch of [1, 5, 10, 12]) {
   const hex = getChapterHexTopology(1);
   const hexCoords = hex.tiles.map(t => `${t.q},${t.r}`).sort().join('|');
   check('[ch1 snapshot] HexTopology coords match authored set', hexCoords === CH1_SNAPSHOT);
-  check('[ch1 snapshot] HexTopology startTileId fixed', hex.startTileId  === CH1_START);
+  check('[ch1 snapshot] HexTopology startTileId fixed',  hex.startTileId  === CH1_START);
   check('[ch1 snapshot] HexTopology gateAnchorId fixed', hex.gateAnchorId === CH1_GATE);
 
   // Geometry invariant across DIFFERENT SEEDS.
@@ -279,16 +284,16 @@ for (const ch of [1, 5, 10, 12]) {
     second.tiles.map(t => t.id).sort().join('|') === CH1_SNAPSHOT);
 }
 
-// ── 11. Push 3 acceptance criteria — Chapter 1 start and gate placement ────────
+// ── 11. Push 1 acceptance criteria — Chapter 1 start and gate placement ────────
 //
-// These tests lock the deliberate placement decisions for Ch1:
-//   Start  (-1,2): lower-left wing, exactly 4 exploration directions
-//   Gate   ( 3,0): far-right atrium-hall terminus, not top cap
+// These tests lock the deliberate placement decisions for the doubled Ch1 map:
+//   Start  (0,3):  lower-centre of the radius-4 atrium, 6 exploration directions
+//   Gate   (0,−4): top-centre cap — ceremonial entrance arch
 //
 // "Never changes" means: invariant across seed, attempt number, and TimeOfDay.
 {
-  const CH1_START = '-1,2';
-  const CH1_GATE  = '3,0';
+  const CH1_START = '0,3';
+  const CH1_GATE  = '0,-4';
   const AXIAL_DIRS: readonly (readonly [number, number])[] = [
     [1,0],[-1,0],[0,1],[0,-1],[1,-1],[-1,1],
   ];
@@ -297,21 +302,21 @@ for (const ch of [1, 5, 10, 12]) {
   const idSet = new Set(tpl.tiles.map(t => t.id));
 
   // S1: Start is at the authored coordinate.
-  check('[push3-placement S1] start at (-1,2)',        tpl.startTileId  === CH1_START);
+  check('[push3-placement S1] start at (0,3)',         tpl.startTileId  === CH1_START);
   check('[push3-placement S1] start role correct',     tpl.tiles.find(t => t.id === CH1_START)?.role === 'start');
 
-  // S2: Start has exactly 4 neighbours (3–4 exploration directions).
+  // S2: Start has exactly 6 neighbours (interior of radius-4 hex).
   {
     const [q, r] = CH1_START.split(',').map(Number);
     const n = AXIAL_DIRS.filter(([dq,dr]) => idSet.has(`${q+dq},${r+dr}`)).length;
-    check('[push3-placement S2] start has exactly 4 neighbours',
-      n === 4, `actual: ${n}`);
+    check('[push3-placement S2] start has exactly 6 neighbours',
+      n === 6, `actual: ${n}`);
   }
 
-  // S3: Start is NOT in the top cap row (r ≠ -3).
+  // S3: Start is NOT in the top cap row (r ≠ -4).
   {
     const [, r] = CH1_START.split(',').map(Number);
-    check('[push3-placement S3] start not in top-cap row (r ≠ -3)', r !== -3);
+    check('[push3-placement S3] start not in top-cap row (r ≠ -4)', r !== -4);
   }
 
   // S4: Start is in the lower sector (r > 0).
@@ -321,28 +326,26 @@ for (const ch of [1, 5, 10, 12]) {
   }
 
   // G1: Gate is at the authored coordinate.
-  check('[push3-placement G1] gate at (3,0)',          tpl.gateTileId  === CH1_GATE);
+  check('[push3-placement G1] gate at (0,-4)',         tpl.gateTileId  === CH1_GATE);
   check('[push3-placement G1] gate role correct',      tpl.tiles.find(t => t.id === CH1_GATE)?.role === 'gate');
 
-  // G2: Gate is NOT in the top cap row (r ≠ -3) — deliberate placement, not auto-top.
+  // G2: Gate IS in the top cap row (r = -4) — ceremonial arch placement.
   {
     const [, r] = CH1_GATE.split(',').map(Number);
-    check('[push3-placement G2] gate not in top-cap row (r ≠ -3)', r !== -3);
+    check('[push3-placement G2] gate in top-cap row (r = -4)', r === -4);
   }
 
-  // G3: Gate is in the widest row (r = 0, the atrium-hall row).
+  // G3: Gate is in the top row (r = -4).
   {
     const [, r] = CH1_GATE.split(',').map(Number);
-    check('[push3-placement G3] gate in widest row (r = 0)', r === 0, `r=${r}`);
+    check('[push3-placement G3] gate in topmost row (r = -4)', r === -4, `r=${r}`);
   }
 
-  // G4: Gate is at the rightmost q in its row (architectural terminus).
+  // G4: Gate row (r = -4) has ≥ 3 cells (the top cap is substantial).
   {
-    const [gq, gr] = CH1_GATE.split(',').map(Number);
-    const rowCells = tpl.tiles.filter(t => t.r === gr).map(t => t.q);
-    const maxQ     = Math.max(...rowCells);
-    check('[push3-placement G4] gate at rightmost q in row r=0',
-      gq === maxQ, `gate q=${gq}, max q in row=${maxQ}`);
+    const [, gr] = CH1_GATE.split(',').map(Number);
+    const rowCells = tpl.tiles.filter(t => t.r === gr).length;
+    check('[push3-placement G4] gate row has ≥ 3 cells', rowCells >= 3, `cells=${rowCells}`);
   }
 
   // INV1: Start coordinate is invariant across all seeds.
@@ -368,7 +371,7 @@ for (const ch of [1, 5, 10, 12]) {
       run.topology.gateAnchorId === CH1_GATE);
   }
 
-  // BFS1: Gate is reachable from start in exactly 4 hops.
+  // BFS1: Gate is reachable from start in exactly 7 hops.
   {
     const adj = new Map<string, string[]>();
     for (const t of tpl.tiles) {
@@ -387,13 +390,13 @@ for (const ch of [1, 5, 10, 12]) {
     }
     const d = dist.get(CH1_GATE) ?? -1;
     check('[push3-placement BFS1] gate reachable from start', d >= 0);
-    check('[push3-placement BFS1] BFS distance start→gate = 4', d === 4, `actual: ${d}`);
+    check('[push3-placement BFS1] BFS distance start→gate = 7', d === 7, `actual: ${d}`);
   }
 }
 
-// ── 12. Push 2 acceptance criteria — Chapter 1 hexagonal battlefield ──────────
+// ── 12. Push 1 acceptance criteria — Chapter 1 hexagonal battlefield ──────────
 //
-// Validates the specific shape properties of the authored 30-cell tactical field.
+// Validates the specific shape properties of the doubled 60-cell tactical field.
 // These are structural guarantees that must hold for the template to be approved.
 {
   const AXIAL_DIRS: readonly (readonly [number, number])[] = [
@@ -404,12 +407,12 @@ for (const ch of [1, 5, 10, 12]) {
   const tiles = tpl.tiles;
   const idSet = new Set(tiles.map(t => t.id));
 
-  // AC1: Exactly 30 unique coordinates.
-  check('[push2 AC1] exactly 30 cells',           tiles.length === 30);
-  check('[push2 AC1] all ids unique',             new Set(tiles.map(t => t.id)).size === 30);
-  check('[push2 AC1] all coordinates unique',     new Set(tiles.map(t => `${t.q},${t.r}`)).size === 30);
+  // AC1: Exactly 60 unique coordinates.
+  check('[push2 AC1] exactly 60 cells',           tiles.length === 60);
+  check('[push2 AC1] all ids unique',             new Set(tiles.map(t => t.id)).size === 60);
+  check('[push2 AC1] all coordinates unique',     new Set(tiles.map(t => `${t.q},${t.r}`)).size === 60);
 
-  // AC2: Single connected component — BFS from start covers all 30 tiles.
+  // AC2: Single connected component — BFS from start covers all 60 tiles.
   {
     const adj = new Map<string, string[]>();
     for (const t of tiles) {
@@ -425,21 +428,21 @@ for (const ch of [1, 5, 10, 12]) {
         if (!visited.has(nb)) { visited.add(nb); queue.push(nb); }
       }
     }
-    check('[push2 AC2] single connected component (BFS covers all 30)', visited.size === 30);
+    check('[push2 AC2] single connected component (BFS covers all 60)', visited.size === 60);
   }
 
   // AC3: Start cell exists and is correctly tagged.
   check('[push2 AC3] start tile exists',          tiles.some(t => t.id === tpl.startTileId));
   check('[push2 AC3] start tile role is start',   tiles.find(t => t.id === tpl.startTileId)?.role === 'start');
-  check('[push2 AC3] start at authored coord',    tpl.startTileId === '-1,2');
+  check('[push2 AC3] start at authored coord',    tpl.startTileId === '0,3');
 
   // AC4: Gate cell exists and is correctly tagged.
   check('[push2 AC4] gate tile exists',           tiles.some(t => t.id === tpl.gateTileId));
   check('[push2 AC4] gate tile role is gate',     tiles.find(t => t.id === tpl.gateTileId)?.role === 'gate');
-  check('[push2 AC4] gate at authored coord',     tpl.gateTileId === '3,0');
+  check('[push2 AC4] gate at authored coord',     tpl.gateTileId === '0,-4');
 
   // AC5: Every terrain cell has at least one neighbour (no orphans).
-  //      The hexagonal battlefield requires ≥3 neighbours on every cell.
+  //      The radius-4 hex requires ≥3 neighbours on every cell (no peninsulas).
   {
     let minNeighbours = Infinity;
     let orphanFound   = false;
@@ -480,27 +483,27 @@ for (const ch of [1, 5, 10, 12]) {
       `actual: ${gateDistance}`);
   }
 
-  // AC7: Shape properties — 7 rows, max width 6.
+  // AC7: Shape properties — 9 rows (r=-4 to r=4), max width 8.
   {
     const rValues = tiles.map(t => t.r);
     const minR    = Math.min(...rValues);
     const maxR    = Math.max(...rValues);
-    check('[push2 AC7] 7 rows (r from -3 to +3)', minR === -3 && maxR === 3);
+    check('[push2 AC7] 9 rows (r from -4 to +4)', minR === -4 && maxR === 4);
 
     let maxWidth = 0;
     for (let r = minR; r <= maxR; r++) {
       const width = tiles.filter(t => t.r === r).length;
       maxWidth = Math.max(maxWidth, width);
     }
-    check('[push2 AC7] max row width = 6', maxWidth === 6,
+    check('[push2 AC7] max row width = 8', maxWidth === 8,
       `actual max width: ${maxWidth}`);
   }
 
-  // AC8: Row-width profile matches the authored 3+4+5+6+5+4+3 pattern.
+  // AC8: Row-width profile matches the authored 5+6+7+8+8+8+7+6+5 pattern.
   {
-    const widthByRow = [-3,-2,-1,0,1,2,3].map(r => tiles.filter(t => t.r === r).length);
-    const expected   = [3, 4, 5, 6, 5, 4, 3];
-    check('[push2 AC8] row widths match 3+4+5+6+5+4+3',
+    const widthByRow = [-4,-3,-2,-1,0,1,2,3,4].map(r => tiles.filter(t => t.r === r).length);
+    const expected   = [5, 6, 7, 8, 8, 8, 7, 6, 5];
+    check('[push2 AC8] row widths match 5+6+7+8+8+8+7+6+5',
       widthByRow.join(',') === expected.join(','),
       `actual: ${widthByRow.join(',')}`);
   }
@@ -538,12 +541,12 @@ for (const ch of [1, 5, 10, 12]) {
   check('[variant] different seeds produce different distributions',
     variantsA.join('|') !== variantsB.join('|'));
 
-  // 3. All 7 variants are reachable across a 30-tile map with some seed.
+  // 3. All 7 variants are reachable across the tile map with some seed.
   const allTileKeys = run.topology.tiles.map(t => `${t.q},${t.r}`);
   const seen = new Set(allTileKeys.map(k => variantFor('coverage-seed', k)));
-  // Not guaranteed for every seed, but with 30 tiles and 7 variants it's almost
+  // Not guaranteed for every seed, but with 60 tiles and 7 variants it's almost
   // certain for any fixed seed. Accept ≥5 distinct variants as sufficient coverage.
-  check(`[variant] coverage: ≥5 distinct variants seen across 30 tiles`, seen.size >= 5);
+  check(`[variant] coverage: ≥5 distinct variants seen across 60 tiles`, seen.size >= 5);
 
   // 4. Variant namespace is isolated — same seed, different namespace never collides.
   //    (terrain namespace: "seed:terrain:key"; encounters use "seed:encounters")

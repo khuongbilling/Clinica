@@ -1,0 +1,108 @@
+PUSH 2 — GENERATE NAVIGATION BLUEPRINT BEFORE BACKGROUND ART
+
+The Chapter background must no longer determine where traversal happens.
+
+Generate a LOGICAL NAVIGATION BLUEPRINT first.
+
+This blueprint is invisible gameplay-authoring data.
+
+==================================================
+CREATE MAP BLUEPRINT
+==================================================
+
+Add something similar to:
+
+interface ChapterMapBlueprint {
+  chapterId: number;
+
+  archetype:
+    | "simulation_plaza"
+    | "academic_quad"
+    | "simulation_complex";
+
+  tileCount: number;
+
+  walkableCells: HexCoord[];
+
+  clearings: MapClearing[];
+
+  obstacleZones: WorldZone[];
+
+  scenicZones: WorldZone[];
+
+  startCell: HexCoord;
+
+  gateCell: HexCoord;
+
+  worldMarginTiles: WorldMargins;
+
+  seed: string;
+}
+
+interface MapClearing {
+  id: string;
+
+  purpose:
+    | "general"
+    | "encounter"
+    | "treasure"
+    | "merchant"
+    | "ward_event"
+    | "boss"
+    | "landmark";
+
+  cells: HexCoord[];
+
+  center: HexCoord;
+
+  minimumOpenRadius: number;
+}
+
+==================================================
+CANONICAL GENERATION ORDER
+==================================================
+
+Chapter generation becomes:
+
+1. choose Chapter archetype
+2. generate logical walkable lanes
+3. generate/open clearings
+4. validate connected terrain
+5. reserve obstacle-free space
+6. generate background art from blueprint
+7. place hex grid on walkableCells
+8. assign encounters to eligible cells
+
+Background art must NEVER be step 1.
+
+==================================================
+FIXED CHAPTER GEOMETRY
+==================================================
+
+Generate this blueprint once for a Chapter.
+
+Persist it as the Chapter's authored map definition.
+
+Rechallenging must NOT regenerate:
+
+- pathways
+- clearings
+- obstacle layout
+- gate location
+- physical Chapter footprint
+
+Rechallenging may regenerate:
+
+- enemies
+- treasure
+- merchant
+- Ward Events
+- Area Boss allocation
+
+Day / Evening / Night must use the SAME navigation blueprint.
+
+Only lighting/environment treatment changes.
+
+Commit:
+
+feat(journey): add navigation-first chapter map blueprint
