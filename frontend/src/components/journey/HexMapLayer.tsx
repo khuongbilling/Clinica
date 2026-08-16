@@ -342,33 +342,61 @@ const FOG_THEMES: Record<'day' | 'evening' | 'night', FogTheme> = {
 //
 // The jade glow ellipse (Layer 4a) is centred at the feet position and widens
 // slightly beyond the sprite footprint for a magical ambient halo effect.
-const CHR_W_RATIO          = 1.38;   // Push 2: 1.15 → 1.38 (+20%) for mobile readability
-const CHR_H_RATIO          = 1.38;   // Push 2: 1.15 → 1.38 (+20%) — square bounding box
-// CHR_Y_SHIFT: keeps feet anchored at the same tile position after the scale-up.
-// Feet land at sz×(CHR_H_RATIO−CHR_Y_SHIFT).  Target = 0.77×sz (unchanged from Push 19).
-// Old: 1.15−0.38 = 0.77 ✓   New: 1.38−0.61 = 0.77 ✓
-const CHR_Y_SHIFT          = 0.61;   // Push 2: 0.38 → 0.61 (compensates for taller sprite)
+// ── Push 4A.6: exploration sprite scale normalization ────────────────────────
+//
+// Scale classes (all fractions of sz — the 80 px authored tile):
+//
+//   SMALL_OBJECT        0.45–0.60 × sz   small pickups, cards, consumable markers
+//   STANDARD_OBJECT     0.65–0.80 × sz   treasure chests, interactable props
+//   STANDARD_CHARACTER  1.00–1.20 × sz   player, merchant, support NPC
+//   LARGE_ENCOUNTER     1.15–1.40 × sz   elite enemy, large ward-event figure
+//   AREA_BOSS           1.40–1.80 × sz   bosses — may dominate multiple cells visually
+//
+// Player target: 1.15 × sz  (≈ 92 px at 80 px tile — STANDARD_CHARACTER midpoint).
+// Chest  target: 0.68 × sz  (≈ 54 px at 80 px tile — STANDARD_OBJECT).
+// Player:Chest ratio: 1.15 / 0.68 = 1.69 ×  →  matches spec target 1.5–1.7 ×.
+//
+// Feet-anchor invariant: sz × (CHR_H_RATIO − CHR_Y_SHIFT) = 0.77 × sz.
+//   Push 8:    1.38 − 0.61 = 0.77 ✓
+//   Push 4A.6: 1.15 − 0.38 = 0.77 ✓  (reverted to original Push 8 target ratio)
+const CHR_W_RATIO          = 1.15;   // Push 4A.6: 1.38 → 1.15 — STANDARD_CHARACTER midpoint
+const CHR_H_RATIO          = 1.15;   // Push 4A.6: 1.38 → 1.15 — square bounding box
+// CHR_Y_SHIFT: keeps feet anchored at 0.77 × sz from tile top regardless of ratio.
+// Formula: CHR_Y_SHIFT = CHR_H_RATIO − 0.77
+const CHR_Y_SHIFT          = 0.38;   // Push 4A.6: 0.61 → 0.38 (1.15 − 0.77 = 0.38 ✓)
 const CHR_GLOW_CY          = 0.65;   // jade glow centre Y = feet position (fraction of sz)
 const CHR_GLOW_RX          = 0.36;   // jade glow horizontal radius (wider than 1.0× era)
 const CHR_GLOW_RY          = 0.11;   // jade glow vertical radius (flattened ellipse)
 const CHR_GLOW_COLOR       = 'rgba(60,220,180,1)'; // jade/teal to match tile ring glow
 const CHR_GLOW_OPACITY     = 0.55;   // peak centre opacity of jade glow pool
 
+// ── Grounding system (Push 4A.7) ─────────────────────────────────────────────
+//
+// Every ground-based exploration object uses ONE named ground anchor:
+//
+//   groundY = sz × GROUND_ANCHOR_Y_FRAC      (within the tile's sz×sz container)
+//   shadowY = groundY + sz × SHADOW_ANCHOR_OFFSET   (just below feet — shadow visible)
+//
+// The sprite is positioned so its BOTTOM (image box bottom) lands at groundY.
+// The shadow ellipse cy = shadowY so sprite and shadow can NEVER drift apart.
+//
+// Player uses separate CHR_SHADOW_CY / CHR_GLOW_CY calibrated to the sprite's
+// visual feet position (0.65 × sz) rather than the 88 % object-floor rule.
+const GROUND_ANCHOR_Y_FRAC = 0.88; // hex floor — object bases land here
+const SHADOW_ANCHOR_OFFSET = 0.015; // shadow cy = groundY + this (keeps shadow at contact)
+
 // ── Push 8: map-object grounding shadows ─────────────────────────────────────
 //
-// Flat ellipses drawn BELOW each world object (SVG painters order — first = bottom)
-// so props feel planted on the hex surface rather than floating.
-//
 //   SHADOW_COLOR      — ink-navy (not flat black); fits Ink & Mist palette
-//   SHADOW_RY_FRAC    — constant very-flat ry = 0.055 × sz for all object types
-//   SHADOW_RX_MUL     — encounter-node rx = sizeMul × SHADOW_RX_MUL × sz
-//                       slightly less than the prop footprint (shadow fits under base)
+//   SHADOW_RY_FRAC    — constant very-flat ry for all object types
+//   SHADOW_RX_MUL     — default shadow half-width as fraction of nodeSz;
+//                       produces ~70 % of sprite width (restrained contact shadow).
+//                       Override per-object via EncounterMapNode.shadowRxFrac.
 //
-// Player shadow uses fixed fractions rather than sizeMul because the sprite is
-// positioned with CHR_Y_SHIFT rather than the 88 %-floor rule.
+// Player shadow uses fixed fractions (CHR_SHADOW_RX/RY) calibrated to its sprite.
 const SHADOW_COLOR     = 'rgba(0,5,20,0.62)';   // Ink & Mist dark navy — Push 12: richer grounding
 const SHADOW_RY_FRAC   = 0.068;                  // Push 12: slightly taller profile for clearer contact
-const SHADOW_RX_MUL    = 0.48;                   // node shadow rx = sizeMul × this × sz
+const SHADOW_RX_MUL    = 0.35;                   // Push 4A.7: 0.48 → 0.35 — shadow 70 % of sprite width
 
 // ── z-layer bases (see journeyZ.ts for the full canonical table) ──────────────
 //
@@ -394,9 +422,11 @@ const TERRAIN_DEPTH = 10;
 const OBJECT_BASE   = JOURNEY_Z.WORLD_CONTENT_BASE;   // 3000
 const OBJECT_DEPTH  = 10;
 const GATE_ART_Z    = JOURNEY_Z.GATE;                 // 5100
-const CHR_SHADOW_CY    = CHR_GLOW_CY;            // same floor as jade glow (0.65 × sz)
-const CHR_SHADOW_RX    = CHR_GLOW_RX + 0.07;     // wider than glow (0.43 × sz) — Push 8
-const CHR_SHADOW_RY    = 0.075;                  // slightly taller than node shadow
+const CHR_SHADOW_CY    = CHR_GLOW_CY;   // shadow cy = feet position (0.65 × sz)
+// Push 4A.7: 0.43 → 0.29 — target ~50 % of sprite width (1.15×sz).
+// 2 × 0.29 × sz = 0.58 × sz; sprite width = 1.15 × sz → 50.4 % ✓
+const CHR_SHADOW_RX    = 0.29;
+const CHR_SHADOW_RY    = 0.075;         // slightly taller than node shadow
 
 // ── Raster assets ─────────────────────────────────────────────────────────────
 // Push 4:  fog is a world-space SVG layer; terrainCurrent (jade glow) still used.
@@ -529,9 +559,19 @@ const MAP_NODE = {
 /**
  * Push 7: source + tile-footprint for one world-object prop.
  * Push 9: shadowColor — tier-specific glow pool for treasure chests.
- *         Omit to use the default dark SHADOW_COLOR.
+ * Push 4A.7: shadowRxFrac — per-type shadow half-width as fraction of nodeSz.
+ *            groundFrac   — per-type ground anchor Y as fraction of sz.
+ *            Both default to module constants when absent.
  */
-type EncounterMapNode = { src: number; sizeMul: number; shadowColor?: string };
+type EncounterMapNode = {
+  src:           number;
+  sizeMul:       number;
+  shadowColor?:  string;
+  /** Shadow half-width as fraction of nodeSz. Default: SHADOW_RX_MUL (0.35). */
+  shadowRxFrac?: number;
+  /** Ground anchor Y as fraction of sz. Default: GROUND_ANCHOR_Y_FRAC (0.88). */
+  groundFrac?:   number;
+};
 
 /**
  * Returns the 2.5D world-object asset and tile footprint for revealed tiles.
@@ -548,10 +588,10 @@ type EncounterMapNode = { src: number; sizeMul: number; shadowColor?: string };
  * sizeMul drives the bounding-box size as a fraction of the tile sz.
  * Positioning: bottom of bounding box anchored at ~88 % tile height (hex floor).
  *
- *   areaBoss    1.35 — larger than player sprite (CHR_W_RATIO 1.15); imposing
- *   merchant    0.78 — substantial cart prop, slightly larger than before
- *   battle      0.70 — stone pedestal; raised slightly for better presence
- *   treasure    0.68 — chest scale; slightly larger for tier readability
+ *   areaBoss    1.45 — AREA_BOSS (1.40–1.80 × sz); clearly larger than player (1.15)
+ *   merchant    1.00 — STANDARD_CHARACTER (1.00–1.20 × sz); roughly player-sized
+ *   battle      0.70 — STANDARD_OBJECT (0.65–0.80 × sz); stone pedestal
+ *   treasure    0.68 — STANDARD_OBJECT (0.65–0.80 × sz); 1.15/0.68 = 1.69× player ratio
  */
 // Push 2: fogState parameter replaces direct tile.visibility comparison so that
 // encounter-privacy is always derived from the central getFogVisibilityState()
@@ -566,16 +606,17 @@ function encounterMapNode(tile: HexMapTile, fogState: FogVisibilityState): Encou
       return { src: MAP_NODE.battle, sizeMul: 0.70 };
 
     case 'merchant':
-      return { src: MAP_NODE.merchant, sizeMul: 0.78 };
+      return { src: MAP_NODE.merchant, sizeMul: 1.00 }; // Push 4A.6: 0.78 → 1.00 (STANDARD_CHARACTER)
 
     case 'areaBoss':
       // 1.35 × sz — intentionally larger than the player sprite (1.15) so the
       // boss reads as genuinely threatening from one tile away.
       // Teal shadow pool matches the creature's ambient flame colour.
       return {
-        src:         MAP_NODE.areaBoss,
-        sizeMul:     1.35,
-        shadowColor: 'rgba(0,160,140,0.40)',  // teal glow pool
+        src:          MAP_NODE.areaBoss,
+        sizeMul:      1.45, // Push 4A.6: 1.35 → 1.45 (AREA_BOSS tier; 1.45/1.15 = 1.26× player)
+        shadowColor:  'rgba(0,160,140,0.40)',  // teal glow pool
+        shadowRxFrac: 0.42, // Push 4A.7: wider boss shadow — 84 % of boss sprite width
       };
 
     case 'treasure': {
@@ -612,7 +653,7 @@ function encounterMapNode(tile: HexMapTile, fogState: FogVisibilityState): Encou
         case 'support_ally':
           return {
             src:         MAP_NODE.wardNpc,
-            sizeMul:     0.76,
+            sizeMul:     1.00, // Push 4A.6: 0.76 → 1.00 (STANDARD_CHARACTER — NPC ally)
             shadowColor: 'rgba(0,180,150,0.28)',   // soft teal pool — welcoming
           };
         case 'patient_family_team':
@@ -984,22 +1025,29 @@ function HexTile({ tile, coords, onPress, fogTheme, terrainSrc: _terrainSrc, fog
       )}
 
       {/* ── Layer 2c: encounter node contact shadow ──────────────────────── */}
-      {/* Push 8: flat ink-navy ellipse at the hex floor (88 % tile height). */}
-      {/* Drawn BEFORE Layer 3 (SVG painters order) so it sits underneath.  */}
-      {/* rx = sizeMul × SHADOW_RX_MUL so shadow footprint matches the prop.*/}
-      {node !== null && (
-        <View style={[s.overlay, { pointerEvents: 'none' }]}>
-          <Svg width={sz} height={sz}>
-            <Ellipse
-              cx={sz / 2}
-              cy={sz * 0.88}
-              rx={sz * node.sizeMul * SHADOW_RX_MUL}
-              ry={sz * SHADOW_RY_FRAC}
-              fill={node.shadowColor ?? SHADOW_COLOR}
-            />
-          </Svg>
-        </View>
-      )}
+      {/* Push 4A.7: shadow cy derived from the SAME ground anchor as the    */}
+      {/* sprite (GROUND_ANCHOR_Y_FRAC + SHADOW_ANCHOR_OFFSET) so the two    */}
+      {/* can never drift apart.  rx = nodeSz × shadowRxFrac (per-type or   */}
+      {/* SHADOW_RX_MUL default) → restrained contact ellipse, not wide halo.*/}
+      {node !== null && (() => {
+        const nodeSzShadow = Math.round(sz * node.sizeMul);
+        const gf           = node.groundFrac ?? GROUND_ANCHOR_Y_FRAC;
+        const shadowCY     = sz * gf + sz * SHADOW_ANCHOR_OFFSET;
+        const shadowRX     = nodeSzShadow * (node.shadowRxFrac ?? SHADOW_RX_MUL);
+        return (
+          <View style={[s.overlay, { pointerEvents: 'none' }]}>
+            <Svg width={sz} height={sz}>
+              <Ellipse
+                cx={sz / 2}
+                cy={shadowCY}
+                rx={shadowRX}
+                ry={sz * SHADOW_RY_FRAC}
+                fill={node.shadowColor ?? SHADOW_COLOR}
+              />
+            </Svg>
+          </View>
+        );
+      })()}
 
       {/* ── Layers 3, 4a, 4b MOVED to HexObjectLayer (Push 21) ───────────────
         * Encounter node sprites, jade ground glow, and player sprite now live
@@ -1008,6 +1056,33 @@ function HexTile({ tile, coords, onPress, fogTheme, terrainSrc: _terrainSrc, fog
     </Pressable>
   );
 }
+
+// ── Grounded sprite position helper (Push 4A.7) ───────────────────────────────
+//
+// Returns the {nodeX, nodeY} WITHIN a tile's sz×sz container such that the
+// BOTTOM of a spriteSz×spriteSz bounding box lands at the ground anchor.
+//
+//   groundY = sz × groundFrac          (hex floor in tile-local coords)
+//   nodeX   = (sz − spriteSz) / 2      (horizontally centred on tile)
+//   nodeY   = groundY − spriteSz       (bottom of sprite = groundY)
+//
+// The contact shadow must use the SAME groundFrac (+ SHADOW_ANCHOR_OFFSET) to
+// guarantee it can never drift from the sprite's visual base.
+function getGroundedSpritePosition(
+  sz:         number,
+  spriteSz:   number,
+  groundFrac: number = GROUND_ANCHOR_Y_FRAC,
+): { nodeX: number; nodeY: number } {
+  return {
+    nodeX: Math.round((sz - spriteSz) / 2),
+    nodeY: Math.round(sz * groundFrac - spriteSz),
+  };
+}
+
+// ── Dev: ground anchor visualisation ─────────────────────────────────────────
+// Set to true during layout debugging to see ground anchors on every object.
+// MUST remain false in production — does not affect any geometry.
+const SHOW_GROUND_ANCHORS = false as boolean;
 
 // ── HexObjectLayer ────────────────────────────────────────────────────────────
 //
@@ -1262,27 +1337,53 @@ function HexObjectLayer({
             }}
           >
             {/* Layer 3: encounter world-object sprite.
-              * Bottom of bounding box anchored at ~88 % tile height (the hex floor).
+              * Push 4A.7: positioned via getGroundedSpritePosition — object bottom
+              * lands at GROUND_ANCHOR_Y_FRAC (0.88) within the tile container.
+              * Same groundFrac drives the Layer 2c shadow → zero drift.
               * Push 18: exploredButOutOfVision nodes at MEMORY_NODE_ALPHA (0.82).
               * NOT inside the tween wrapper — encounter nodes stay anchored to
               * the destination tile; only the hero sprite glides across.        */}
             {node !== null && (() => {
               const nodeSz = Math.round(sz * node.sizeMul);
-              const nodeX  = Math.round((sz - nodeSz) / 2);
-              const nodeY  = Math.round(sz * 0.88 - nodeSz);
+              const { nodeX, nodeY } = getGroundedSpritePosition(
+                sz, nodeSz, node.groundFrac,
+              );
               return (
-                <Image
-                  source={node.src}
-                  style={[s.marker, {
-                    left:    nodeX,
-                    top:     nodeY,
-                    width:   nodeSz,
-                    height:  nodeSz,
-                    opacity: isExplored ? MEMORY_NODE_ALPHA : 1,
-                  }]}
-                  contentFit="contain"
-                  recyclingKey={`node-${tile.id}`}
-                />
+                <>
+                  <Image
+                    source={node.src}
+                    style={[s.marker, {
+                      left:    nodeX,
+                      top:     nodeY,
+                      width:   nodeSz,
+                      height:  nodeSz,
+                      opacity: isExplored ? MEMORY_NODE_ALPHA : 1,
+                    }]}
+                    contentFit="contain"
+                    recyclingKey={`node-${tile.id}`}
+                  />
+                  {/* DEV: ground anchor overlay — enable SHOW_GROUND_ANCHORS to debug */}
+                  {SHOW_GROUND_ANCHORS && (
+                    <Svg
+                      width={sz} height={sz}
+                      style={{ position: 'absolute', left: 0, top: 0 }}
+                      pointerEvents="none"
+                    >
+                      {/* Red dot = ground anchor (sprite bottom) */}
+                      <Ellipse
+                        cx={sz / 2}
+                        cy={sz * (node.groundFrac ?? GROUND_ANCHOR_Y_FRAC)}
+                        rx={3} ry={3} fill="red"
+                      />
+                      {/* Yellow dot = shadow centre */}
+                      <Ellipse
+                        cx={sz / 2}
+                        cy={sz * (node.groundFrac ?? GROUND_ANCHOR_Y_FRAC) + sz * SHADOW_ANCHOR_OFFSET}
+                        rx={2} ry={2} fill="yellow"
+                      />
+                    </Svg>
+                  )}
+                </>
               );
             })()}
 
