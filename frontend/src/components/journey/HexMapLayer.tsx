@@ -1604,6 +1604,20 @@ export interface HexMapWorldMetrics {
   worldTileSize?: number;
   /** Current player tile id — for the dev diagnostics panel. Push 4A.1. */
   currentTileId?: string;
+  /**
+   * Environment background rendered dimensions.
+   * Always equals worldW × worldH — the background image fills MapWorld exactly.
+   * Shown separately in diagnostics so it can be verified to NOT equal the viewport.
+   */
+  backgroundW: number;
+  backgroundH: number;
+  /**
+   * FogOfWar canvas dimensions.
+   * Always equals worldW × worldH — the fog canvas is sized to the world, not the viewport.
+   * If this ever differs from MapWorld the fog origin will drift when the camera pans.
+   */
+  fogCanvasW: number;
+  fogCanvasH: number;
 }
 
 /**
@@ -1975,6 +1989,22 @@ export function HexMapLayer({
   const camRef             = useRef({ x: 0, y: 0 });
   const drag               = useRef({ moved: false, camX0: 0, camY0: 0 });
 
+  // ── Reduce-motion preference cache (Push 4A.8) ───────────────────────────
+  // Queried once on mount so camera follow can read it SYNCHRONOUSLY.
+  // Using a Promise inside the camera useLayoutEffect created an async race:
+  // rapid tile moves enqueued multiple animations before the first Promise
+  // resolved, leaving stale animations running after stopAnimation() had
+  // already been called for the next move.  Reading reduceMotionRef.current
+  // synchronously eliminates the race while still honouring the setting.
+  // The recenter callback (user-initiated, not rapid) keeps its own async
+  // check so it always reads the latest preference at the moment of use.
+  const reduceMotionRef = useRef(false);
+  useEffect(() => {
+    AccessibilityInfo.isReduceMotionEnabled()
+      .then(v  => { reduceMotionRef.current = v; })
+      .catch(() => { /* leave at false — animate by default */ });
+  }, []);
+
   // ── Push 3: fog mask canvas refs (dev only, web only) ─────────────────────
   // fogContainerRef: the world-space View that holds the imperative canvas.
   // fogCanvasRef:    the <canvas> element appended inside that container.
@@ -2142,6 +2172,11 @@ export function HexMapLayer({
 
     if (!isNewRun && !playerMoved && !containerChanged) return;
 
+    // Capture old player tile id BEFORE committing refs so the log can show
+    // the genuine previous tile, not the already-overwritten new value.
+    // (Push 4A.8 logging fix: prevPlayerKeyRef was updated before the log read it.)
+    const prevTileIdForLog = prevPlayerKeyRef.current;
+
     // Commit new prev values before any early returns below.
     prevRunKeyRef.current      = cameraRunKey;
     prevPlayerKeyRef.current   = playerKey;
@@ -2166,7 +2201,7 @@ export function HexMapLayer({
       const travelY  = worldH - containerHeight;
       const changed  = destX !== prevCamX || destY !== prevCamY;
       console.log('[JourneyCameraMove]', {
-        previousTile:   prevPlayerKeyRef.current,
+        previousTile:   prevTileIdForLog,   // Push 4A.8: captured BEFORE ref commit
         currentTile:    playerKey,
         playerWorldX:   tileCx,
         playerWorldY:   tileCy,
@@ -2199,28 +2234,25 @@ export function HexMapLayer({
       //
       // Push 4A: cancel any in-flight camera animation before starting the new
       // one so rapid tile movements do not leave stale animations running.
+      //
+      // Push 4A.8: read reduce-motion from cached ref (SYNCHRONOUSLY) instead
+      // of awaiting AccessibilityInfo.isReduceMotionEnabled() — the async path
+      // caused a race: rapid moves enqueued multiple Promise callbacks, so the
+      // stopAnimation() for move N ran before move N-1's animation had even
+      // started, leaving a ghost animation running after it should be dead.
+      // reduceMotionRef is populated once on mount and is stable for the
+      // session lifetime (accessibility prefs rarely change mid-session).
       cameraAnim.stopAnimation();
-      AccessibilityInfo.isReduceMotionEnabled()
-        .then(reduceMotion => {
-          if (reduceMotion) {
-            cameraAnim.setValue({ x: destX, y: destY });
-          } else {
-            Animated.timing(cameraAnim, {
-              toValue:         { x: destX, y: destY },
-              duration:        230,
-              useNativeDriver: false,
-              easing:          Easing.out(Easing.quad),
-            }).start();
-          }
-        })
-        .catch(() => {
-          Animated.timing(cameraAnim, {
-            toValue:         { x: destX, y: destY },
-            duration:        230,
-            useNativeDriver: false,
-            easing:          Easing.out(Easing.quad),
-          }).start();
-        });
+      if (reduceMotionRef.current) {
+        cameraAnim.setValue({ x: destX, y: destY });
+      } else {
+        Animated.timing(cameraAnim, {
+          toValue:         { x: destX, y: destY },
+          duration:        230,
+          useNativeDriver: false,
+          easing:          Easing.out(Easing.quad),
+        }).start();
+      }
     }
 
     // ── Dev diagnostics (CORRECTIVE PUSH A: extended) ────────────────────────
@@ -2246,6 +2278,13 @@ export function HexMapLayer({
         // Push 4A.1: authored tile size + current tile id for dev panel
         worldTileSize,
         currentTileId: targetTile.id,
+        // Push 4A.8: background and fog canvas sizes — both fill MapWorld exactly.
+        // Shown separately in the diagnostics panel to prove they're NOT viewport-sized.
+        // If either ever differs from worldW/worldH the layers will drift on camera pan.
+        backgroundW: worldW,
+        backgroundH: worldH,
+        fogCanvasW:  worldW,
+        fogCanvasH:  worldH,
       };
       if (diagRef) diagRef.current = metrics;
       onMetricsUpdate?.(metrics);

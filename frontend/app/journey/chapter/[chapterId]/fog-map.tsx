@@ -272,6 +272,19 @@ function CameraDiagnosticsPanel({
           {metrics ? `${r(metrics.worldW)} × ${r(metrics.worldH)}` : '—'}
         </Text>
       </Text>
+      {/* Push 4A.8: background + fog canvas sizes must equal MapWorld, never viewport. */}
+      <Text style={sCamDiag.row}>
+        <Text style={sCamDiag.label}>{'Background  '}</Text>
+        <Text style={sCamDiag.val}>
+          {metrics ? `${r(metrics.backgroundW)} × ${r(metrics.backgroundH)}` : '—'}
+        </Text>
+      </Text>
+      <Text style={sCamDiag.row}>
+        <Text style={sCamDiag.label}>{'FogOfWar    '}</Text>
+        <Text style={sCamDiag.val}>
+          {metrics ? `${r(metrics.fogCanvasW)} × ${r(metrics.fogCanvasH)}` : '—'}
+        </Text>
+      </Text>
       <Text style={sCamDiag.row}>
         <Text style={sCamDiag.label}>{'Tile size   '}</Text>
         <Text style={sCamDiag.val}>{metrics ? `${metrics.tileSize} px` : '—'}</Text>
