@@ -193,6 +193,7 @@ import { FogMidLayer }      from './FogMidLayer';
 import { FogWispLayer }     from './FogWispLayer';
 import { FogDevDiagnostic } from './FogDevDiagnostic';
 import { JOURNEY_Z }    from './journeyZ';
+import { FogOfWarLayer } from '@/src/game/journeyMap/fog/FogOfWarLayer';
 import { type HexMapTile, JOURNEY_MAP_FIXTURE } from '@/src/game/journeyMap/fixture';
 import { UI, SERIF } from '@/src/theme/ui';
 import {
@@ -2250,14 +2251,10 @@ export function HexMapLayer({
           dustTileId={dustTileId}
         />
 
-        {/* ── FogBaseLayer — primary concealment (JOURNEY_Z.FOG_BASE = 5000) ──
-          * Canvas blanket covering terrain (100–400) and world content
-          * (3000–4900).  destination-in compositing punches transparent holes
-          * at visibleNow / exploredButOutOfVision tile centres so terrain and
-          * objects show through without z-poke-through.
-          * Web only — native = null stub.  Camera pan does not trigger redraw.
-          * __DEV__: toggle controlled by devFogBase state (diagnostic panel). */}
-        {(!__DEV__ || devFogBase) && (
+        {/* ── FogBaseLayer — DISABLED for Push 1 (FogOfWarLayer replaces) ──────
+          * Legacy layer kept in source; re-enable by reverting the false guard.
+          * Replaced by FogOfWarLayer which will composite all fog in one canvas. */}
+        {false && (!__DEV__ || devFogBase) && (
           <FogBaseLayer
             tiles={tiles}
             coords={coords}
@@ -2409,12 +2406,9 @@ export function HexMapLayer({
           );
         })()}
 
-        {/* ── FogMidLayer — atmospheric detail (JOURNEY_Z.FOG_MID = 5200) ─────
-          * Above Gate (5100) — upper mist veils the gate landmark.
-          * Atmospheric texture at 0.50 opacity; NO foundation fill (Base only).
-          * Web only — native = null stub.
-          * __DEV__: toggle controlled by devFogMid state (diagnostic panel). */}
-        {(!__DEV__ || devFogMid) && (
+        {/* ── FogMidLayer — DISABLED for Push 1 (FogOfWarLayer replaces) ──────
+          * Legacy layer kept in source; re-enable by reverting the false guard. */}
+        {false && (!__DEV__ || devFogMid) && (
           <FogMidLayer
             tiles={tiles}
             coords={coords}
@@ -2424,12 +2418,9 @@ export function HexMapLayer({
           />
         )}
 
-        {/* ── FogWispLayer — topmost mist (JOURNEY_Z.FOG_WISP = 5300) ─────────
-          * Sparse wisp instances outside the VISIBLE_NOW exclusion zone.
-          * Self-managing placement — no destination-in mask, no world fill.
-          * Web only — native = null stub.
-          * __DEV__: toggle controlled by devFogWisp state (diagnostic panel). */}
-        {(!__DEV__ || devFogWisp) && (
+        {/* ── FogWispLayer — DISABLED for Push 1 (FogOfWarLayer replaces) ─────
+          * Legacy layer kept in source; re-enable by reverting the false guard. */}
+        {false && (!__DEV__ || devFogWisp) && (
           <FogWispLayer
             tiles={tiles}
             coords={coords}
@@ -2438,6 +2429,16 @@ export function HexMapLayer({
             runSeed={runSeed ?? 'fixture-default'}
           />
         )}
+
+        {/* ── FogOfWarLayer — full-world single fog canvas (Push 1+) ──────────
+          * Replaces the three legacy fog layers (Base / Mid / Wisp).
+          * Push 1: transparent canvas, no drawing — confirms exact alignment.
+          * Render order: above Gate (5100), below dev overlays.
+          * z = JOURNEY_Z.FOG_MID (5200) — inherits the atmospheric slot.     */}
+        <FogOfWarLayer
+          worldWidth={worldW}
+          worldHeight={worldH}
+        />
 
         {/* ── FogDevDiagnostic — __DEV__ only (z 19999) ───────────────────────
           * Reports layer dimensions + tile counts in a top-right panel.
