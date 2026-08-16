@@ -51,15 +51,18 @@ export const MIN_TILE_SZ = 44;
  * It is INDEPENDENT of viewport / container dimensions — the world is always
  * computed at this scale and the camera viewport then clips the visible slice.
  *
- * At 150 px/tile a Chapter 1 map (q span −2 … 3 = 5 cols) produces a world
- * roughly 710 × 600 px — meaningfully wider and taller than a mobile viewport
- * (≈ 380 × 360), giving the player-follow camera ~330 × 240 px of travel.
+ * At 110 px/tile a Chapter 1 map (q span −2 … 3 = 5 cols) produces a world
+ * roughly 650–700 × 800–850 px — meaningfully wider and taller than a mobile
+ * viewport (≈ 380 × 360), giving the player-follow camera ~270–320 × 420–480 px
+ * of travel, while showing 4–5 hex columns for tactical readability.
+ *
+ * (Was 150 px through Push 4A.1 — reduced in Push 4A.2 for mobile composition.)
  *
  * Pass this as `szOverride` to `computeHexWorldCoords` (or as `worldTileSize`
  * to `HexMapLayer`) to activate the full-span formula that accounts for tiles
  * with negative q coordinates correctly.
  */
-export const AUTHORED_MAP_TILE_SZ = 150;
+export const AUTHORED_MAP_TILE_SZ = 110;
 
 // ── World bounds padding (named for explicit intent) ──────────────────────────
 
@@ -228,7 +231,7 @@ function _computeAuthoredWorldCoords(
   sz:    number,
 ): HexWorldCoords {
   // worldMargin: breathing room on every side of the tile footprint.
-  // sz × 0.65 at the canonical authored tile size (150 px) gives ≈ 97 px —
+  // sz × 0.65 at the canonical authored tile size (110 px) gives ≈ 72 px —
   // enough for sprite overflow, encounter props, jade glow, and edge composition.
   // Do NOT reduce below sz × 0.5 or sprites near map edges will clip.
   const worldMargin = sz * 0.65;
