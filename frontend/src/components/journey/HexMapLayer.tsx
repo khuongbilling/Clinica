@@ -1460,13 +1460,20 @@ function RecenterButton({ onPress }: { onPress: () => void }) {
  * World-space metrics written by HexMapLayer to a caller-supplied ref once the
  * geometry is settled.  Production code must never read from this ref — it exists
  * solely to feed the development diagnostics panel.
+ *
+ * Camera diagnostic fields (CORRECTIVE PUSH A):
+ *   viewportW / viewportH   — containerWidth / containerHeight (the clip window)
+ *   playerWorldX / Y        — tile centre in world px for the current tile
+ *   desiredCamX / Y         — viewportW/2 − playerWorldX (before clamping)
+ *   actualCamX / Y          — clamped destination (= cameraX / cameraY)
+ *   maxCamX / maxCamY       — max pan distance: max(0, worldW − viewportW)
  */
 export interface HexMapWorldMetrics {
-  /** Full rendered world width in px (same formula as worldW inside the component). */
+  /** Full rendered world width in px. */
   worldW:            number;
   /** Full rendered world height in px. */
   worldH:            number;
-  /** Camera X at the moment the metrics were written (initial centre on load). */
+  /** Camera X at the moment the metrics were written (player-centred destination). */
   cameraX:           number;
   /** Camera Y at the moment the metrics were written. */
   cameraY:           number;
@@ -1474,6 +1481,24 @@ export interface HexMapWorldMetrics {
   renderedTileCount: number;
   /** Resolved tile size in display pixels (sz). */
   tileSize:          number;
+
+  // ── Camera diagnostics ──────────────────────────────────────────────────────
+  /** Viewport (container) width in px — the clipping window. */
+  viewportW:     number;
+  /** Viewport (container) height in px. */
+  viewportH:     number;
+  /** Current tile's world-space centre X (px). */
+  playerWorldX:  number;
+  /** Current tile's world-space centre Y (px). */
+  playerWorldY:  number;
+  /** Desired camera X before clamping: viewportW/2 − playerWorldX. */
+  desiredCamX:   number;
+  /** Desired camera Y before clamping: viewportH/2 − playerWorldY. */
+  desiredCamY:   number;
+  /** Maximum positive pan distance on X: max(0, worldW − viewportW). */
+  maxCamX:       number;
+  /** Maximum positive pan distance on Y: max(0, worldH − viewportH). */
+  maxCamY:       number;
 }
 
 /**
@@ -1719,6 +1744,25 @@ export interface HexMapLayerProps {
    * Every branch is guarded by `__DEV__`; no overhead in production.
    */
   devOverlay?: HexMapDevOverlay;
+
+  // ── CORRECTIVE PUSH A: world sizing ──────────────────────────────────────
+
+  /**
+   * Fixed tile size (px) for world-canvas rendering.
+   * When provided, `computeHexWorldCoords` uses it directly (authored-world mode)
+   * so the world is sized from the chapter geometry rather than the viewport width.
+   * Pass `AUTHORED_MAP_TILE_SZ` from hexWorldCoords to activate the player-follow camera.
+   * When omitted, the legacy viewport-fit formula is used (world ≈ viewport).
+   */
+  worldTileSize?: number;
+
+  /**
+   * DEV-only callback fired whenever world/camera metrics are updated (on run
+   * load, player move, or container resize).  Use to feed a diagnostic overlay
+   * that sits outside MapWorld (i.e. not subject to the camera transform).
+   * No-op in production — never called when `__DEV__` is false.
+   */
+  onMetricsUpdate?: (metrics: HexMapWorldMetrics) => void;
 }
 
 export function HexMapLayer({
@@ -1740,6 +1784,8 @@ export function HexMapLayer({
   devOverlay,
   fogExploredTileIds,
   fogVisibleTileIds,
+  worldTileSize,
+  onMetricsUpdate,
 }: HexMapLayerProps) {
   // ── Push 10: resolved shift fog/overlay theme ─────────────────────────────
   // Drives all SVG atmospheric colors: fog blobs, memory veil, frontier glow,
@@ -1750,7 +1796,12 @@ export function HexMapLayer({
   // ── Geometry — Push 6: unified world coordinate system ───────────────────
   // All tile positions (terrain, player, gate, fog holes, camera) are derived
   // from this single coords object.  No component may inline the formula.
-  const coords = computeHexWorldCoords(tiles, containerWidth);
+  //
+  // CORRECTIVE PUSH A: when worldTileSize is provided, computeHexWorldCoords
+  // uses the authored-world formula (full q-span, no viewport padding) so the
+  // world is genuinely larger than the mobile viewport and the player-follow
+  // camera can travel across it.
+  const coords = computeHexWorldCoords(tiles, containerWidth, worldTileSize);
   const {
     sz,
     worldWidth:  worldW,
@@ -1968,17 +2019,29 @@ export function HexMapLayer({
         });
     }
 
-    // ── Dev diagnostics ──────────────────────────────────────────────────────
-    // Production: diagRef is always undefined; tree-shakers eliminate this.
-    if (__DEV__ && diagRef) {
-      diagRef.current = {
+    // ── Dev diagnostics (CORRECTIVE PUSH A: extended) ────────────────────────
+    // Production: diagRef and onMetricsUpdate are always undefined;
+    // tree-shakers eliminate this entire block.
+    if (__DEV__) {
+      const metrics: HexMapWorldMetrics = {
         worldW,
         worldH,
         cameraX:           destX,
         cameraY:           destY,
         renderedTileCount: tiles.length,
         tileSize:          sz,
+        // Camera diagnostic fields
+        viewportW:    containerWidth,
+        viewportH:    containerHeight,
+        playerWorldX: tileCx,
+        playerWorldY: tileCy,
+        desiredCamX:  containerWidth  / 2 - tileCx,
+        desiredCamY:  containerHeight / 2 - tileCy,
+        maxCamX:      Math.max(0, worldW - containerWidth),
+        maxCamY:      Math.max(0, worldH - containerHeight),
       };
+      if (diagRef) diagRef.current = metrics;
+      onMetricsUpdate?.(metrics);
     }
   // tilesKey = `${runKey}:${playerKey}` collapses both movement signals into one dep.
   // sz/containerWidth/containerHeight cover geometry changes.

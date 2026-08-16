@@ -144,7 +144,10 @@ function FogOfWarLayerWeb({
         * Values come from worldWidth/worldHeight (runtime, not hardcoded).
         * Both rows must be identical — that is the acceptance criterion.
         */}
-      {__DEV__ && <FogDiagnosticPanel worldWidth={worldWidth} worldHeight={worldHeight} />}
+      {/* Push 2 alignment check: fog canvas dims must equal world dims.
+          Full camera diagnostic is in fog-map.tsx CameraDiagnosticsPanel (viewport-level).
+          __DEV__ only — never ships. */}
+      {__DEV__ && <FogAlignmentCheck worldWidth={worldWidth} worldHeight={worldHeight} />}
     </View>
   );
 }
@@ -153,7 +156,8 @@ function FogOfWarLayerWeb({
 // Dev diagnostic panel
 // ─────────────────────────────────────────────────────────────────────────────
 
-function FogDiagnosticPanel({
+/** Confirms fog canvas is sized to world rect (both axes must match MapWorld). */
+function FogAlignmentCheck({
   worldWidth,
   worldHeight,
 }: {
@@ -165,11 +169,10 @@ function FogDiagnosticPanel({
 
   return (
     <View style={[diagStyles.panel, { pointerEvents: 'none' }]}>
-      <Text style={diagStyles.header}>FOG ALIGNMENT</Text>
-      <Text style={diagStyles.label}>Background:</Text>
-      <Text style={diagStyles.value}>{w} × {h} @ 0,0</Text>
+      <Text style={diagStyles.header}>FOG CANVAS</Text>
       <Text style={diagStyles.label}>FogOfWar:</Text>
       <Text style={diagStyles.value}>{w} × {h} @ 0,0</Text>
+      <Text style={diagStyles.label}>↑ must equal MapWorld</Text>
     </View>
   );
 }

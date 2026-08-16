@@ -35,7 +35,7 @@ export const Q_VOFF = 0.395;
 
 // ── Tile size bounds ──────────────────────────────────────────────────────────
 
-/** Upper bound on tile size in display pixels. */
+/** Upper bound on tile size in display pixels (viewport-fit mode). */
 export const MAX_TILE_SZ = 88;
 /**
  * Lower bound on tile size in display pixels.
@@ -43,6 +43,23 @@ export const MAX_TILE_SZ = 88;
  * This ensures every interactive tile meets the rule regardless of container width.
  */
 export const MIN_TILE_SZ = 44;
+
+/**
+ * Authored tile size for world-canvas rendering.
+ *
+ * This is the CANONICAL tile size for the full MapWorld coordinate system.
+ * It is INDEPENDENT of viewport / container dimensions — the world is always
+ * computed at this scale and the camera viewport then clips the visible slice.
+ *
+ * At 150 px/tile a Chapter 1 map (q span −2 … 3 = 5 cols) produces a world
+ * roughly 710 × 600 px — meaningfully wider and taller than a mobile viewport
+ * (≈ 380 × 360), giving the player-follow camera ~330 × 240 px of travel.
+ *
+ * Pass this as `szOverride` to `computeHexWorldCoords` (or as `worldTileSize`
+ * to `HexMapLayer`) to activate the full-span formula that accounts for tiles
+ * with negative q coordinates correctly.
+ */
+export const AUTHORED_MAP_TILE_SZ = 150;
 
 // ── World bounds padding (named for explicit intent) ──────────────────────────
 
@@ -111,20 +128,38 @@ export interface HexWorldCoords {
 /**
  * Compute the complete world coordinate system for a tile set and container.
  *
- * World bounds are derived from:
- *   • All terrain coordinates (rightmost q, bottommost r determine extremes)
- *   • One tile-body of clearance on right + bottom (gate art / sprite overflow)
- *   • Symmetric x centering overflow when the world is narrower than container
- *   • Fixed top margin of 10 px (worldOriginY)
- *   • `FOG_BOTTOM_PAD_PX` extra below the lowest tile (fog / sprite bleed)
+ * Two modes:
  *
- * @param tiles         Tile set — only `q` and `r` are read.
- * @param containerWidth Viewport width in display pixels.
+ *   Viewport-fit mode (default, szOverride omitted):
+ *     sz is derived from containerWidth so the full tile set fits horizontally.
+ *     worldWidth ≈ containerWidth.  Camera cannot pan when world ≈ viewport.
+ *     Use only when the map is guaranteed larger than the viewport from tile count
+ *     alone (many q columns).
+ *
+ *   Authored-world mode (szOverride = AUTHORED_MAP_TILE_SZ):
+ *     sz is the fixed authored tile size, independent of the viewport.
+ *     worldOriginX correctly accounts for tiles with negative q coordinates.
+ *     worldWidth = full q-span × Q_STEP × sz + sz + 2×MARGIN, always larger
+ *     than a mobile viewport for the authored chapter layouts.
+ *     This activates the player-follow camera in HexMapLayer.
+ *
+ * @param tiles          Tile set — only `q` and `r` are read.
+ * @param containerWidth Viewport width in display pixels (only used in
+ *                       viewport-fit mode; ignored when szOverride is provided).
+ * @param szOverride     Fixed tile size in display pixels.  Pass
+ *                       `AUTHORED_MAP_TILE_SZ` to get the full authored world.
  */
 export function computeHexWorldCoords(
   tiles: ReadonlyArray<{ readonly q: number; readonly r: number }>,
   containerWidth: number,
+  szOverride?: number,
 ): HexWorldCoords {
+  // ── Authored-world mode ────────────────────────────────────────────────────
+  if (szOverride !== undefined) {
+    return _computeAuthoredWorldCoords(tiles, szOverride);
+  }
+
+  // ── Viewport-fit mode (legacy) ─────────────────────────────────────────────
   // ── Tile size ──────────────────────────────────────────────────────────────
   const maxQ    = tiles.reduce((m, t) => Math.max(m, t.q), 0);
   const wFactor = maxQ * Q_STEP + 1;
@@ -164,6 +199,70 @@ export function computeHexWorldCoords(
       cx: left + Math.round(sz / 2),
       cy: top  + Math.round(sz / 2),
     };
+  }
+
+  return { sz, worldOriginX, worldOriginY, worldWidth, worldHeight, axialToWorld };
+}
+
+// ── Authored-world formula (used when szOverride is provided) ─────────────────
+//
+// Unlike the viewport-fit formula, this:
+//   • Uses the FULL axial q-span (minQ … maxQ), correctly accounting for tiles
+//     with negative q coordinates which the viewport-fit formula ignores.
+//   • Sets worldOriginX so the leftmost tile sits at MARGIN px from left.
+//   • worldWidth = full q-span × Q_STEP × sz + sz + 2×MARGIN.
+//   • Never adds viewport-width padding — the camera viewport is separate.
+//
+// This is a module-private helper; callers go through computeHexWorldCoords.
+const _AUTHORED_MARGIN = 10; // px of breathing room on left and right edges
+
+function _computeAuthoredWorldCoords(
+  tiles: ReadonlyArray<{ readonly q: number; readonly r: number }>,
+  sz:    number,
+): HexWorldCoords {
+  if (tiles.length === 0) {
+    const worldOriginX = _AUTHORED_MARGIN;
+    const worldOriginY = _AUTHORED_MARGIN;
+    function axialToWorldEmpty(q: number, r: number) {
+      const left = Math.round(q * Q_STEP * sz) + worldOriginX;
+      const top  = Math.round((r * R_STEP + q * Q_VOFF) * sz) + worldOriginY;
+      return { left, top, cx: left + Math.round(sz / 2), cy: top + Math.round(sz / 2) };
+    }
+    return {
+      sz, worldOriginX, worldOriginY,
+      worldWidth: sz + _AUTHORED_MARGIN * 2, worldHeight: sz + _AUTHORED_MARGIN * 2,
+      axialToWorld: axialToWorldEmpty,
+    };
+  }
+
+  // Full axial extent — includes tiles with negative q.
+  const minQ = tiles.reduce((m, t) => Math.min(m, t.q), tiles[0].q);
+  const maxQ = tiles.reduce((m, t) => Math.max(m, t.q), tiles[0].q);
+
+  // worldOriginX: places the leftmost tile (q = minQ) at left = _AUTHORED_MARGIN.
+  //   left(minQ) = round(minQ × Q_STEP × sz) + worldOriginX = _AUTHORED_MARGIN
+  //   ⟹ worldOriginX = _AUTHORED_MARGIN − round(minQ × Q_STEP × sz)
+  const worldOriginX = _AUTHORED_MARGIN - Math.round(minQ * Q_STEP * sz);
+  const worldOriginY = 10;
+
+  // worldWidth covers the tile body from minQ left-edge to maxQ right-edge,
+  // plus one margin on each side.
+  //   right edge of maxQ tile = round(maxQ × Q_STEP × sz) + worldOriginX + sz
+  //                           = round(maxQ × Q_STEP × sz) + worldOriginX + sz
+  //   worldWidth = right edge + _AUTHORED_MARGIN (right breathing room)
+  //   Substituting worldOriginX:
+  //     ≈ round((maxQ − minQ) × Q_STEP × sz) + sz + 2 × _AUTHORED_MARGIN
+  const worldWidth = Math.round((maxQ - minQ) * Q_STEP * sz) + sz + _AUTHORED_MARGIN * 2;
+
+  // worldHeight: standard formula driven by the bottommost tile row.
+  const maxPxBottom = tiles.reduce((m, t) => Math.max(m, t.r * R_STEP + t.q * Q_VOFF), 0);
+  const worldHeight = Math.round(maxPxBottom * sz) + sz + worldOriginY + FOG_BOTTOM_PAD_PX;
+
+  // Identical axial-to-pixel formula — worldOriginX is the only thing that changed.
+  function axialToWorld(q: number, r: number) {
+    const left = Math.round(q * Q_STEP * sz) + worldOriginX;
+    const top  = Math.round((r * R_STEP + q * Q_VOFF) * sz) + worldOriginY;
+    return { left, top, cx: left + Math.round(sz / 2), cy: top + Math.round(sz / 2) };
   }
 
   return { sz, worldOriginX, worldOriginY, worldWidth, worldHeight, axialToWorld };

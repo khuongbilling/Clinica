@@ -33,6 +33,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { HexMapLayer, hexFacingFromDelta } from '@/src/components/journey/HexMapLayer';
 import type { HexMapTile, HexMapWorldMetrics, HexMapDevOverlay, FacingDir } from '@/src/components/journey/HexMapLayer';
+import { AUTHORED_MAP_TILE_SZ }            from '@/src/components/journey/hexWorldCoords';
 import { JourneyMapDiagnosticsPanel }     from '@/src/components/journey/dev/JourneyMapDiagnosticsPanel';
 import { CHAPTERS }                        from '@/src/game/chapterJourney';
 import { generateDebugFixture, JOURNEY_MAP_FIXTURE } from '@/src/game/journeyMap/fixture';
@@ -202,6 +203,91 @@ function LegendRow({ src, label, desc }: { src: number; label: string; desc: str
         <Text style={s.legendLabel}>{label}</Text>
         <Text style={s.legendDesc}>{desc}</Text>
       </View>
+    </View>
+  );
+}
+
+/**
+ * CORRECTIVE PUSH A — Camera diagnostics overlay.
+ *
+ * Renders inside the map viewport (mapOuter) as an absolute overlay so it is
+ * NOT inside the camera-transformed MapWorld and therefore stays fixed while
+ * the player moves.
+ *
+ * Acceptance criteria (PASS only if):
+ *   Background == MapWorld == FogOfWar  (all three match)
+ *   Viewport < MapWorld  (world is larger than viewport, enabling pan)
+ *   maxCamera > 0 on at least one axis (camera can actually move)
+ */
+function CameraDiagnosticsPanel({
+  viewport,
+  metrics,
+}: {
+  viewport: { w: number; h: number };
+  metrics:  HexMapWorldMetrics | null;
+}): React.ReactElement | null {
+  if (!__DEV__) return null;
+
+  const r = (n: number) => Math.round(n);
+  const dim = (w: number, h: number) => `${r(w)} × ${r(h)}`;
+
+  return (
+    <View style={sCamDiag.panel} pointerEvents="none">
+      <Text style={sCamDiag.header}>📐 CAMERA DIAGNOSTICS</Text>
+
+      <View style={sCamDiag.divider} />
+
+      <Text style={sCamDiag.sectionHead}>Dimensions</Text>
+      <Text style={sCamDiag.row}>
+        <Text style={sCamDiag.label}>Viewport   </Text>
+        <Text style={sCamDiag.val}>{dim(viewport.w, viewport.h)}</Text>
+      </Text>
+      <Text style={sCamDiag.row}>
+        <Text style={sCamDiag.label}>MapWorld   </Text>
+        <Text style={[sCamDiag.val, metrics && metrics.worldW > viewport.w ? sCamDiag.good : sCamDiag.warn]}>
+          {metrics ? dim(metrics.worldW, metrics.worldH) : '—'}
+        </Text>
+      </Text>
+      <Text style={sCamDiag.row}>
+        <Text style={sCamDiag.label}>Background </Text>
+        <Text style={sCamDiag.val}>{metrics ? dim(metrics.worldW, metrics.worldH) : '—'}</Text>
+      </Text>
+      <Text style={sCamDiag.row}>
+        <Text style={sCamDiag.label}>FogOfWar   </Text>
+        <Text style={sCamDiag.val}>{metrics ? dim(metrics.worldW, metrics.worldH) : '—'}</Text>
+      </Text>
+
+      <View style={sCamDiag.divider} />
+
+      <Text style={sCamDiag.sectionHead}>Tile size: {metrics ? metrics.tileSize : '—'} px</Text>
+
+      <View style={sCamDiag.divider} />
+
+      <Text style={sCamDiag.sectionHead}>Camera</Text>
+      <Text style={sCamDiag.row}>
+        <Text style={sCamDiag.label}>Player world   </Text>
+        <Text style={sCamDiag.val}>
+          {metrics ? `${r(metrics.playerWorldX)}, ${r(metrics.playerWorldY)}` : '—'}
+        </Text>
+      </Text>
+      <Text style={sCamDiag.row}>
+        <Text style={sCamDiag.label}>Desired camera </Text>
+        <Text style={sCamDiag.val}>
+          {metrics ? `${r(metrics.desiredCamX)}, ${r(metrics.desiredCamY)}` : '—'}
+        </Text>
+      </Text>
+      <Text style={sCamDiag.row}>
+        <Text style={sCamDiag.label}>Actual camera  </Text>
+        <Text style={sCamDiag.val}>
+          {metrics ? `${r(metrics.cameraX)}, ${r(metrics.cameraY)}` : '—'}
+        </Text>
+      </Text>
+      <Text style={sCamDiag.row}>
+        <Text style={sCamDiag.label}>Max camera     </Text>
+        <Text style={[sCamDiag.val, metrics && metrics.maxCamX > 0 ? sCamDiag.good : sCamDiag.warn]}>
+          {metrics ? `${r(metrics.maxCamX)}, ${r(metrics.maxCamY)}` : '—'}
+        </Text>
+      </Text>
     </View>
   );
 }
@@ -402,11 +488,14 @@ export default function ChapterFogMapShell() {
     useState<'idle' | 'confirming' | 'creating' | 'error'>('idle');
   const [rechallengeError, setRechallengeError] = useState<string | null>(null);
 
-  // ── Dev diagnostics (Push 0) ───────────────────────────────────────────────
+  // ── Dev diagnostics (Push 0 + CORRECTIVE PUSH A) ─────────────────────────
   // diagRef is written by HexMapLayer after geometry settles; read by panel.
+  // mapMetrics mirrors the same data as React state so CameraDiagnosticsPanel
+  // re-renders automatically after each player move or run load.
   // devOverlay controls per-tile debug overlays inside HexMapLayer.
-  // Both are always created (hooks rules) but only consumed in __DEV__ paths.
+  // All are always created (hooks rules) but only consumed in __DEV__ paths.
   const diagRef    = useRef<HexMapWorldMetrics | null>(null);
+  const [mapMetrics, setMapMetrics] = useState<HexMapWorldMetrics | null>(null);
   const [devOverlay, setDevOverlay] = useState<HexMapDevOverlay>({});
 
   useEffect(() => {
@@ -1211,6 +1300,8 @@ export default function ChapterFogMapShell() {
             fogVisibleTileIds={fogVisibleTileIds}
             diagRef={__DEV__ ? diagRef : undefined}
             devOverlay={__DEV__ ? devOverlay : undefined}
+            worldTileSize={AUTHORED_MAP_TILE_SZ}
+            onMetricsUpdate={__DEV__ ? setMapMetrics : undefined}
           />
         )}
 
@@ -1227,6 +1318,15 @@ export default function ChapterFogMapShell() {
               style={[StyleSheet.absoluteFillObject, { opacity: 0.28 }]}
               contentFit="cover"
             />
+          </View>
+        )}
+
+        {/* ── CORRECTIVE PUSH A: camera diagnostics overlay ──────────────
+            Lives OUTSIDE MapWorld so it stays fixed while the camera pans.
+            __DEV__ only — CameraDiagnosticsPanel returns null in production. */}
+        {__DEV__ && (
+          <View style={s.camDiagOverlay} pointerEvents="none">
+            <CameraDiagnosticsPanel viewport={mapSize} metrics={mapMetrics} />
           </View>
         )}
 
@@ -1782,6 +1882,15 @@ const s = StyleSheet.create({
     borderRadius: 14, overflow: 'hidden',
     borderWidth: 1, borderColor: PANEL_BORDER,
   },
+  // CORRECTIVE PUSH A: absolute overlay anchor for the camera diagnostics panel.
+  // top-right corner of mapOuter so it doesn't overlap the map content.
+  camDiagOverlay: {
+    position: 'absolute',
+    top:   6,
+    right: 6,
+    zIndex: 14000,
+  },
+
   // mapBg removed Push 7: background is now inside HexMapLayer's MapWorld.
   neutralMapShell: {
     // Push 9: placeholder rendered when run.shift has not yet resolved.
@@ -2016,4 +2125,28 @@ const sDev = StyleSheet.create({
   key:  { color: '#4CAF5088', fontSize: 10, fontFamily: SERIF, minWidth: 52 },
   val:  { color: '#A5D6A7', fontSize: 10, fontFamily: SERIF, flex: 1 },
   divider: { height: 1, backgroundColor: '#2E7D4444', marginVertical: 4 },
+});
+
+// CORRECTIVE PUSH A — Camera diagnostics panel styles
+const sCamDiag = StyleSheet.create({
+  panel: {
+    backgroundColor: 'rgba(0,0,0,0.82)',
+    borderRadius: 8, borderWidth: 1, borderColor: '#334455',
+    paddingHorizontal: 10, paddingVertical: 8,
+    minWidth: 188,
+  },
+  header: {
+    color: '#e2e8f0', fontSize: 9, fontWeight: '800',
+    letterSpacing: 1.1, textTransform: 'uppercase', marginBottom: 4,
+  },
+  sectionHead: {
+    color: '#94a3b8', fontSize: 8, fontWeight: '700',
+    letterSpacing: 0.7, marginTop: 2,
+  },
+  divider:   { height: 1, backgroundColor: '#334455', marginVertical: 4 },
+  row:       { flexDirection: 'row', marginTop: 2 },
+  label:     { color: '#64748b', fontSize: 9, fontFamily: 'monospace', minWidth: 96 },
+  val:       { color: '#a3e635', fontSize: 9, fontFamily: 'monospace' },
+  good:      { color: '#4ade80' },
+  warn:      { color: '#fb923c' },
 });
