@@ -814,11 +814,27 @@ export default function ChapterFogMapShell() {
   // marks as 'visibleNow'.  Recomputed whenever the run or radius changes
   // (movement updates run.currentTileId which changes the tile identity check).
   const fogVisibleTileIds = useMemo((): ReadonlySet<string> => {
-    if (!run) return new Set<string>();
+    if (!run) {
+      // Debug fixture / no-session fallback: compute the live FOV ring from
+      // the current tile so the fog erasure (Push 4) is exercised on the dev
+      // route with the same geometry as a real run.
+      const currentDebugTile = mapTiles.find(t => t.current);
+      if (!currentDebugTile) return new Set<string>();
+      return calculateVisibleTileIds(currentDebugTile.id, mapTiles, effectiveVisionRadius);
+    }
     const currentTile = run.tiles.find(t => t.current);
     if (!currentTile) return new Set<string>();
     return calculateVisibleTileIds(currentTile.id, run.tiles, effectiveVisionRadius);
-  }, [run, effectiveVisionRadius]);
+  }, [run, effectiveVisionRadius, mapTiles]);
+
+  // Push 4: explored fallback for debug/fixture mode (run=null) — mirrors
+  // run.exploredTileIds using the per-tile visibility states.
+  const fogExploredTileIds = useMemo((): readonly string[] => {
+    if (run) return run.exploredTileIds;
+    return mapTiles
+      .filter(t => t.visibility === 'exploredButOutOfVision' || t.visibility === 'visibleNow')
+      .map(t => t.id);
+  }, [run, mapTiles]);
 
   // Push 24: canonical terrain cell count (includes gate tile — 30 for Ch1-5).
   // run.tileCount excluded the gate tile (tiles.length - 1) and was the source
@@ -1296,7 +1312,7 @@ export default function ChapterFogMapShell() {
               offsetY: chapterVisuals.backgroundOffsetY,
             }}
             runSeed={run?.seed}
-            fogExploredTileIds={run?.exploredTileIds}
+            fogExploredTileIds={fogExploredTileIds}
             fogVisibleTileIds={fogVisibleTileIds}
             diagRef={__DEV__ ? diagRef : undefined}
             devOverlay={__DEV__ ? devOverlay : undefined}

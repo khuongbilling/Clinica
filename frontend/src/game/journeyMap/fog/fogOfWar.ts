@@ -21,6 +21,7 @@
 
 import { Asset } from 'expo-asset';
 import { JOURNEY_ASSETS } from '../assets';
+import { buildOrganicRevealInfluences, eraseSoftLobe } from './fogMask';
 
 // ── Asset source ──────────────────────────────────────────────────────────────
 
@@ -36,6 +37,21 @@ const FOUNDATION_COLOR = 'rgba(55, 72, 86, 0.82)';
 /** Opacity of the base texture drawn over the foundation.
  *  Range 0.40–0.50 — provides mist depth without obscuring the foundation tint. */
 const TEXTURE_ALPHA = 0.45;
+
+// ── Push 4: reveal erasure strengths ─────────────────────────────────────────
+// Same organic-lobe model proven in the legacy fogBase.ts.
+
+/**
+ * Erase strength for EXPLORED (out-of-vision) tiles.
+ * ~0.70 → 25–35 % fog haze remains — remembered terrain through light mist.
+ */
+const EXPLORED_STRENGTH = 0.70;
+
+/**
+ * Erase strength for VISIBLE_NOW tiles.
+ * ~0.98 → fog nearly gone — current FOV is crystal clear.
+ */
+const VISIBLE_STRENGTH = 0.98;
 
 // ── Image cache ───────────────────────────────────────────────────────────────
 
@@ -129,6 +145,24 @@ export interface FogOfWarParams {
    * Push 4 will erase sharper 'visibleNow' lobes for these tiles.
    */
   visibleTileIds?: ReadonlySet<string>;
+
+  // ── Push 4: erasure geometry inputs ────────────────────────────────────────
+
+  /** Resolved tile edge length in display pixels (coords.sz from HexMapLayer). */
+  sz?: number;
+
+  /**
+   * World-space centre point for every tile in the active run, keyed by tile ID.
+   * Built by HexMapLayer from coords.axialToWorld(q, r):
+   *   cx = left + sz / 2, cy = top + sz / 2
+   */
+  tileCenters?: ReadonlyMap<string, { cx: number; cy: number }>;
+
+  /** Player's effective field of vision radius (fogVision). Default 1. */
+  effectiveFieldOfVision?: number;
+
+  /** JourneyRun seed — deterministic organic lobe profiles per tile. */
+  runSeed?: string;
 }
 
 // ── Main draw function ────────────────────────────────────────────────────────
@@ -142,8 +176,17 @@ export interface FogOfWarParams {
  * Push 3+ will add destination-out erasure for revealed tiles after this call.
  */
 export async function drawFogOfWar(
-  canvas:                HTMLCanvasElement,
-  { worldWidth, worldHeight }: FogOfWarParams,
+  canvas: HTMLCanvasElement,
+  {
+    worldWidth,
+    worldHeight,
+    exploredTileIds,
+    visibleTileIds,
+    sz,
+    tileCenters,
+    effectiveFieldOfVision,
+    runSeed,
+  }: FogOfWarParams,
 ): Promise<void> {
   const ctx = canvas.getContext('2d');
   if (!ctx) return;
@@ -180,9 +223,84 @@ export async function drawFogOfWar(
 
   ctx.globalAlpha = TEXTURE_ALPHA;
   drawImageCover(ctx, image, 0, 0, worldWidth, worldHeight);
+  ctx.globalAlpha = 1.0;
 
-  // Restore defaults for any subsequent drawing passes (Push 3+).
+  // ── 5. Push 4: destination-out reveal erasure ─────────────────────────────
+  // Explored (out-of-vision) tiles → feathered organic lobes, light haze left.
+  // Visible-now tiles → sharper/stronger lobes, fog-free FOV.
+  // Same buildOrganicRevealInfluences + eraseSoftLobe pattern as legacy fogBase.
+  eraseRevealLobes(ctx, {
+    exploredTileIds,
+    visibleTileIds,
+    sz,
+    tileCenters,
+    effectiveFieldOfVision,
+    runSeed,
+  });
+
+  // Restore defaults for any subsequent drawing passes.
   ctx.globalAlpha = 1.0;
   ctx.globalCompositeOperation = 'source-over';
   ctx.setTransform(1, 0, 0, 1, 0, 0);
+}
+
+// ── Push 4: reveal erasure pass ───────────────────────────────────────────────
+
+/**
+ * Erases organic reveal lobes into the fog canvas with destination-out.
+ *
+ * No-op when geometry inputs (sz / tileCenters) are missing or nothing is
+ * revealed — the full fog field from steps 3–4 remains intact.
+ *
+ * exploredTileIds may include currently-visible tiles (it grows monotonically);
+ * those are excluded here so each tile gets exactly one tier of lobes.
+ */
+function eraseRevealLobes(
+  ctx: CanvasRenderingContext2D,
+  {
+    exploredTileIds,
+    visibleTileIds,
+    sz,
+    tileCenters,
+    effectiveFieldOfVision,
+    runSeed,
+  }: Pick<
+    FogOfWarParams,
+    'exploredTileIds' | 'visibleTileIds' | 'sz' | 'tileCenters' |
+    'effectiveFieldOfVision' | 'runSeed'
+  >,
+): void {
+  if (!sz || sz <= 0 || !tileCenters || tileCenters.size === 0) {
+    if (__DEV__) console.log('[fogOfWar] erase skipped — missing geometry', { sz, centers: tileCenters?.size ?? 0 });
+    return;
+  }
+
+  const visibleNowIds: ReadonlySet<string> = visibleTileIds ?? new Set<string>();
+
+  // Explored-but-out-of-vision = ever-seen minus currently visible.
+  const exploredIds = new Set<string>();
+  for (const id of exploredTileIds ?? []) {
+    if (!visibleNowIds.has(id)) exploredIds.add(id);
+  }
+
+  if (visibleNowIds.size === 0 && exploredIds.size === 0) return;
+
+  const lobes = buildOrganicRevealInfluences({
+    tileCenters,
+    visibleNowIds,
+    exploredIds,
+    sz,
+    effectiveFieldOfVision: effectiveFieldOfVision ?? 1,
+    runSeed:                runSeed ?? 'fixture-default',
+    exploredStrength:       EXPLORED_STRENGTH,
+    visibleStrength:        VISIBLE_STRENGTH,
+    radiusMultiplier:       1.0,
+  });
+
+  if (__DEV__) console.log(`[fogOfWar] erasing ${lobes.length} lobes | visible: ${visibleNowIds.size} | explored: ${exploredIds.size}`);
+  ctx.globalCompositeOperation = 'destination-out';
+  for (const lobe of lobes) {
+    eraseSoftLobe(ctx, lobe.x, lobe.y, lobe.radius, lobe.strength);
+  }
+  ctx.globalCompositeOperation = 'source-over';
 }

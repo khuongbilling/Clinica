@@ -1,7 +1,9 @@
 /**
  * FogOfWarLayer — single full-world fog canvas
  *
- * Push 2 — draw one continuous full-map fog field (no reveal yet).
+ * Push 2 — draw one continuous full-map fog field.
+ * Push 3 — exploration state wired through.
+ * Push 4 — destination-out erasure: explored + visible tiles revealed.
  *
  * Architecture rules (do not break):
  *  • ONE canvas, covers the entire world rect (worldWidth × worldHeight).
@@ -20,6 +22,7 @@ import React, { useLayoutEffect, useRef } from 'react';
 import { Platform, StyleSheet, Text, View } from 'react-native';
 import { JOURNEY_Z } from '../../../components/journey/journeyZ';
 import { drawFogOfWar } from './fogOfWar';
+import { buildFogMaskCacheKey } from './fogMask';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -29,42 +32,45 @@ interface Props {
   worldWidth:  number;
   worldHeight: number;
 
-  // ── Push 3: exploration state (wired; not yet used for drawing) ────────────
   /**
-   * Tile IDs that have ever entered the player's FOV.
-   * Passed through to drawFogOfWar; Push 4 will erase 'exploredButOutOfVision'
-   * lobes for these tiles (destination-out).
+   * Tile IDs that have ever entered the player's FOV (monotonically growing).
+   * Push 4: erased as 'exploredButOutOfVision' lobes (light haze remains).
    */
   exploredTileIds?: readonly string[];
 
   /**
    * Live FOV ring — tile IDs currently visible from the player's position.
-   * Push 4 will erase sharper 'visibleNow' lobes for these tiles.
+   * Push 4: erased as sharper 'visibleNow' lobes (fog-free).
    */
   visibleTileIds?: ReadonlySet<string>;
+
+  // ── Push 4: erasure geometry ────────────────────────────────────────────────
+
+  /** Resolved tile edge length in display pixels (coords.sz). */
+  sz?: number;
+
+  /**
+   * World-space centre point per tile ID, built by HexMapLayer from
+   * coords.axialToWorld(q, r): cx = left + sz/2, cy = top + sz/2.
+   */
+  tileCenters?: ReadonlyMap<string, { cx: number; cy: number }>;
+
+  /** Player's effective field of vision radius. Default 1. */
+  effectiveFieldOfVision?: number;
+
+  /** JourneyRun seed — deterministic organic lobe profiles. */
+  runSeed?: string;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Component
 // ─────────────────────────────────────────────────────────────────────────────
 
-export function FogOfWarLayer({
-  worldWidth,
-  worldHeight,
-  exploredTileIds,
-  visibleTileIds,
-}: Props): React.ReactElement | null {
+export function FogOfWarLayer(props: Props): React.ReactElement | null {
   // Web only — native has no canvas API at this layer.
   if (Platform.OS !== 'web') return null;
 
-  return (
-    <FogOfWarLayerWeb
-      worldWidth={worldWidth}
-      worldHeight={worldHeight}
-      exploredTileIds={exploredTileIds}
-      visibleTileIds={visibleTileIds}
-    />
-  );
+  return <FogOfWarLayerWeb {...props} />;
 }
 
 // Separated so the hooks always run (no early return before hooks rule).
@@ -73,9 +79,16 @@ function FogOfWarLayerWeb({
   worldHeight,
   exploredTileIds,
   visibleTileIds,
+  sz,
+  tileCenters,
+  effectiveFieldOfVision,
+  runSeed,
 }: Props): React.ReactElement {
   const containerRef = useRef<View>(null);
+  const canvasRef    = useRef<HTMLCanvasElement | null>(null);
+  const cacheKeyRef  = useRef<string>('');
 
+  // ── Effect A: create the canvas (dimensions only) ──────────────────────────
   // useLayoutEffect fires synchronously after DOM mutations but BEFORE the
   // browser paints — canvas is in the DOM and the foundation fill is drawn
   // on the very first frame (no blank flash, screenshot-tool-visible).
@@ -97,26 +110,63 @@ function FogOfWarLayerWeb({
     canvas.height = Math.ceil(worldHeight * DPR);
 
     container.appendChild(canvas);
+    canvasRef.current  = canvas;
+    cacheKeyRef.current = ''; // force a draw on (re)attach
 
-    // Push 2: draw one continuous full-map fog field.
-    // Push 3: exploredTileIds + visibleTileIds are threaded through but not
-    //         used for drawing yet — Push 4 adds destination-out erasure.
+    return () => {
+      canvas.remove();
+      canvasRef.current   = null;
+      cacheKeyRef.current = '';
+    };
+  }, [worldWidth, worldHeight]);
+
+  // ── Effect B: draw / redraw when visibility inputs change ──────────────────
+  // Camera pan never appears here — it is NOT in these deps.
+  useLayoutEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const visibleNowIds = visibleTileIds ?? new Set<string>();
+    const exploredIds   = new Set(exploredTileIds ?? []);
+
+    // Skip redraws when nothing that affects the output changed.
+    const nextKey = buildFogMaskCacheKey({
+      runId:                  runSeed ?? 'fixture-default',
+      worldWidth,
+      worldHeight,
+      tileSize:               sz ?? 0,
+      effectiveFieldOfVision: effectiveFieldOfVision ?? 1,
+      visibleNowIds,
+      exploredIds,
+    });
+    if (nextKey === cacheKeyRef.current) return;
+    cacheKeyRef.current = nextKey;
+
     // Fire-and-forget — canvas is already in the DOM; the draw updates it
     // asynchronously as the texture loads (foundation renders immediately,
-    // texture appears on the next frame once the image resolves).
+    // texture + reveal erasure appear once the image resolves).
     drawFogOfWar(canvas, {
       worldWidth,
       worldHeight,
       exploredTileIds,
       visibleTileIds,
+      sz,
+      tileCenters,
+      effectiveFieldOfVision,
+      runSeed,
     }).catch((err) => {
       console.warn('[FogOfWarLayer] drawFogOfWar failed:', err);
     });
-
-    return () => {
-      canvas.remove();
-    };
-  }, [worldWidth, worldHeight]);
+  }, [
+    worldWidth,
+    worldHeight,
+    exploredTileIds,
+    visibleTileIds,
+    sz,
+    tileCenters,
+    effectiveFieldOfVision,
+    runSeed,
+  ]);
 
   return (
     <View

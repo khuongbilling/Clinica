@@ -1808,6 +1808,21 @@ export function HexMapLayer({
     worldHeight: worldH,
   } = coords;
 
+  // ── Push 4: tile ID → world-pixel centre map for FogOfWarLayer erasure ────
+  // Same axialToWorld formula every other layer uses; memoised so the map
+  // reference is stable across camera-pan re-renders (FogOfWarLayer's redraw
+  // effect depends on it).
+  const fogTileCenters = useMemo(() => {
+    const centers = new Map<string, { cx: number; cy: number }>();
+    for (const tile of tiles) {
+      const { left, top } = coords.axialToWorld(tile.q, tile.r);
+      centers.set(tile.id, { cx: left + sz / 2, cy: top + sz / 2 });
+    }
+    return centers;
+  // coords is rebuilt each render but is pure in (tiles, containerWidth).
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tiles, containerWidth]);
+
   // ── Persistent refs ─────────────────────────────────────────────────────────
   const boundsRef          = useRef({ minX: -9999, maxX: 9999, minY: -9999, maxY: 9999 });
   const initialCamRef      = useRef({ x: 0, y: 0 });
@@ -2524,6 +2539,10 @@ export function HexMapLayer({
           worldHeight={worldH}
           exploredTileIds={fogExploredTileIds}
           visibleTileIds={fogVisibleTileIds}
+          sz={sz}
+          tileCenters={fogTileCenters}
+          effectiveFieldOfVision={getEffectiveVisionRadius(DEFAULT_PLAYER_VISION_STATS)}
+          runSeed={runSeed ?? 'fixture-default'}
         />
 
         {/* ── FogDevDiagnostic — __DEV__ only (z 19999) ───────────────────────

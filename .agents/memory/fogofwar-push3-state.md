@@ -24,6 +24,15 @@ description: Architecture decisions, commit refs, and what each push added to th
 - FogOfWarParams extended with `exploredTileIds?` + `visibleTileIds?` (accepted, not used for drawing yet)
 - Full prop chain: fog-map.tsx (computes fogVisibleTileIds via useMemo + calculateVisibleTileIds) → HexMapLayer (fogExploredTileIds, fogVisibleTileIds passthrough) → FogOfWarLayer → drawFogOfWar
 
+
+## Push 4 (done)
+Destination-out erasure inside `drawFogOfWar`:
+- After foundation + texture: `buildOrganicRevealInfluences` + `eraseSoftLobe` (explored 0.70, visible 0.98) — same lobe model as legacy fogBase.ts
+- `exploredTileIds` may include currently-visible ids (monotonic) — must subtract `visibleTileIds` before building lobes or tiles get double lobes
+- Tile geometry travels as props: HexMapLayer builds memoised `fogTileCenters` (coords.axialToWorld + sz/2) and passes sz/tileCenters/fov/runSeed — fogOfWar never re-derives hex math
+- FogOfWarLayer split into Effect A (canvas create, dims deps) + Effect B (draw, full deps + `buildFogMaskCacheKey` skip) — camera pan never redraws
+- Debug/fixture mode (run=null) has no run exploration state — fog-map falls back to tile.visibility-derived sets so `?debug=N` exercises the erasure
+
 ## Corrective Push A (a32c591)
 
 ### Root cause
@@ -49,13 +58,7 @@ placing tile q=−2 at left=−75px (off-canvas left edge).
 Recenter uses `initialCamRef.current` which is set to `{x:destX, y:destY}` (player-centred) in Effect 2.
 It does NOT reset to 0,0. No change needed.
 
-## Push 4 plan (destination-out erasure in drawFogOfWar)
-- After foundation + texture: erase lobes for `exploredTileIds` (feathered, persistent memory)
-- Then erase for `visibleTileIds` (sharper, current FOV)
-- Follow the `buildOrganicRevealInfluences` + `eraseSoftLobe` pattern from fogBase.ts
-- Need tile coordinate lookup: pass tile coord map or derive from id ("q,r" format)
-- coords.axialToWorld already threaded to FogOfWarLayer via props — Pass coords object down
-
 ## Screenshot tool limitation
 - fog-map route requires AsyncStorage player session — screenshot tool always starts fresh
-- Verification must be done in the live app with a real session
+- `?debug=N` now works for fog verification (Push 4 fallback), but Metro rebuilds make the first 1–2 screenshots after an edit come back blank/stale — retry with sleeps until browser logs show the new dev log lines
+- Verification of run-persisted exploration must still be done in the live app with a real session
