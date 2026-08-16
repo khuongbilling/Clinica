@@ -636,8 +636,5 @@ export function getChapterDNARange(fromChapter: number, toChapter: number): Chap
   return result;
 }
 
-/**
- * Returns the structural signature for a DNA object.
- * Re-exported here for use in tests and the art/blueprint pipeline.
- */
-export { computeStructureSignature, signatureSimilarity };
+// computeStructureSignature and signatureSimilarity are already exported
+// as named export functions above (lines ~453 and ~469).  No re-export needed.

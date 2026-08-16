@@ -750,7 +750,7 @@ export default function ChapterFogMapShell() {
   // TERRAIN INVARIANT (Push 5):
   //
   //   When a run is active, ALL run.tiles are passed to HexMapLayer — never a
-  //   filtered subset.  For Chapter 1 this is always 30 cells.
+  //   filtered subset.  For Chapter 1 this is always 60 cells (Push 1 doubled the count).
   //
   //   Do NOT add a visibility/encounter/viewport filter here.  Terrain must
   //   be fully mounted in MapWorld for the entire run so that:

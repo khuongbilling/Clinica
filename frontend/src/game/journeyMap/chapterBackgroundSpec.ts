@@ -72,9 +72,9 @@ const FAMILY_TO_ENV: Record<MapTopologyFamily, ChapterEnvironmentType> = {
   staggered_academic_blocks:   'ANATOMY_GARDEN',
   serpentine_campus_walk:      'CLINICAL_SKILLS_COMPLEX',
   multi_court_campus:          'CAPSTONE_CAMPUS',
-  // Procedural fallbacks (Book II families)
-  radial_campus:               'ACADEMIC_QUAD',
-  linear_corridor:             'CLINICAL_SKILLS_COMPLEX',
+  // Remaining Book I families (procedurally used in Ch11+ overflow)
+  radial_training_center:      'ACADEMIC_QUAD',
+  clustered_training_bays:     'CLINICAL_SKILLS_COMPLEX',
 };
 
 // ── Walkable path styles per topology family ──────────────────────────────────
@@ -114,12 +114,12 @@ const WALKABLE_PATH_STYLES: Record<MapTopologyFamily, string> = {
   multi_court_campus:
     'multiple interconnected open simulation courts with wide transitional plazas, ' +
     'court floors lighter in tone than surrounding architecture',
-  radial_campus:
+  radial_training_center:
     'radial stone spoke paths emanating from a large central hub plaza, ' +
     'each spoke clearly paved and distinct',
-  linear_corridor:
-    'long straight clinical corridors with branching bay openings, ' +
-    'corridor floors polished and distinctly lighter than walls',
+  clustered_training_bays:
+    'clustered training bay zones linked by short wide connectors, ' +
+    'each bay floor distinct in tone from surrounding corridors',
 };
 
 // ── Clearing styles per environment type ──────────────────────────────────────
@@ -181,7 +181,7 @@ function buildSceneryFramingStyle(
         case 'DECORATIVE_LANDMARK':  return 'decorative landmarks';
         case 'WATER_FEATURE':      return 'water features';
         case 'ACADEMIC_STATUE':    return 'academic statues';
-        default: return z.toLowerCase().replace(/_/g, ' ');
+        default: return (z as string).toLowerCase().replace(/_/g, ' ');
       }
     }).join(', ');
 

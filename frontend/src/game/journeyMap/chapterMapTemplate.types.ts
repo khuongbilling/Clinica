@@ -48,6 +48,7 @@
  */
 
 import type { AxialCoord } from './topology';
+import type { TimeOfDay }  from './types';
 
 export type ChapterTileRole =
   | 'start'

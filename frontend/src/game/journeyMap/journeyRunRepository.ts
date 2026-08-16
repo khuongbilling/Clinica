@@ -34,6 +34,7 @@ import type { IJourneyRunRepository }   from './journeyRunLifecycle';
 import type { JourneyRun, TimeOfDay }   from './types';
 import { resolveRunShift }              from './chapterShiftRules';
 import { computeFogAfterMove, REVEAL_RADIUS } from './fogCalculator';
+import { getChapterTerrainCellCount }   from './config';
 
 // ── HTTP helpers ──────────────────────────────────────────────────────────────
 
@@ -270,14 +271,37 @@ export class JourneyRunRepository implements IJourneyRunRepository {
     const raw = await httpOrNull<WireRun>(
       `/player/${playerId}/journey-runs/${chapterId}/active`,
     );
-    return raw ? fromWire(raw) : null;
+    if (!raw) return null;
+    const run = fromWire(raw);
+    // Legacy compatibility: runs created before the tile-count doubling (Push 1)
+    // carry fewer tiles than the current config expects.  Returning null here
+    // causes loadOrCreateJourneyRun to create a fresh run rather than crashing
+    // with TERRAIN ASSERTION FAIL in the fog-map screen.
+    if (run.tiles.length !== getChapterTerrainCellCount(chapterId)) {
+      console.warn(
+        `[journeyRunRepository] legacy run discarded for ch${chapterId}: ` +
+        `tiles.length=${run.tiles.length} expected=${getChapterTerrainCellCount(chapterId)}`,
+      );
+      return null;
+    }
+    return run;
   }
 
   async getLatestRun(playerId: string, chapterId: number): Promise<JourneyRun | null> {
     const raw = await httpOrNull<WireRun>(
       `/player/${playerId}/journey-runs/${chapterId}/latest`,
     );
-    return raw ? fromWire(raw) : null;
+    if (!raw) return null;
+    const run = fromWire(raw);
+    // Same legacy tile-count guard as getActiveRun.
+    if (run.tiles.length !== getChapterTerrainCellCount(chapterId)) {
+      console.warn(
+        `[journeyRunRepository] legacy run discarded for ch${chapterId}: ` +
+        `tiles.length=${run.tiles.length} expected=${getChapterTerrainCellCount(chapterId)}`,
+      );
+      return null;
+    }
+    return run;
   }
 
   // ── Mutations ──────────────────────────────────────────────────────────────
