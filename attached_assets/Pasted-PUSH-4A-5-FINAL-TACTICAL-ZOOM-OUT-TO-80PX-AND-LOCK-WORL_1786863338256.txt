@@ -1,0 +1,225 @@
+PUSH 4A.5 — FINAL TACTICAL ZOOM-OUT TO 80PX AND LOCK WORLD SCALE
+
+The 90px authored-map test PASSED.
+
+Current confirmed behavior:
+
+Viewport:     ~383 × 377
+MapWorld:     ~531 × 670
+FogCanvas:    ~531 × 670
+Tile size:    90px
+Travel X:     ~148px
+Travel Y:     ~293px
+Camera:       FOLLOW READY
+
+Fog canvas matches MapWorld.
+Camera follows correctly.
+Map boundaries clamp correctly.
+FOV / Fog-of-War architecture is approved.
+
+DO NOT change those systems.
+
+This push makes one final tactical readability adjustment.
+
+==================================================
+1. CHANGE AUTHORED TILE SIZE
+==================================================
+
+Change:
+
+AUTHORED_MAP_TILE_SZ = 90
+
+to:
+
+AUTHORED_MAP_TILE_SZ = 80
+
+Do not add:
+- CSS scaling
+- camera zoom
+- pinch zoom
+- separate map transforms
+
+Continue using the canonical authored-world coordinate system.
+
+==================================================
+2. EXPECTED WORLD SIZE
+==================================================
+
+The Chapter 1 world should shrink proportionally.
+
+Approximate target:
+
+MapWorld width:
+~465–485px
+
+MapWorld height:
+~585–610px
+
+Exact dimensions depend on authored margins.
+
+Against the current viewport:
+
+~383 × 377
+
+there should still be meaningful travel on both axes.
+
+Require:
+
+worldWidth > viewportWidth
+worldHeight > viewportHeight
+
+and:
+
+Travel X > 0
+Travel Y > 0
+
+Camera diagnostic must continue reporting:
+
+FOLLOW READY
+
+==================================================
+3. LOCK 80PX AS THE CURRENT CANONICAL EXPLORATION SCALE
+==================================================
+
+If this visual test passes, treat 80px as the canonical Chapter-map
+tile scale for the current mobile exploration implementation.
+
+Do not continue shrinking the entire map to solve sprite readability.
+
+Further readability changes should be applied to individual visual assets,
+not world geometry.
+
+==================================================
+4. FOG/FOV REMAIN LOCKED
+==================================================
+
+Do NOT change:
+
+- FogOfWar canvas architecture
+- worldWidth/worldHeight relationship
+- destination-out erasure
+- explored haze behavior
+- unexplored concealment
+- FOV radius
+- class FOV bonus system
+- organic reveal shape
+- camera-follow formula
+- camera clamps
+
+FogCanvas must automatically become the exact same size as the new MapWorld.
+
+Required:
+
+FogCanvas width === MapWorld width
+FogCanvas height === MapWorld height
+
+==================================================
+5. MOVEMENT REMAINS LOGICALLY IDENTICAL
+==================================================
+
+One hex is still one move.
+
+Do not alter:
+
+- axial coordinates
+- adjacency
+- stamina cost
+- encounters
+- explored state
+- chapter topology
+
+Only screen/world scale changes.
+
+==================================================
+6. KEEP CURRENT CAMERA BEHAVIOR
+==================================================
+
+The screenshot currently shows:
+
+Desired Cam: positive values
+Target Cam: 0,0
+
+when the character is near the top-left world boundary.
+
+THIS IS CORRECT.
+
+Do not interpret that as camera failure.
+
+Camera target is clamped because the viewport cannot reveal space outside
+the Chapter background.
+
+In central portions of the world, desired and target camera positions
+should move normally.
+
+==================================================
+7. PLAYER SPRITE — DO NOT SCALE WITH MAP FOREVER
+==================================================
+
+After moving to 80px, inspect the exploration sprite separately.
+
+The map should now be considered approximately correct.
+
+If the character still feels too large relative to the tactical map,
+do NOT shrink the world again.
+
+Instead adjust only exploration sprite dimensions.
+
+Target visual footprint:
+
+approximately 1.1–1.25 tile heights for the main body,
+with hair / clothing allowed to extend slightly beyond that.
+
+The player should be:
+- immediately identifiable
+- larger than ordinary encounter tokens
+- smaller than major bosses/gates
+- not visually occupying two complete movement cells
+
+Do not make this sprite adjustment in the same commit unless the current
+sprite sizing is obviously hard-coded independently of sz.
+
+First validate the 80px map.
+
+==================================================
+8. VISUAL TARGET
+==================================================
+
+At 80px:
+
+- more surrounding terrain should be visible
+- multiple encounter positions should be readable simultaneously
+- fog boundaries should become easier to understand tactically
+- the map should feel like an explorable environment
+- the player should no longer dominate the entire viewport
+- camera still follows rather than presenting the whole map at once
+
+This is NOT intended to become a full-map overview.
+
+It remains a moving tactical camera.
+
+==================================================
+9. ACCEPTANCE
+==================================================
+
+PASS when:
+
+Tile size: 80px
+
+FogCanvas == MapWorld
+
+Travel X > 0
+Travel Y > 0
+
+FOLLOW READY
+
+Player movement still triggers camera follow.
+
+Camera still clamps correctly near every map boundary.
+
+Fog/FOV remain visually and mechanically unchanged.
+
+No map, fog, encounter, or player coordinates drift out of alignment.
+
+Commit:
+
+style(journey): finalize 80px tactical exploration scale
