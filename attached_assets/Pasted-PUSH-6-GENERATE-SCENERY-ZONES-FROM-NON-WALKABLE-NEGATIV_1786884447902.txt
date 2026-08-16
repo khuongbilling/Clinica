@@ -1,0 +1,117 @@
+PUSH 6 — GENERATE SCENERY ZONES FROM NON-WALKABLE NEGATIVE SPACE
+
+Do not randomly place scenery around a finished background.
+
+Once the hex footprint exists:
+
+WALKABLE SPACE IS SACRED.
+
+Everything else becomes candidate scenery space.
+
+==================================================
+1. CREATE WALKABLE MASK
+==================================================
+
+Generate a continuous polygon/mask around:
+
+all lanes
+all clearings
+all junctions
+all transition cells
+
+Add visual safety padding around the walkable mask.
+
+Suggested:
+
+0.15–0.25 × tile size
+
+This prevents scenery from visually intruding into hex edges.
+
+==================================================
+2. CREATE SCENERY MASK
+==================================================
+
+sceneryAllowed =
+worldBounds
+MINUS
+walkableSafetyMask
+
+Only this region may contain major environmental obstacles.
+
+==================================================
+3. SCENERY ZONE TYPES
+==================================================
+
+Possible University/Simulation scenery zones:
+
+ARCHITECTURE
+GARDEN
+PLANTER
+COLUMN_GROUP
+BUILDING_WING
+OBSERVATION_DECK
+SIMULATION_STRUCTURE
+DECORATIVE_LANDMARK
+WATER_FEATURE
+ACADEMIC_STATUE
+
+==================================================
+4. SCENERY SHOULD EXPLAIN PATH SHAPE
+==================================================
+
+If pathways curve:
+
+put architecture/garden mass inside the curve.
+
+If two lanes split:
+
+environmental feature may occupy the island between them.
+
+If a clearing exists:
+
+frame it with scenery.
+
+The environment should make the path geometry look intentional.
+
+==================================================
+5. NEVER PLACE MAJOR OBSTACLE OVER WALKABLE CELLS
+==================================================
+
+Hard rule:
+
+obstacle polygon
+∩
+walkableSafetyMask
+
+must equal zero.
+
+No:
+
+- planter through a hex
+- column in the middle of a cell
+- shrub covering an encounter clearing
+- staircase crossing a movement lane
+- decorative wall blocking a generated route
+
+==================================================
+6. DO NOT FILL EVERY EMPTY SPACE
+==================================================
+
+Some negative space should remain visually open.
+
+Otherwise maps become cluttered.
+
+Use an environmental density value from MapDNA:
+
+LOW
+MEDIUM
+HIGH
+
+University Chapters 1–3:
+prefer LOW–MEDIUM.
+
+Later simulation maps can become denser.
+
+Commit:
+
+feat(journey): derive obstacle zones from non-walkable map space

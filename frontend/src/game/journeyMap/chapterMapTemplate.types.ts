@@ -372,3 +372,521 @@ export interface ChapterMapBlueprint {
    */
   seed: string;
 }
+
+// ══════════════════════════════════════════════════════════════════════════════
+// Push 4 — PATHWAY GRAPH
+// ══════════════════════════════════════════════════════════════════════════════
+//
+// The PathwayGraph is an ABSTRACT logical graph that sits BETWEEN the MapDNA
+// and the hex coordinate embedding.  It has no spatial coordinates.
+//
+// Generation order (updated):
+//   DNA → PathwayGraph → hex embedding → art / encounters
+//
+// PathwayGraph must pass validation before any hex work begins.
+
+/**
+ * The seven semantic roles a pathway node can carry.
+ *
+ * START           — the single entry point where the player begins.
+ * JUNCTION        — a decision point: three or more lanes meet here.
+ * CLEARING        — an open area; mandatory dead-end reward destination.
+ * LANDMARK        — a named narrative or exploration landmark; dead-end ok.
+ * TRANSITION      — a connector segment between two larger nodes.
+ * FINAL_APPROACH  — the lane immediately before the Gate (boss encounter zone).
+ * GATE            — the Chapter Boss Gate; single exit.
+ */
+export type PathNodeType =
+  | 'START'
+  | 'JUNCTION'
+  | 'CLEARING'
+  | 'LANDMARK'
+  | 'TRANSITION'
+  | 'FINAL_APPROACH'
+  | 'GATE';
+
+/** A single node in the abstract pathway graph. */
+export interface PathNode {
+  id: string;
+  type: PathNodeType;
+  /** Optional human-readable label for art / encounter guidance. */
+  label?: string;
+}
+
+/**
+ * An undirected traversal lane between two pathway nodes.
+ *
+ * `width` maps to approximate hex-tile lane widths:
+ *   primary   — 2–3 hexes wide
+ *   secondary — 1–2 hexes wide
+ *
+ * `laneLength` is the approximate number of hex tiles the lane spans
+ * (before spatial embedding; used as a sizing hint for the art pipeline).
+ */
+export interface PathEdge {
+  id: string;
+  fromId: string;
+  toId: string;
+  width: 'primary' | 'secondary';
+  laneLength: number;
+}
+
+/**
+ * The complete abstract pathway graph for one chapter.
+ *
+ * All structural metrics are pre-computed and stored here so consumers
+ * never need to re-run graph algorithms.
+ */
+export interface PathwayGraph {
+  chapterId: number;
+  /** DNA seed that generated this graph. */
+  seed: string;
+  nodes: PathNode[];
+  edges: PathEdge[];
+  startNodeId: string;
+  gateNodeId: string;
+  /**
+   * Cycle rank: |edges| − |nodes| + 1 for a connected graph.
+   * A value of 0 means the graph is a spanning tree (no loops).
+   * Directive minimum: ≥ 1 loop.
+   */
+  loopCount: number;
+  /**
+   * IDs of nodes whose degree is 1, excluding START and GATE.
+   * These must be CLEARING or LANDMARK nodes (reward dead ends).
+   */
+  deadEndNodeIds: string[];
+  /** BFS edge-hop distance from start to gate along the shortest path. */
+  shortestRouteLength: number;
+  /** True when ≥ 2 distinct simple paths exist from start to gate. */
+  hasMultipleRoutes: boolean;
+  /** Maximum BFS distance from start across all reachable nodes. */
+  graphDiameter: number;
+}
+
+/**
+ * Result of validating a PathwayGraph against the Push-4 constraints.
+ * `valid` is the conjunction of all boolean checks.
+ */
+export interface PathwayGraphValidation {
+  valid: boolean;
+  gateReachable: boolean;
+  isConnected: boolean;
+  hasMultipleRoutes: boolean;
+  hasMinLoops: boolean;
+  deadEndCount: number;
+  /** All degree-1 non-START/GATE nodes are CLEARING, LANDMARK, or TRANSITION. */
+  deadEndsHaveReward: boolean;
+  /** shortestRouteLength ≥ ceil(0.35 × graphDiameter). */
+  startGateDistanceSufficient: boolean;
+  /** Human-readable list of constraint violations; empty when valid. */
+  errors: string[];
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// Push 5 — HEX LANE LAYOUT
+// ══════════════════════════════════════════════════════════════════════════════
+//
+// The HexLaneLayout expands the abstract PathwayGraph into the exact
+// walkable tile footprint for a chapter.
+//
+// Generation pipeline (updated):
+//   DNA → PathwayGraph → HexLaneLayout → art / encounters
+//
+// Tile budget targets (generation guidance, not rigid):
+//   55–65%  Lane tiles
+//   25–35%  Clearing tiles
+//    5–15%  Transition / connector tiles
+//
+// Clearing count formula:
+//   clearingCount = clamp(round(tileCount / 10), 5, 12)
+
+/** Semantic purpose of a clearing zone (spatial opportunity, not encounter). */
+export type ClearingType =
+  | 'GENERAL_CLEARING'
+  | 'JUNCTION_CLEARING'
+  | 'SIDE_CLEARING'
+  | 'MAJOR_CLEARING'
+  | 'FINAL_CLEARING';
+
+/** Visual/spatial shape of a clearing zone. */
+export type ClearingShape =
+  | 'oval'
+  | 'crescent'
+  | 'widened_intersection'
+  | 'court'
+  | 'offset_plaza'
+  | 'irregular_bay';
+
+/**
+ * One named open region in the hex footprint.
+ *
+ * Sizes:
+ *   small  — 3–5 cells
+ *   normal — 5–8 cells
+ *   major  — 8–12 cells  (MAJOR_CLEARING / FINAL_CLEARING)
+ *
+ * `exitCount` reflects how many distinct lane segments enter/exit this
+ * clearing; influences encounter selection (central nodes: 2–4 exits,
+ * side nodes: 1 exit, major junctions: 3–5 exits).
+ */
+export interface ClearingZone {
+  id: string;
+  /** References the PathwayGraph node that this clearing expands from. */
+  nodeId: string;
+  type: ClearingType;
+  shape: ClearingShape;
+  center: AxialCoord;
+  size: 'small' | 'normal' | 'major';
+  cells: AxialCoord[];
+  exitCount: number;
+}
+
+/**
+ * One lane corridor in the hex footprint.
+ *
+ * `cells` includes the center-line tiles plus perpendicular width expansion.
+ * Tiles near a clearing node are widened further as a transition zone.
+ *
+ * `width` mirrors the PathEdge width:
+ *   primary   — 2–3 hexes wide (halfWidth expansion = 1)
+ *   secondary — 1–2 hexes wide (halfWidth expansion = 0 or 1)
+ */
+export interface LaneSegment {
+  edgeId: string;
+  fromNodeId: string;
+  toNodeId: string;
+  cells: AxialCoord[];
+  width: 'primary' | 'secondary';
+}
+
+/**
+ * The fully expanded hex tile footprint for one chapter.
+ *
+ * Guaranteed properties:
+ *   • `actualTileCount === targetTileCount`
+ *   • All tiles form one connected component (verified by BFS from `startCell`).
+ *   • `startCell` and `gateCell` are present in `cells`.
+ *   • No duplicate coords in `cells`.
+ *   • `clearingZones.length` ≈ clamp(round(targetTileCount/10), 5, 12).
+ */
+export interface HexLaneLayout {
+  chapterId: number;
+  seed: string;
+  /** All deduplicated tile coordinates forming the walkable footprint. */
+  cells: AxialCoord[];
+  startCell: AxialCoord;
+  gateCell: AxialCoord;
+  clearingZones: ClearingZone[];
+  laneSegments: LaneSegment[];
+  targetTileCount: number;
+  actualTileCount: number;
+  /**
+   * Approximate budget fractions (values overlap and need not sum to 1.0;
+   * they measure each category's share of the total, pre-overlap).
+   */
+  budgetFractions: {
+    lane: number;
+    clearing: number;
+  };
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// Push 6 — SCENERY LAYOUT (non-walkable negative-space zones)
+// ══════════════════════════════════════════════════════════════════════════════
+//
+// Derived from the HexLaneLayout (walkable footprint).
+// Rule: walkable space is sacred — no scenery zone may overlap the walkable
+// safety mask (walkable cells + 1-tile border).
+//
+// Environmental density is derived from ChapterMapDNA.obstaclePattern and
+// chapter number:
+//   Ch 1–3        → LOW
+//   obstaclePattern 'none'   → LOW
+//   obstaclePattern 'islands' → LOW / MEDIUM (by chapter)
+//   obstaclePattern 'walls'  → MEDIUM
+//   obstaclePattern 'blocks' → MEDIUM / HIGH (by chapter)
+//   obstaclePattern 'mixed'  → HIGH
+
+// ══════════════════════════════════════════════════════════════════════════════
+// Push 8 — FULL STRUCTURAL FINGERPRINT (diversity enforcement)
+// ══════════════════════════════════════════════════════════════════════════════
+//
+// Expands the 7-dimension MapStructureSignature (DNA-only) into a
+// 12-dimension FullStructuralFingerprint that incorporates computed values
+// from PathwayGraph and HexLaneLayout.
+//
+// Similarity threshold: reject a map when ≥ FULL_REJECT_THRESHOLD dimensions
+// match an existing chapter (see chapterDiversityEnforcement.ts).
+//
+// Dimensions from the directive:
+//   1.  topologyFamily          — DNA, exact match
+//   2.  aspectRatio             — DNA, exact match
+//   3.  symmetry                — DNA, exact match (was missing from MapStructureSignature)
+//   4.  hubCount                — DNA, exact match
+//   5.  junctionCountBand       — PathwayGraph JUNCTION node count, bucketed
+//   6.  branchBand              — DNA branchCount, bucketed (inherited)
+//   7.  loopBand                — DNA loopCount, bucketed (inherited)
+//   8.  clearingCountBand       — HexLaneLayout.clearingZones.length, bucketed
+//   9.  avgClearingSizeBand     — mean clearing zone cell count, bucketed
+//  10.  primaryLaneBand         — DNA.primaryLaneWidth, bucketed
+//  11.  startGateRelationship   — DNA, exact match
+//  12.  deadEndBand             — PathwayGraphValidation.deadEndCount, bucketed
+
+/** Number of JUNCTION nodes in the PathwayGraph, bucketed for similarity comparison. */
+export type JunctionCountBand = 'few' | 'moderate' | 'many';
+/** Mean tile-area of clearing zones, bucketed for similarity comparison. */
+export type AvgClearingSizeBand = 'small' | 'medium' | 'large';
+/** Primary lane width from DNA, bucketed for similarity comparison. */
+export type PrimaryLaneBand = 'narrow' | 'standard' | 'wide';
+/** Dead-end node count from PathwayGraphValidation, bucketed. */
+export type DeadEndBand = 'none' | 'few' | 'many';
+/** Clearing count from HexLaneLayout.clearingZones.length, bucketed. */
+export type ClearingCountBand = 'few' | 'moderate' | 'many';
+
+/**
+ * 12-dimension structural fingerprint for diversity enforcement.
+ *
+ * Computed from: ChapterMapDNA + PathwayGraph + HexLaneLayout.
+ * Used by `chapterDiversityEnforcement.ts` to detect structural repetition.
+ *
+ * Two chapters are considered "too similar" when their fingerprints match
+ * on ≥ FULL_REJECT_THRESHOLD dimensions (default 8 out of 12).
+ * Even with different hex coordinates, matching 8+ dimensions feels like
+ * the same map in a different rotation.
+ */
+export interface FullStructuralFingerprint {
+  chapterId:             number;
+  /** 1. Core topology family (strongest differentiator — distinct across BOOK1). */
+  topologyFamily:        MapTopologyFamily;
+  /** 2. Aspect ratio of the map world. */
+  aspectRatio:           'wide' | 'portrait' | 'balanced';
+  /** 3. Spatial symmetry of the chapter layout. */
+  symmetry:              'none' | 'partial' | 'strong';
+  /** 4. Number of open hub / interchange nodes. */
+  hubCount:              number;
+  /** 5. Number of JUNCTION-type nodes in the PathwayGraph, bucketed. */
+  junctionCountBand:     JunctionCountBand;
+  /** 6. DNA branchCount bucketed: low=1–2, mid=3–4, high=5+. */
+  branchBand:            'low' | 'mid' | 'high';
+  /** 7. DNA loopCount bucketed: low=0–1, mid=2–3, high=4+. */
+  loopBand:              'low' | 'mid' | 'high';
+  /** 8. Number of named clearing zones, bucketed. */
+  clearingCountBand:     ClearingCountBand;
+  /** 9. Mean tile area of clearing zones, bucketed. */
+  avgClearingSizeBand:   AvgClearingSizeBand;
+  /** 10. DNA.primaryLaneWidth bucketed: narrow=3–4, standard=5–6, wide=7–8. */
+  primaryLaneBand:       PrimaryLaneBand;
+  /** 11. Spatial relationship between the start tile and the gate tile. */
+  startGateRelationship: 'opposite' | 'diagonal' | 'offset' | 'indirect';
+  /** 12. Dead-end count from PathwayGraphValidation, bucketed. */
+  deadEndBand:           DeadEndBand;
+}
+
+/**
+ * Report returned by `validateBookDiversity`.
+ * `valid` is true only when ALL diversity constraints pass.
+ */
+export interface BookDiversityReport {
+  /** True when all pairwise similarity checks and axis coverage checks pass. */
+  valid: boolean;
+  /** Chapter pairs whose similarity meets or exceeds FULL_REJECT_THRESHOLD. */
+  tooSimilarPairs: Array<{ chA: number; chB: number; similarity: number }>;
+  /** Consecutive chapters sharing the same topology family. */
+  consecutiveFamilyViolations: Array<{ chA: number; chB: number; family: MapTopologyFamily }>;
+  /** Diversity axes that are not adequately covered. */
+  axisViolations: string[];
+  /** All per-chapter fingerprints (for debugging). */
+  fingerprints: FullStructuralFingerprint[];
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// Push 7 — BACKGROUND SPEC (art-specification bridge: data → raster art)
+// ══════════════════════════════════════════════════════════════════════════════
+//
+// The code pipeline (Pushes 1–6) generates blueprints, masks, and geometry.
+// The ACTUAL environment art must be raster-generated — never approximated
+// with CSS, SVG, or procedural vector art.
+//
+// ChapterBackgroundSpec is the structured specification consumed by an AI image
+// generator to produce each chapter's per-shift raster background.
+//
+// SHIFT GEOMETRY INVARIANT
+// ──────────────────────────
+//   Day, Evening, and Night variants share the SAME:
+//     lanes · clearings · obstacles · landmarks · world footprint
+//   Shift variants change ONLY:
+//     lighting · atmosphere · illuminated windows · ambient detail
+//   They NEVER move buildings or paths.
+
+/** Eight canonical environment archetypes for the university/simulation world. */
+export type ChapterEnvironmentType =
+  | 'ACADEMIC_QUAD'
+  | 'SIMULATION_PLAZA'
+  | 'CLINICAL_SKILLS_COMPLEX'
+  | 'MOCK_WARD_CAMPUS'
+  | 'DIAGNOSTIC_CENTER'
+  | 'EMERGENCY_SIMULATION_CENTER'
+  | 'ANATOMY_GARDEN'
+  | 'CAPSTONE_CAMPUS';
+
+/**
+ * Art specification for one shift variant (day / evening / night) of a
+ * chapter background.
+ *
+ * Raster rule: the generated image must be a real raster asset (PNG/WebP),
+ * not CSS, SVG, or procedural vector art.  The `targetAssetPath` and
+ * `metroRequirePath` indicate exactly where to save the file so
+ * chapterMapVisuals.ts can register it.
+ */
+export interface ShiftBackgroundSpec {
+  shift: TimeOfDay;
+  /** Lighting character for this shift ("warm morning sunlight flooding…"). */
+  lightingDescription: string;
+  /** Atmospheric quality ("pale jade mist, vivid greenery, clear sky above"). */
+  atmosphereDescription: string;
+  /** Additional detail that changes between shifts (windows lit, haze, etc.). */
+  ambientDetail: string;
+  /**
+   * Full AI image-generation prompt.
+   * Encodes: style, environment type, walkable-path visual, clearing visual,
+   * scenery framing, lighting, atmosphere, and technical constraints.
+   */
+  aiPrompt: string;
+  /**
+   * Negative prompt — elements the generated image must NOT contain.
+   * Always excludes: characters, UI, text, grid, CSS/SVG art shapes.
+   */
+  negativePrompt: string;
+  /**
+   * Filesystem path (relative to `frontend/`) where the generated raster
+   * should be saved.
+   * E.g. `assets/ui/journey/map/map-platform-background-ch1-day.png`
+   */
+  targetAssetPath: string;
+  /**
+   * Metro `require()` string for registering the generated asset in
+   * `chapterMapVisuals.ts`.
+   * E.g. `@/assets/ui/journey/map/map-platform-background-ch1-day.png`
+   */
+  metroRequirePath: string;
+  /** Pixel dimensions for the generated image. */
+  targetDimensions: { width: number; height: number };
+}
+
+/**
+ * Complete art specification for one chapter's fog-map background.
+ *
+ * Sources all of: MapDNA · HexLaneLayout · SceneryLayout.
+ *
+ * WALKABLE REGIONS:    rendered as broad paved paths / academy flooring / courts
+ * ENCOUNTER CLEARINGS: rendered as open spaces (courts, bays, pavilion floors)
+ * SCENERY:             borders and frames the walkable mask — never overlaps it
+ *
+ * Three shift variants (day / evening / night) share the same geometry but
+ * differ in lighting, atmosphere, and ambient detail.
+ */
+export interface ChapterBackgroundSpec {
+  chapterId: number;
+  /** DNA seed that produced the underlying spatial data. */
+  seed: string;
+  /** Canonical environment archetype for this chapter. */
+  environmentType: ChapterEnvironmentType;
+  /** Human-readable environment name (from ChapterMapDNA.themeName). */
+  environmentName: string;
+  /** Art direction paragraph describing the chapter's visual identity. */
+  artDirection: string;
+  /** How the walkable lanes and paths should look visually. */
+  walkablePathStyle: string;
+  /** How encounter clearings should appear (open space type and character). */
+  clearingStyle: string;
+  /**
+   * How scenery zones frame and border the walkable regions.
+   * Must never overlap the walkable safety mask.
+   */
+  sceneryFramingStyle: string;
+  /**
+   * Geometry invariant statement: what is IDENTICAL across all three shifts.
+   * Referenced when generating each variant to prevent layout drift.
+   */
+  geometryInvariantNote: string;
+  /** Per-shift art specifications. */
+  shifts: Record<TimeOfDay, ShiftBackgroundSpec>;
+}
+
+/** Semantic type of a scenery / environmental zone. */
+export type SceneryZoneType =
+  | 'ARCHITECTURE'
+  | 'GARDEN'
+  | 'PLANTER'
+  | 'COLUMN_GROUP'
+  | 'BUILDING_WING'
+  | 'OBSERVATION_DECK'
+  | 'SIMULATION_STRUCTURE'
+  | 'DECORATIVE_LANDMARK'
+  | 'WATER_FEATURE'
+  | 'ACADEMIC_STATUE';
+
+/** Density of environmental scenery.  Derived from DNA + chapter number. */
+export type EnvironmentalDensity = 'LOW' | 'MEDIUM' | 'HIGH';
+
+/**
+ * One named environmental zone in the non-walkable negative space.
+ *
+ * Placement rules:
+ *   • All `cells` are outside the walkable safety mask.
+ *   • `cells` form one hex-connected component.
+ *   • Zones near clearings frame them (OBSERVATION_DECK, DECORATIVE_LANDMARK).
+ *   • Zones enclosed by path curves contain ARCHITECTURE or GARDEN.
+ *   • Zones in lane islands contain COLUMN_GROUP or PLANTER.
+ *   • Some negative space intentionally stays empty (density gate).
+ */
+export interface SceneryZone {
+  id: string;
+  type: SceneryZoneType;
+  cells: AxialCoord[];
+  /** Rounded centroid of the cell cluster (may not be a valid tile itself). */
+  centroid: AxialCoord;
+  /** Number of cells in this zone. */
+  area: number;
+  /**
+   * How many of this zone's cells are directly adjacent to the walkable
+   * safety mask.  High contact → zone is "right beside" a path or clearing.
+   */
+  walkableContactCount: number;
+  /**
+   * True when > 50 % of border neighbours of this zone's cells are walkable
+   * (the zone sits inside a curve or enclosed pocket of path geometry).
+   */
+  isEnclosed: boolean;
+  /**
+   * Minimum hex-graph distance from any cell in this zone to the nearest
+   * clearing centre.  ≤ 2 → "frames" the clearing.
+   */
+  nearestClearingDist: number;
+}
+
+/**
+ * The full scenery analysis for one chapter map.
+ *
+ * Guaranteed:
+ *   • Every cell in `sceneryZones` is absent from `walkableSafetyMaskKeys`.
+ *   • `walkableSafetyMaskKeys` is a superset of all HexLaneLayout.cells keys.
+ *   • All world-bounds coordinates are contained in the axial bounding box
+ *     `worldBounds` (with ≥ 3 tile margin around the safety mask).
+ *   • `sceneryZones.length ≥ 1` (at least one zone is always produced).
+ */
+export interface SceneryLayout {
+  chapterId: number;
+  seed: string;
+  /**
+   * "q,r" keys of every tile in the walkable safety mask:
+   *   walkable cells ∪ all immediate hex-neighbours of walkable cells.
+   * Scenery must never overlap this set.
+   */
+  walkableSafetyMaskKeys: string[];
+  /** Axial bounding box of the world space (includes scenery space margin). */
+  worldBounds: { minQ: number; maxQ: number; minR: number; maxR: number };
+  sceneryZones: SceneryZone[];
+  environmentalDensity: EnvironmentalDensity;
+}

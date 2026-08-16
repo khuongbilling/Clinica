@@ -1,0 +1,136 @@
+PUSH 7 — GENERATE RASTER BACKGROUND FROM MAP BLUEPRINT
+
+Only now generate the actual Chapter background art.
+
+INPUT:
+
+- MapDNA
+- world aspect ratio
+- walkable mask
+- lane mask
+- clearing mask
+- scenery zones
+- landmark zones
+
+==================================================
+1. WALKABLE REGIONS MUST BE VISUALLY OBVIOUS
+==================================================
+
+Render walkable regions as:
+
+- broad paved paths
+- polished academy flooring
+- simulation courts
+- training plazas
+- medical university walkways
+
+Do not camouflage traversal areas.
+
+==================================================
+2. CLEARINGS MUST READ AS OPEN SPACE
+==================================================
+
+Encounter clearings should visually look like locations where something
+could plausibly happen.
+
+Examples:
+
+- training court
+- simulation bay
+- practice pavilion floor
+- assessment plaza
+- observation court
+- mock clinical station
+
+Leave their center visibly open.
+
+==================================================
+3. SCENERY FRAMES NAVIGATION
+==================================================
+
+Architecture should border and define pathways.
+
+Do not put visually dominant scenery over the traversal mask.
+
+==================================================
+4. UNIVERSITY / SIMULATION LANGUAGE
+==================================================
+
+Chapters 1–10 should vary while sharing the same world identity.
+
+Possible environment combinations:
+
+Academic Quad:
+stone pathways + teaching wings + gardens
+
+Simulation Plaza:
+broad training court + observation pavilions
+
+Clinical Skills Complex:
+open medical training stations + academy architecture
+
+Mock Ward Campus:
+fantasy clinical structures connected by broad corridors
+
+Diagnostic Center:
+crystal/medical laboratories around open circulation space
+
+Emergency Simulation Center:
+larger open response courts + branching practice zones
+
+Anatomy Garden:
+educational botanical / medicinal spaces around clear paved circulation
+
+Capstone Campus:
+larger interconnected simulation courts
+
+==================================================
+5. ART MUST BE RASTER-GENERATED
+==================================================
+
+Code generates:
+
+blueprint
+masks
+collision data
+hex geometry
+
+Actual environment art should be:
+
+generated/painted raster asset.
+
+Do NOT approximate the environment using:
+
+CSS rectangles
+SVG buildings
+procedural vector shrubs
+coded decorative art
+
+==================================================
+6. SAME GEOMETRY ACROSS SHIFTS
+==================================================
+
+Day
+Evening
+Night
+
+use the SAME:
+
+lanes
+clearings
+obstacles
+landmarks
+world footprint
+
+Shift variants modify:
+
+- lighting
+- atmosphere
+- illuminated windows
+- ambient detail
+
+They do not move buildings or paths.
+
+Commit:
+
+feat(journey): generate raster simulation environment from navigational blueprint

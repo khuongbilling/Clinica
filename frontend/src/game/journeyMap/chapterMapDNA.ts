@@ -315,7 +315,7 @@ const BOOK1_DNA: Readonly<Record<number, ChapterMapDNA>> = {
     hubCount:              1,
     clearingPattern:       'linear',
     obstaclePattern:       'blocks',
-    startGateRelationship: 'opposite',
+    startGateRelationship: 'indirect',
     routeBias:             'progressive',
   },
   4: {
@@ -358,7 +358,7 @@ const BOOK1_DNA: Readonly<Record<number, ChapterMapDNA>> = {
     themeName:             'Mock Ward Campus',
     topologyFamily:        'campus_promenade',
     aspectRatio:           'portrait',
-    symmetry:              'none',
+    symmetry:              'partial',
     primaryLaneWidth:      4,
     secondaryLaneWidth:    2,
     branchCount:           2,
