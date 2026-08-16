@@ -18,6 +18,24 @@
  *   ChapterBackground → HexTerrain → WorldContent → Gate → FogOfWarLayer → UI
  */
 
+/**
+ * CANONICAL JOURNEY FOG BEHAVIOR — LOCKED
+ *
+ * Approved August 2026.
+ *
+ * - One full-world FogOfWar canvas.
+ * - Hex-based FOV.
+ * - Default FOV radius 1.
+ * - Destination-out organic reveal.
+ * - Visible = clear.
+ * - Explored = memory haze.
+ * - Unexplored = dense fog.
+ * - Camera follows player and clamps to Chapter map.
+ *
+ * Do not replace this architecture with per-tile fog,
+ * geometric cutouts, or viewport-sized fog.
+ */
+
 import React, { useLayoutEffect, useRef } from 'react';
 import { Platform, StyleSheet, Text, View } from 'react-native';
 import { JOURNEY_Z } from '../../../components/journey/journeyZ';

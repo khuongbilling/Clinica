@@ -33,6 +33,24 @@
  *   Shift affects fog art colour only (handled by the rendering layer).
  */
 
+/**
+ * CANONICAL JOURNEY FOG BEHAVIOR — LOCKED
+ *
+ * Approved August 2026.
+ *
+ * - One full-world FogOfWar canvas.
+ * - Hex-based FOV.
+ * - Default FOV radius 1.
+ * - Destination-out organic reveal.
+ * - Visible = clear.
+ * - Explored = memory haze.
+ * - Unexplored = dense fog.
+ * - Camera follows player and clamps to Chapter map.
+ *
+ * Do not replace this architecture with per-tile fog,
+ * geometric cutouts, or viewport-sized fog.
+ */
+
 import type {
   FogVisibility,
   FogVisibilityState,
