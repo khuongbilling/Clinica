@@ -1314,6 +1314,7 @@ export default function ChapterFogMapShell() {
             runSeed={run?.seed}
             fogExploredTileIds={fogExploredTileIds}
             fogVisibleTileIds={fogVisibleTileIds}
+            fogEffectiveFieldOfVision={effectiveVisionRadius}
             diagRef={__DEV__ ? diagRef : undefined}
             devOverlay={__DEV__ ? devOverlay : undefined}
             worldTileSize={AUTHORED_MAP_TILE_SZ}

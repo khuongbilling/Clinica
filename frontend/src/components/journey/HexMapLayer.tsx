@@ -1740,6 +1740,14 @@ export interface HexMapLayerProps {
   fogVisibleTileIds?: ReadonlySet<string>;
 
   /**
+   * Player's effective field-of-vision radius (tiles).
+   * Forwarded to FogOfWarLayer to size the erasure lobes correctly.
+   * Source: computeEffectiveVisionRadius(resolveVisionBonuses(player.class_tree_id)).
+   * When omitted, FogOfWarLayer falls back to the default radius (1).
+   */
+  fogEffectiveFieldOfVision?: number;
+
+  /**
    * Per-tile debug overlays controlled by the diagnostics panel checkboxes.
    * Every branch is guarded by `__DEV__`; no overhead in production.
    */
@@ -1784,6 +1792,7 @@ export function HexMapLayer({
   devOverlay,
   fogExploredTileIds,
   fogVisibleTileIds,
+  fogEffectiveFieldOfVision,
   worldTileSize,
   onMetricsUpdate,
 }: HexMapLayerProps) {
@@ -2541,7 +2550,7 @@ export function HexMapLayer({
           visibleTileIds={fogVisibleTileIds}
           sz={sz}
           tileCenters={fogTileCenters}
-          effectiveFieldOfVision={getEffectiveVisionRadius(DEFAULT_PLAYER_VISION_STATS)}
+          effectiveFieldOfVision={fogEffectiveFieldOfVision ?? getEffectiveVisionRadius(DEFAULT_PLAYER_VISION_STATS)}
           runSeed={runSeed ?? 'fixture-default'}
         />
 
