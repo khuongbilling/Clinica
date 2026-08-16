@@ -237,6 +237,18 @@ function CameraDiagnosticsPanel({
 
       <View style={sCamDiag.divider} />
 
+      {/* Push 4A: hard assertion — world must be larger than viewport on at
+          least one axis, otherwise authored-world sizing is not active. */}
+      {metrics !== null &&
+        metrics.worldW <= viewport.w &&
+        metrics.worldH <= viewport.h && (
+        <View style={sCamDiag.failBanner}>
+          <Text style={sCamDiag.failText}>
+            {'⚠️ CAMERA WORLD FAIL\nWorld is viewport-fit; authored map sizing is not active.'}
+          </Text>
+        </View>
+      )}
+
       <Text style={sCamDiag.sectionHead}>Dimensions</Text>
       <Text style={sCamDiag.row}>
         <Text style={sCamDiag.label}>Viewport   </Text>
@@ -2166,4 +2178,11 @@ const sCamDiag = StyleSheet.create({
   val:       { color: '#a3e635', fontSize: 9, fontFamily: 'monospace' },
   good:      { color: '#4ade80' },
   warn:      { color: '#fb923c' },
+  // Push 4A: hard assertion banner shown when authored-world sizing is not active.
+  failBanner: {
+    backgroundColor: '#7f1d1d',
+    borderRadius: 4, borderWidth: 1, borderColor: '#ef4444',
+    paddingHorizontal: 8, paddingVertical: 6, marginBottom: 6,
+  },
+  failText: { color: '#fca5a5', fontSize: 9, fontWeight: '800', lineHeight: 14 },
 });

@@ -1865,7 +1865,7 @@ export function HexMapLayer({
   //                      run is loaded (tile count changes).
   //   prevPlayerKeyRef — mirrors currentTile.id; changes after each movement.
   // Container resize is tracked separately (prevContainerRef).
-  const prevRunKeyRef      = useRef(0);
+  const prevRunKeyRef      = useRef('');   // Push 4A: string key (was number)
   const prevPlayerKeyRef   = useRef('');
   const prevContainerRef   = useRef({ w: 0, h: 0 });
 
@@ -1874,10 +1874,23 @@ export function HexMapLayer({
   const cameraAnim = useMemo(() => new Animated.ValueXY({ x: 0, y: 0 }), []);
 
   // Derived signals — stable strings that collapse into the two cases.
-  const currentTile = tiles.find(t => t.current);
-  const runKey      = tiles.length;                // new value = new run
-  const playerKey   = currentTile?.id ?? '';       // new value = player moved
-  const tilesKey    = `${runKey}:${playerKey}`;   // combined for Effect 2 dep
+  //
+  // Push 4A: cameraRunKey now encodes runSeed + world geometry so that two
+  // different runs that happen to share the same tile count AND start tile
+  // (which previously looked identical) are correctly treated as "new run"
+  // and trigger an instant camera reposition rather than a player-move follow.
+  //
+  //   cameraRunKey = runSeed:worldW:worldH:sz
+  //     • runSeed    — unique per run attempt (from server)
+  //     • worldW/H   — change when authored tile size activates
+  //     • sz         — changes on authored-world toggle; covered by worldW/H too
+  //
+  // Falls back to `tiles.length` when runSeed is not yet available (e.g. the
+  // static dev fixture) so behaviour is unchanged for offline dev.
+  const currentTile  = tiles.find(t => t.current);
+  const cameraRunKey = `${runSeed ?? tiles.length}:${worldW}:${worldH}:${sz}`;
+  const playerKey    = currentTile?.id ?? '';
+  const tilesKey     = `${cameraRunKey}:${playerKey}`;  // combined for Effect 2 dep
 
   // ── Effect 1: recompute camera bounds ────────────────────────────────────
   // Runs whenever the world geometry or container changes.
@@ -1984,8 +1997,8 @@ export function HexMapLayer({
   useLayoutEffect(() => {
     if (containerWidth < 10 || containerHeight < 10) return;
 
-    const isNewRun         = runKey    !== prevRunKeyRef.current;
-    const playerMoved      = playerKey !== prevPlayerKeyRef.current;
+    const isNewRun         = cameraRunKey !== prevRunKeyRef.current;
+    const playerMoved      = playerKey    !== prevPlayerKeyRef.current;
     const containerChanged =
       containerWidth  !== prevContainerRef.current.w ||
       containerHeight !== prevContainerRef.current.h;
@@ -1993,7 +2006,7 @@ export function HexMapLayer({
     if (!isNewRun && !playerMoved && !containerChanged) return;
 
     // Commit new prev values before any early returns below.
-    prevRunKeyRef.current      = runKey;
+    prevRunKeyRef.current      = cameraRunKey;
     prevPlayerKeyRef.current   = playerKey;
     prevContainerRef.current   = { w: containerWidth, h: containerHeight };
 
@@ -2020,6 +2033,10 @@ export function HexMapLayer({
       // animation (220 ms, Easing.out(Easing.quad) in HexObjectLayer).
       // Timing produces a clean deterministic follow that always arrives near
       // the same frame as the sprite — no overshoot, no spring bounce lag.
+      //
+      // Push 4A: cancel any in-flight camera animation before starting the new
+      // one so rapid tile movements do not leave stale animations running.
+      cameraAnim.stopAnimation();
       AccessibilityInfo.isReduceMotionEnabled()
         .then(reduceMotion => {
           if (reduceMotion) {
@@ -2108,6 +2125,10 @@ export function HexMapLayer({
     // C3: Commit the logical position immediately so stale-closure reads are
     // always accurate, regardless of whether animation is skipped.
     camRef.current = { x, y };
+
+    // Push 4A: cancel any in-flight camera animation before starting the
+    // recenter spring so an interrupted auto-follow doesn't fight the gesture.
+    cameraAnim.stopAnimation();
 
     // C3: Respect reduced-motion preference (WCAG 2.3.3).
     // If the user has enabled "Reduce Motion" in OS accessibility settings,
