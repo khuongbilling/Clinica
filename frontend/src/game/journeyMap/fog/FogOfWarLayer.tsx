@@ -1,7 +1,7 @@
 /**
  * FogOfWarLayer — single full-world fog canvas
  *
- * Push 1 — create aligned canvas (no drawing yet).
+ * Push 2 — draw one continuous full-map fog field (no reveal yet).
  *
  * Architecture rules (do not break):
  *  • ONE canvas, covers the entire world rect (worldWidth × worldHeight).
@@ -16,9 +16,10 @@
  *   ChapterBackground → HexTerrain → WorldContent → Gate → FogOfWarLayer → UI
  */
 
-import React, { useEffect, useRef } from 'react';
+import React, { useLayoutEffect, useRef } from 'react';
 import { Platform, StyleSheet, Text, View } from 'react-native';
 import { JOURNEY_Z } from '../../../components/journey/journeyZ';
+import { drawFogOfWar } from './fogOfWar';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -44,7 +45,10 @@ export function FogOfWarLayer({ worldWidth, worldHeight }: Props): React.ReactEl
 function FogOfWarLayerWeb({ worldWidth, worldHeight }: Props): React.ReactElement {
   const containerRef = useRef<View>(null);
 
-  useEffect(() => {
+  // useLayoutEffect fires synchronously after DOM mutations but BEFORE the
+  // browser paints — canvas is in the DOM and the foundation fill is drawn
+  // on the very first frame (no blank flash, screenshot-tool-visible).
+  useLayoutEffect(() => {
     if (typeof document === 'undefined') return;
     const container = containerRef.current as unknown as HTMLDivElement | null;
     if (!container) return;
@@ -63,8 +67,13 @@ function FogOfWarLayerWeb({ worldWidth, worldHeight }: Props): React.ReactElemen
 
     container.appendChild(canvas);
 
-    // Push 1: no fog drawn — canvas stays transparent (clear).
-    // Future pushes will call drawFogOfWar(canvas, ...) here.
+    // Push 2: draw one continuous full-map fog field.
+    // Fire-and-forget — canvas is already in the DOM; the draw updates it
+    // asynchronously as the texture loads (foundation renders immediately,
+    // texture appears on the next frame once the image resolves).
+    drawFogOfWar(canvas, { worldWidth, worldHeight }).catch((err) => {
+      console.warn('[FogOfWarLayer] drawFogOfWar failed:', err);
+    });
 
     return () => {
       canvas.remove();
