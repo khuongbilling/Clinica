@@ -208,16 +208,15 @@ function LegendRow({ src, label, desc }: { src: number; label: string; desc: str
 }
 
 /**
- * CORRECTIVE PUSH A — Camera diagnostics overlay.
+ * Push 4A.1 — Camera diagnostics overlay (expanded).
  *
- * Renders inside the map viewport (mapOuter) as an absolute overlay so it is
- * NOT inside the camera-transformed MapWorld and therefore stays fixed while
- * the player moves.
+ * Renders OUTSIDE MapWorld so it stays fixed while the camera pans.
+ * All fields derived from the HexMapWorldMetrics emitted by HexMapLayer's
+ * Effect 2 after every player-tile change.
  *
  * Acceptance criteria (PASS only if):
- *   Background == MapWorld == FogOfWar  (all three match)
- *   Viewport < MapWorld  (world is larger than viewport, enabling pan)
- *   maxCamera > 0 on at least one axis (camera can actually move)
+ *   Travel X > 0 OR Travel Y > 0   → status = FOLLOW READY
+ *   [JourneyCameraMove] log shows  → CAMERA TARGET CHANGED on tile move
  */
 function CameraDiagnosticsPanel({
   viewport,
@@ -228,77 +227,125 @@ function CameraDiagnosticsPanel({
 }): React.ReactElement | null {
   if (!__DEV__) return null;
 
-  const r = (n: number) => Math.round(n);
-  const dim = (w: number, h: number) => `${r(w)} × ${r(h)}`;
+  const r   = (n: number) => Math.round(n);
+  const fmt = (n: number) => r(n).toString();
+
+  // Travel = how far the camera can actually move (may be 0 if world ≤ viewport).
+  const travelX = metrics ? metrics.worldW - metrics.viewportW : 0;
+  const travelY = metrics ? metrics.worldH - metrics.viewportH : 0;
+  const hasTravel = travelX > 0 || travelY > 0;
+
+  // Camera bounds: pan is clamped to [viewportW − worldW, 0] on X,
+  // and [viewportH − worldH, 0] on Y.
+  const boundsMinX = metrics ? r(metrics.viewportW - metrics.worldW) : 0;
+  const boundsMinY = metrics ? r(metrics.viewportH - metrics.worldH) : 0;
+
+  // AUTHORED WORLD FAIL: worldTileSize was requested but world is still viewport-fit.
+  const authoredFail =
+    metrics !== null &&
+    metrics.worldTileSize !== undefined &&
+    !hasTravel;
 
   return (
     <View style={sCamDiag.panel} pointerEvents="none">
-      <Text style={sCamDiag.header}>📐 CAMERA DIAGNOSTICS</Text>
+      <Text style={sCamDiag.header}>CAMERA</Text>
 
-      <View style={sCamDiag.divider} />
-
-      {/* Push 4A: hard assertion — world must be larger than viewport on at
-          least one axis, otherwise authored-world sizing is not active. */}
-      {metrics !== null &&
-        metrics.worldW <= viewport.w &&
-        metrics.worldH <= viewport.h && (
+      {/* Hard-fail banner: authored mode requested but world didn't expand. */}
+      {authoredFail && (
         <View style={sCamDiag.failBanner}>
           <Text style={sCamDiag.failText}>
-            {'⚠️ CAMERA WORLD FAIL\nWorld is viewport-fit; authored map sizing is not active.'}
+            {'⚠️ AUTHORED WORLD FAIL\nMapWorld is still viewport-fit.'}
           </Text>
         </View>
       )}
 
-      <Text style={sCamDiag.sectionHead}>Dimensions</Text>
+      <View style={sCamDiag.divider} />
+
+      {/* ── Map dimensions ── */}
       <Text style={sCamDiag.row}>
-        <Text style={sCamDiag.label}>Viewport   </Text>
-        <Text style={sCamDiag.val}>{dim(viewport.w, viewport.h)}</Text>
+        <Text style={sCamDiag.label}>{'Viewport    '}</Text>
+        <Text style={sCamDiag.val}>{`${viewport.w} × ${viewport.h}`}</Text>
       </Text>
       <Text style={sCamDiag.row}>
-        <Text style={sCamDiag.label}>MapWorld   </Text>
-        <Text style={[sCamDiag.val, metrics && metrics.worldW > viewport.w ? sCamDiag.good : sCamDiag.warn]}>
-          {metrics ? dim(metrics.worldW, metrics.worldH) : '—'}
+        <Text style={sCamDiag.label}>{'MapWorld    '}</Text>
+        <Text style={[sCamDiag.val, hasTravel ? sCamDiag.good : sCamDiag.warn]}>
+          {metrics ? `${r(metrics.worldW)} × ${r(metrics.worldH)}` : '—'}
         </Text>
       </Text>
       <Text style={sCamDiag.row}>
-        <Text style={sCamDiag.label}>Background </Text>
-        <Text style={sCamDiag.val}>{metrics ? dim(metrics.worldW, metrics.worldH) : '—'}</Text>
+        <Text style={sCamDiag.label}>{'Tile size   '}</Text>
+        <Text style={sCamDiag.val}>{metrics ? `${metrics.tileSize} px` : '—'}</Text>
       </Text>
       <Text style={sCamDiag.row}>
-        <Text style={sCamDiag.label}>FogOfWar   </Text>
-        <Text style={sCamDiag.val}>{metrics ? dim(metrics.worldW, metrics.worldH) : '—'}</Text>
+        <Text style={sCamDiag.label}>{'WorldTileSz '}</Text>
+        <Text style={sCamDiag.val}>
+          {metrics?.worldTileSize != null ? `${metrics.worldTileSize} px` : '— (viewport-fit)'}
+        </Text>
       </Text>
 
       <View style={sCamDiag.divider} />
 
-      <Text style={sCamDiag.sectionHead}>Tile size: {metrics ? metrics.tileSize : '—'} px</Text>
+      {/* ── Player position ── */}
+      <Text style={sCamDiag.row}>
+        <Text style={sCamDiag.label}>{'Current tile'}</Text>
+        <Text style={sCamDiag.val}>{metrics?.currentTileId ?? '—'}</Text>
+      </Text>
+      <Text style={sCamDiag.row}>
+        <Text style={sCamDiag.label}>{'Player world'}</Text>
+        <Text style={sCamDiag.val}>
+          {metrics ? `${fmt(metrics.playerWorldX)}, ${fmt(metrics.playerWorldY)}` : '—'}
+        </Text>
+      </Text>
 
       <View style={sCamDiag.divider} />
 
-      <Text style={sCamDiag.sectionHead}>Camera</Text>
+      {/* ── Camera positions ── */}
       <Text style={sCamDiag.row}>
-        <Text style={sCamDiag.label}>Player world   </Text>
+        <Text style={sCamDiag.label}>{'Desired cam '}</Text>
         <Text style={sCamDiag.val}>
-          {metrics ? `${r(metrics.playerWorldX)}, ${r(metrics.playerWorldY)}` : '—'}
+          {metrics ? `${fmt(metrics.desiredCamX)}, ${fmt(metrics.desiredCamY)}` : '—'}
         </Text>
       </Text>
       <Text style={sCamDiag.row}>
-        <Text style={sCamDiag.label}>Desired camera </Text>
+        <Text style={sCamDiag.label}>{'Target cam  '}</Text>
         <Text style={sCamDiag.val}>
-          {metrics ? `${r(metrics.desiredCamX)}, ${r(metrics.desiredCamY)}` : '—'}
+          {metrics ? `${fmt(metrics.cameraX)}, ${fmt(metrics.cameraY)}` : '—'}
+        </Text>
+      </Text>
+
+      <View style={sCamDiag.divider} />
+
+      {/* ── Clamp bounds ── */}
+      <Text style={sCamDiag.row}>
+        <Text style={sCamDiag.label}>{'Bounds X    '}</Text>
+        <Text style={sCamDiag.val}>{metrics ? `${boundsMinX} → 0` : '—'}</Text>
+      </Text>
+      <Text style={sCamDiag.row}>
+        <Text style={sCamDiag.label}>{'Bounds Y    '}</Text>
+        <Text style={sCamDiag.val}>{metrics ? `${boundsMinY} → 0` : '—'}</Text>
+      </Text>
+
+      <View style={sCamDiag.divider} />
+
+      {/* ── Travel (world − viewport) ── */}
+      <Text style={sCamDiag.row}>
+        <Text style={sCamDiag.label}>{'Travel X    '}</Text>
+        <Text style={[sCamDiag.val, travelX > 0 ? sCamDiag.good : sCamDiag.warn]}>
+          {metrics ? `${r(travelX)} px` : '—'}
         </Text>
       </Text>
       <Text style={sCamDiag.row}>
-        <Text style={sCamDiag.label}>Actual camera  </Text>
-        <Text style={sCamDiag.val}>
-          {metrics ? `${r(metrics.cameraX)}, ${r(metrics.cameraY)}` : '—'}
+        <Text style={sCamDiag.label}>{'Travel Y    '}</Text>
+        <Text style={[sCamDiag.val, travelY > 0 ? sCamDiag.good : sCamDiag.warn]}>
+          {metrics ? `${r(travelY)} px` : '—'}
         </Text>
       </Text>
-      <Text style={sCamDiag.row}>
-        <Text style={sCamDiag.label}>Max camera     </Text>
-        <Text style={[sCamDiag.val, metrics && metrics.maxCamX > 0 ? sCamDiag.good : sCamDiag.warn]}>
-          {metrics ? `${r(metrics.maxCamX)}, ${r(metrics.maxCamY)}` : '—'}
-        </Text>
+
+      <View style={sCamDiag.divider} />
+
+      {/* ── Status ── */}
+      <Text style={hasTravel ? sCamDiag.statusGood : sCamDiag.statusBad}>
+        {hasTravel ? '✓ FOLLOW READY' : '✗ NO CAMERA TRAVEL'}
       </Text>
     </View>
   );
@@ -2185,4 +2232,7 @@ const sCamDiag = StyleSheet.create({
     paddingHorizontal: 8, paddingVertical: 6, marginBottom: 6,
   },
   failText: { color: '#fca5a5', fontSize: 9, fontWeight: '800', lineHeight: 14 },
+  // Push 4A.1: status row at the bottom of the panel.
+  statusGood: { color: '#4ade80', fontSize: 10, fontWeight: '800', marginTop: 4 },
+  statusBad:  { color: '#fb923c', fontSize: 10, fontWeight: '800', marginTop: 4 },
 });

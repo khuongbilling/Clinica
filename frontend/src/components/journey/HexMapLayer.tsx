@@ -1499,6 +1499,10 @@ export interface HexMapWorldMetrics {
   maxCamX:       number;
   /** Maximum positive pan distance on Y: max(0, worldH − viewportH). */
   maxCamY:       number;
+  /** Authored tile size that was requested (worldTileSize prop value). Push 4A.1. */
+  worldTileSize?: number;
+  /** Current player tile id — for the dev diagnostics panel. Push 4A.1. */
+  currentTileId?: string;
 }
 
 /**
@@ -1832,6 +1836,38 @@ export function HexMapLayer({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tiles, containerWidth]);
 
+  // ── Push 4A.1: DEV geometry trace ───────────────────────────────────────────
+  // Fires once per geometry change (sz, worldW, worldH, tile-count, container).
+  // Proves which branch of computeHexWorldCoords ran and whether the world is
+  // genuinely larger than the viewport so the camera can travel.
+  useEffect(() => {
+    if (!__DEV__) return;
+    console.log('[JourneyWorldGeometry]', {
+      containerWidth,
+      containerHeight,
+      requestedWorldTileSize: worldTileSize,
+      resolvedTileSize: sz,
+      worldW,
+      worldH,
+      tileCount: tiles.length,
+    });
+    if (worldTileSize !== undefined) {
+      const hasHorizontalTravel = worldW > containerWidth  + 1;
+      const hasVerticalTravel   = worldH > containerHeight + 1;
+      if (!hasHorizontalTravel && !hasVerticalTravel) {
+        console.error('[JourneyCamera] AUTHORED WORLD FAIL', {
+          reason:    'MapWorld is still viewport-fit despite worldTileSize being provided',
+          viewport:  [containerWidth, containerHeight],
+          world:     [worldW, worldH],
+          worldTileSize,
+          resolvedTileSize: sz,
+          tileCount: tiles.length,
+        });
+      }
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sz, worldW, worldH, containerWidth, containerHeight, tiles.length]);
+
   // ── Persistent refs ─────────────────────────────────────────────────────────
   const boundsRef          = useRef({ minX: -9999, maxX: 9999, minY: -9999, maxY: 9999 });
   const initialCamRef      = useRef({ x: 0, y: 0 });
@@ -2019,6 +2055,32 @@ export function HexMapLayer({
     const destX = clamp(containerWidth  / 2 - tileCx, minX, maxX);
     const destY = clamp(containerHeight / 2 - tileCy, minY, maxY);
 
+    // ── Push 4A.1: camera-move trace ──────────────────────────────────────────
+    // Logs once per tile change so we can prove camera position changes with the
+    // player.  Captures prevCam BEFORE the ref is overwritten below.
+    if (__DEV__ && playerMoved) {
+      const prevCamX = camRef.current.x;
+      const prevCamY = camRef.current.y;
+      const travelX  = worldW - containerWidth;
+      const travelY  = worldH - containerHeight;
+      const changed  = destX !== prevCamX || destY !== prevCamY;
+      console.log('[JourneyCameraMove]', {
+        previousTile:   prevPlayerKeyRef.current,
+        currentTile:    playerKey,
+        playerWorldX:   tileCx,
+        playerWorldY:   tileCy,
+        desiredX:       containerWidth  / 2 - tileCx,
+        desiredY:       containerHeight / 2 - tileCy,
+        clampedX:       destX,
+        clampedY:       destY,
+        previousCameraX: prevCamX,
+        previousCameraY: prevCamY,
+        status: changed
+          ? 'CAMERA TARGET CHANGED'
+          : (travelX <= 0 && travelY <= 0 ? 'WORLD TOO SMALL' : 'EDGE CLAMP'),
+      });
+    }
+
     // Recenter always targets the current player tile.
     initialCamRef.current = { x: destX, y: destY };
     // camRef updated now so PanResponder reads destination, not flight-path value.
@@ -2080,6 +2142,9 @@ export function HexMapLayer({
         desiredCamY:  containerHeight / 2 - tileCy,
         maxCamX:      Math.max(0, worldW - containerWidth),
         maxCamY:      Math.max(0, worldH - containerHeight),
+        // Push 4A.1: authored tile size + current tile id for dev panel
+        worldTileSize,
+        currentTileId: targetTile.id,
       };
       if (diagRef) diagRef.current = metrics;
       onMetricsUpdate?.(metrics);

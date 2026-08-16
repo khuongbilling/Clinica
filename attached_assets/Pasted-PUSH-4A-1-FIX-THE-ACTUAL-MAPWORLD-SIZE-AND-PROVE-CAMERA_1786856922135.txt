@@ -1,0 +1,452 @@
+PUSH 4A.1 — FIX THE ACTUAL MAPWORLD SIZE AND PROVE CAMERA TRAVEL
+
+The previous 4A did not pass.
+
+Observed runtime evidence:
+
+Background: 382 × 351
+FogOfWar:  382 × 351
+
+Camera still does not follow the player.
+
+The camera animation already exists.
+Do NOT add another camera implementation.
+
+The likely problem is that MapWorld is still viewport-fit, so camera bounds
+collapse and there is nowhere for the camera to travel.
+
+==================================================
+1. AUDIT THE ACTUAL RUNTIME GEOMETRY FIRST
+==================================================
+
+Inspect:
+
+frontend/src/components/journey/hexWorldCoords.ts
+
+Specifically inspect:
+
+AUTHORED_MAP_TILE_SZ
+computeHexWorldCoords(...)
+the authored/fixed-size branch
+
+HexMapLayer already calls:
+
+computeHexWorldCoords(
+  tiles,
+  containerWidth,
+  worldTileSize
+)
+
+and fog-map already passes:
+
+worldTileSize={AUTHORED_MAP_TILE_SZ}
+
+Therefore do NOT add another prop chain.
+
+Prove whether the authored branch is actually being entered.
+
+In DEV add:
+
+console.log('[JourneyWorldGeometry]', {
+  containerWidth,
+  containerHeight,
+  requestedWorldTileSize: worldTileSize,
+  resolvedTileSize: sz,
+  worldW,
+  worldH,
+  tileCount: tiles.length,
+});
+
+==================================================
+2. FIX AUTHORED-WORLD CALCULATION
+==================================================
+
+When worldTileSize is a valid positive number:
+
+computeHexWorldCoords MUST NOT use the viewport-fit sizing algorithm.
+
+It must build the world from the ACTUAL rendered extent of every authored tile.
+
+Use the same axial formula already owned by hexWorldCoords:
+
+rawLeft =
+  q * Q_STEP * sz
+
+rawTop =
+  (r * R_STEP + q * Q_VOFF) * sz
+
+For every authored tile calculate:
+
+minLeft
+minTop
+maxRight  = rawLeft + sz
+maxBottom = rawTop + sz
+
+Then establish a world-space margin around the tile footprint.
+
+Use approximately:
+
+worldMargin = sz * 0.65
+
+This margin is part of the painted MapWorld and provides room for:
+- player sprite overflow
+- encounter props
+- jade glow
+- map composition near edges
+
+Then:
+
+originX = worldMargin - minLeft
+originY = worldMargin - minTop
+
+worldWidth =
+  ceil(maxRight - minLeft + worldMargin * 2)
+
+worldHeight =
+  ceil(maxBottom - minTop + worldMargin * 2)
+
+axialToWorld(q,r) must return positions using that SAME origin:
+
+left =
+  q * Q_STEP * sz + originX
+
+top =
+  (r * R_STEP + q * Q_VOFF) * sz + originY
+
+cx = left + sz / 2
+cy = top  + sz / 2
+
+Do NOT afterwards clamp worldWidth/worldHeight back to:
+
+containerWidth
+containerHeight
+
+Do NOT scale sz downward to make the whole chapter visible.
+
+The Chapter map is intentionally larger than the mobile viewport.
+
+==================================================
+3. HARD FAIL IF AUTHORING MODE SILENTLY COLLAPSES
+==================================================
+
+In DEV, after coords are calculated:
+
+const hasHorizontalTravel =
+  worldW > containerWidth + 1;
+
+const hasVerticalTravel =
+  worldH > containerHeight + 1;
+
+If worldTileSize was supplied AND neither is true:
+
+console.error(
+  '[JourneyCamera] AUTHORED WORLD FAIL',
+  {
+    viewport: [containerWidth, containerHeight],
+    world: [worldW, worldH],
+    worldTileSize,
+    resolvedTileSize: sz,
+  }
+);
+
+Display a red diagnostic:
+
+AUTHORED WORLD FAIL
+MapWorld is still viewport-fit.
+
+Do not hide this failure.
+
+==================================================
+4. FIX RUN IDENTITY WHILE HERE
+==================================================
+
+Current camera logic uses:
+
+runKey = tiles.length
+
+That is not a valid run identity because:
+
+Attempt #4 = 30 tiles
+Attempt #5 = 30 tiles
+
+would produce the same runKey.
+
+HexMapLayer already receives:
+
+runSeed
+
+Change camera run identity to something like:
+
+const runKey =
+  runSeed ??
+  `${tiles.length}:${worldW}:${worldH}`;
+
+Keep:
+
+playerKey = currentTile?.id ?? '';
+
+Camera effect must respond independently to:
+
+runKey change
+playerKey change
+viewport change
+
+Do not use tile count alone as the run identifier.
+
+==================================================
+5. KEEP THE EXISTING CAMERA FOLLOW FORMULA
+==================================================
+
+Do NOT redesign the camera.
+
+Keep:
+
+desiredX =
+  viewportWidth / 2 - playerWorldX
+
+desiredY =
+  viewportHeight / 2 - playerWorldY
+
+Clamp against:
+
+minX = viewportWidth  - worldWidth
+maxX = 0
+
+minY = viewportHeight - worldHeight
+maxY = 0
+
+when world is larger than viewport.
+
+If one world axis is smaller than viewport,
+center and lock ONLY that axis.
+
+==================================================
+6. CANCEL OLD CAMERA FLIGHT BEFORE NEW PLAYER MOVE
+==================================================
+
+Before starting a new automatic camera animation:
+
+cameraAnim.stopAnimation();
+
+Then start the existing approximately 230 ms timing animation.
+
+This prevents rapid player moves from leaving an old animation competing
+with the newest destination.
+
+Do not change the player tween duration.
+
+==================================================
+7. MAKE CAMERA DIAGNOSTICS ACTUALLY VISIBLE
+==================================================
+
+The screenshot currently shows:
+
+FOG ALIGNMENT
+FOG LAYERS
+
+but not the useful camera metrics.
+
+Add / restore a DEV camera block outside the translated MapWorld.
+
+It must remain stationary on screen and show:
+
+CAMERA
+
+Viewport       382 × ...
+MapWorld       ... × ...
+Tile size      ...
+WorldTileSize  ...
+
+Current tile   ...
+Player world   x,y
+
+Desired camera x,y
+Target camera  x,y
+
+Bounds X       minX → maxX
+Bounds Y       minY → maxY
+
+Travel X       worldW - viewportW
+Travel Y       worldH - viewportH
+
+Status:
+
+FOLLOW READY
+
+only if:
+
+Travel X > 0
+OR
+Travel Y > 0
+
+Otherwise:
+
+NO CAMERA TRAVEL
+
+==================================================
+8. PROVE PLAYER MOVEMENT TRIGGERS CAMERA
+==================================================
+
+DEV only, on every currentTile change log:
+
+[JourneyCameraMove]
+
+previousTile
+currentTile
+
+playerWorldX
+playerWorldY
+
+desiredX
+desiredY
+
+clampedX
+clampedY
+
+previousCameraX
+previousCameraY
+
+Also log:
+
+CAMERA TARGET CHANGED
+
+when either clamped destination coordinate changed.
+
+If the player changes tile but target camera does not change,
+show whether that is because:
+
+EDGE CLAMP
+
+or:
+
+WORLD TOO SMALL
+
+This distinction matters.
+
+==================================================
+9. MAPWORLD REMAINS THE ONLY CAMERA TRANSFORM
+==================================================
+
+Do NOT move the sprite independently to simulate camera following.
+
+The existing hierarchy is correct:
+
+MapViewport
+  Animated MapWorld   <-- camera transform here
+    Background
+    terrain
+    encounter objects
+    player
+    FogOfWar
+    other fog layers
+    gate
+
+Everything in world space moves together.
+
+Do not put Background or Fog outside MapWorld.
+
+==================================================
+10. FOG MUST INHERIT THE NEW WORLD SIZE AUTOMATICALLY
+==================================================
+
+Once MapWorld expands:
+
+Background
+FogOfWar
+Base
+Mid
+Wisp
+
+must all receive the SAME new:
+
+worldW × worldH
+
+Therefore the current diagnostic:
+
+382 × 351
+
+should change together for all world-space layers.
+
+Do not independently enlarge the fog.
+
+Fog follows MapWorld dimensions.
+
+==================================================
+ACCEPTANCE TEST
+==================================================
+
+Reload Chapter 1.
+
+FIRST TEST:
+
+The diagnostic must NOT show:
+
+Viewport 382 × 351
+MapWorld 382 × 351
+
+or equivalent same-size dimensions.
+
+MapWorld must be meaningfully larger on at least one axis.
+
+Expected:
+
+Travel X > 0
+and/or
+Travel Y > 0.
+
+SECOND TEST:
+
+Move one tile.
+
+Player sprite performs its normal 220 ms movement.
+
+Camera target changes when the player's new position can be centered.
+
+Background, terrain, fog, encounters and gate move together.
+
+THIRD TEST:
+
+Move several tiles toward the middle of the map.
+
+Player should remain approximately around the camera focus region
+rather than walking progressively toward the edge of the screen.
+
+FOURTH TEST:
+
+Move toward the authored map edge.
+
+Camera eventually reaches its clamp.
+
+At that point the player is allowed to move away from screen center.
+
+This is correct behavior.
+
+FIFTH TEST:
+
+Manually drag/pan.
+
+Manual pan still respects the same world bounds.
+
+Make another valid player move.
+
+Automatic camera follow resumes from the new player position.
+
+==================================================
+DO NOT DO YET
+==================================================
+
+Do NOT implement Push 4B.
+Do NOT tune fog erasure.
+Do NOT change FOV.
+Do NOT restore Mid/Edge/Wisp logic.
+Do NOT resize fog independently.
+Do NOT create a second camera.
+
+We are fixing ONE invariant:
+
+MAPWORLD MUST BE LARGER THAN VIEWPORT
+SO THE EXISTING PLAYER-FOLLOW CAMERA HAS ROOM TO MOVE.
+
+Commit:
+
+fix(journey): correct authored world bounds and restore camera travel

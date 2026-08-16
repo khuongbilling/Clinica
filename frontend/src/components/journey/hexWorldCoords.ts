@@ -206,63 +206,109 @@ export function computeHexWorldCoords(
 
 // ── Authored-world formula (used when szOverride is provided) ─────────────────
 //
-// Unlike the viewport-fit formula, this:
-//   • Uses the FULL axial q-span (minQ … maxQ), correctly accounting for tiles
-//     with negative q coordinates which the viewport-fit formula ignores.
-//   • Sets worldOriginX so the leftmost tile sits at MARGIN px from left.
-//   • worldWidth = full q-span × Q_STEP × sz + sz + 2×MARGIN.
-//   • Never adds viewport-width padding — the camera viewport is separate.
+// Push 4A.1 rewrite: uses the ACTUAL pixel bounding box of all tile positions
+// rather than the axial q-span approximation.  Key differences vs the old
+// approach:
+//
+//   OLD: worldOriginX derived from minQ only (wrong for negative-r tiles).
+//        worldHeight seeded from 0, so tiles above r=0 shrank the world.
+//        worldMargin = 10 px (too small; world ≈ viewport on Chapter 1).
+//
+//   NEW: minLeft / minTop / maxRight / maxBottom computed from every tile's
+//        actual pixel footprint (rawLeft = q×Q_STEP×sz, rawTop = (r×R_STEP +
+//        q×Q_VOFF)×sz).  originX = worldMargin − minLeft correctly offsets the
+//        entire footprint into positive world-space regardless of sign.
+//        worldMargin = sz × 0.65 (≈ 97 px at sz=150) gives breathing room for
+//        sprite overflow, encounter props, jade glow, and edge composition.
 //
 // This is a module-private helper; callers go through computeHexWorldCoords.
-const _AUTHORED_MARGIN = 10; // px of breathing room on left and right edges
 
 function _computeAuthoredWorldCoords(
   tiles: ReadonlyArray<{ readonly q: number; readonly r: number }>,
   sz:    number,
 ): HexWorldCoords {
+  // worldMargin: breathing room on every side of the tile footprint.
+  // sz × 0.65 at the canonical authored tile size (150 px) gives ≈ 97 px —
+  // enough for sprite overflow, encounter props, jade glow, and edge composition.
+  // Do NOT reduce below sz × 0.5 or sprites near map edges will clip.
+  const worldMargin = sz * 0.65;
+
   if (tiles.length === 0) {
-    const worldOriginX = _AUTHORED_MARGIN;
-    const worldOriginY = _AUTHORED_MARGIN;
+    const worldOriginX = worldMargin;
+    const worldOriginY = worldMargin;
     function axialToWorldEmpty(q: number, r: number) {
-      const left = Math.round(q * Q_STEP * sz) + worldOriginX;
-      const top  = Math.round((r * R_STEP + q * Q_VOFF) * sz) + worldOriginY;
+      const left = Math.round(q * Q_STEP * sz + worldOriginX);
+      const top  = Math.round((r * R_STEP + q * Q_VOFF) * sz + worldOriginY);
       return { left, top, cx: left + Math.round(sz / 2), cy: top + Math.round(sz / 2) };
     }
     return {
       sz, worldOriginX, worldOriginY,
-      worldWidth: sz + _AUTHORED_MARGIN * 2, worldHeight: sz + _AUTHORED_MARGIN * 2,
+      worldWidth:  Math.ceil(sz + worldMargin * 2),
+      worldHeight: Math.ceil(sz + worldMargin * 2),
       axialToWorld: axialToWorldEmpty,
     };
   }
 
-  // Full axial extent — includes tiles with negative q.
-  const minQ = tiles.reduce((m, t) => Math.min(m, t.q), tiles[0].q);
-  const maxQ = tiles.reduce((m, t) => Math.max(m, t.q), tiles[0].q);
+  // ── Step 1: actual pixel bounding box of every tile ─────────────────────────
+  //
+  // Each tile's raw (un-offset) pixel footprint in the coordinate system where
+  // tile (0,0) is at the origin:
+  //
+  //   rawLeft   = q × Q_STEP × sz
+  //   rawTop    = (r × R_STEP + q × Q_VOFF) × sz
+  //   rawRight  = rawLeft + sz        (one tile body wide)
+  //   rawBottom = rawTop  + sz        (one tile body tall)
+  //
+  // We need the global min/max across all tiles so the world origin can shift
+  // the ENTIRE footprint into positive world-space with a uniform margin.
+  let minLeft   =  Infinity;
+  let minTop    =  Infinity;
+  let maxRight  = -Infinity;
+  let maxBottom = -Infinity;
 
-  // worldOriginX: places the leftmost tile (q = minQ) at left = _AUTHORED_MARGIN.
-  //   left(minQ) = round(minQ × Q_STEP × sz) + worldOriginX = _AUTHORED_MARGIN
-  //   ⟹ worldOriginX = _AUTHORED_MARGIN − round(minQ × Q_STEP × sz)
-  const worldOriginX = _AUTHORED_MARGIN - Math.round(minQ * Q_STEP * sz);
-  const worldOriginY = 10;
+  for (const tile of tiles) {
+    const rawLeft   = tile.q * Q_STEP * sz;
+    const rawTop    = (tile.r * R_STEP + tile.q * Q_VOFF) * sz;
+    if (rawLeft          < minLeft)   minLeft   = rawLeft;
+    if (rawTop           < minTop)    minTop    = rawTop;
+    if (rawLeft + sz     > maxRight)  maxRight  = rawLeft + sz;
+    if (rawTop  + sz     > maxBottom) maxBottom = rawTop  + sz;
+  }
 
-  // worldWidth covers the tile body from minQ left-edge to maxQ right-edge,
-  // plus one margin on each side.
-  //   right edge of maxQ tile = round(maxQ × Q_STEP × sz) + worldOriginX + sz
-  //                           = round(maxQ × Q_STEP × sz) + worldOriginX + sz
-  //   worldWidth = right edge + _AUTHORED_MARGIN (right breathing room)
-  //   Substituting worldOriginX:
-  //     ≈ round((maxQ − minQ) × Q_STEP × sz) + sz + 2 × _AUTHORED_MARGIN
-  const worldWidth = Math.round((maxQ - minQ) * Q_STEP * sz) + sz + _AUTHORED_MARGIN * 2;
+  // ── Step 2: world origin — push footprint into positive space + margin ──────
+  //
+  //   originX = worldMargin − minLeft
+  //   originY = worldMargin − minTop
+  //
+  // After this shift, the leftmost tile's left edge lands at exactly worldMargin.
+  // Tiles with negative rawLeft (e.g. q = −2 in Chapter 1) are handled correctly.
+  const worldOriginX = worldMargin - minLeft;
+  const worldOriginY = worldMargin - minTop;
 
-  // worldHeight: standard formula driven by the bottommost tile row.
-  const maxPxBottom = tiles.reduce((m, t) => Math.max(m, t.r * R_STEP + t.q * Q_VOFF), 0);
-  const worldHeight = Math.round(maxPxBottom * sz) + sz + worldOriginY + FOG_BOTTOM_PAD_PX;
+  // ── Step 3: world canvas dimensions ─────────────────────────────────────────
+  //
+  //   worldWidth  = (maxRight  − minLeft) + worldMargin × 2
+  //   worldHeight = (maxBottom − minTop)  + worldMargin × 2
+  //
+  // The Chapter background image fills exactly these dimensions.
+  // Do NOT clamp to containerWidth/containerHeight — the world is intentionally
+  // larger than the mobile viewport so the player-follow camera has travel room.
+  const worldWidth  = Math.ceil(maxRight  - minLeft + worldMargin * 2);
+  const worldHeight = Math.ceil(maxBottom - minTop  + worldMargin * 2);
 
-  // Identical axial-to-pixel formula — worldOriginX is the only thing that changed.
+  // ── Step 4: axial → pixel conversion ────────────────────────────────────────
+  //
+  // Identical raw formula; originX / originY offset the result into world-space.
+  // Every placement (terrain, player, gate, fog holes, camera) MUST use this.
   function axialToWorld(q: number, r: number) {
-    const left = Math.round(q * Q_STEP * sz) + worldOriginX;
-    const top  = Math.round((r * R_STEP + q * Q_VOFF) * sz) + worldOriginY;
-    return { left, top, cx: left + Math.round(sz / 2), cy: top + Math.round(sz / 2) };
+    const left = Math.round(q * Q_STEP * sz + worldOriginX);
+    const top  = Math.round((r * R_STEP + q * Q_VOFF) * sz + worldOriginY);
+    return {
+      left,
+      top,
+      cx: left + Math.round(sz / 2),
+      cy: top  + Math.round(sz / 2),
+    };
   }
 
   return { sz, worldOriginX, worldOriginY, worldWidth, worldHeight, axialToWorld };
