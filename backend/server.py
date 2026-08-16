@@ -511,6 +511,7 @@ class JourneyRunCreate(BaseModel):
     area_boss_keys_collected: int           = 0
     chapter_boss_defeated:   bool           = False
     explored_tile_count:     int            = 0
+    explored_tile_ids:       List[str]      = []
     stamina_spent:           int            = 0
     # Push 4 canonical fields
     shift:                   Optional[str]  = None   # 'day' | 'evening' | 'night'
@@ -525,8 +526,9 @@ class JourneyRunSave(BaseModel):
     current_tile_id:          str
     area_boss_keys_collected: Optional[int]   = None
     chapter_boss_defeated:    Optional[bool]  = None
-    explored_tile_count:      Optional[int]   = None
-    stamina_spent:            Optional[int]   = None
+    explored_tile_count:      Optional[int]       = None
+    explored_tile_ids:        Optional[List[str]] = None
+    stamina_spent:            Optional[int]       = None
     # Push 4 canonical mutable fields
     call_team:                Optional[List[str]] = None
     cards:                    Optional[List[Any]] = None

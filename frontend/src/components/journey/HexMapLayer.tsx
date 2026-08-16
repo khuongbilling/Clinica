@@ -1695,6 +1695,25 @@ export interface HexMapLayerProps {
    */
   runSeed?: string;
 
+  // ── Push 3: exploration state pass-through ───────────────────────────────
+  // Threaded from fog-map.tsx → HexMapLayer → FogOfWarLayer so the single
+  // fog canvas knows which tiles to reveal without coupling fog-map to the
+  // world pixel geometry that only HexMapLayer knows.
+
+  /**
+   * Tile IDs that have ever entered the player's FOV during this run.
+   * Forwarded unchanged to FogOfWarLayer; Push 4 will erase explored lobes.
+   * Source: JourneyRun.exploredTileIds (monotonically growing).
+   */
+  fogExploredTileIds?: readonly string[];
+
+  /**
+   * Live FOV ring — tile IDs currently within the player's vision radius.
+   * Forwarded unchanged to FogOfWarLayer; Push 4 will erase visible lobes.
+   * Source: calculateVisibleTileIds(run.currentTileId, run.tiles, radius).
+   */
+  fogVisibleTileIds?: ReadonlySet<string>;
+
   /**
    * Per-tile debug overlays controlled by the diagnostics panel checkboxes.
    * Every branch is guarded by `__DEV__`; no overhead in production.
@@ -1719,6 +1738,8 @@ export function HexMapLayer({
   runSeed,
   diagRef,
   devOverlay,
+  fogExploredTileIds,
+  fogVisibleTileIds,
 }: HexMapLayerProps) {
   // ── Push 10: resolved shift fog/overlay theme ─────────────────────────────
   // Drives all SVG atmospheric colors: fog blobs, memory veil, frontier glow,
@@ -2438,6 +2459,8 @@ export function HexMapLayer({
         <FogOfWarLayer
           worldWidth={worldW}
           worldHeight={worldH}
+          exploredTileIds={fogExploredTileIds}
+          visibleTileIds={fogVisibleTileIds}
         />
 
         {/* ── FogDevDiagnostic — __DEV__ only (z 19999) ───────────────────────

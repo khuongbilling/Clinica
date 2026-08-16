@@ -125,6 +125,37 @@ function tilesWithinRadius(
   return result;
 }
 
+// ── Public visibility helpers ─────────────────────────────────────────────────
+
+/**
+ * Return the Set of tile IDs that are currently visible from `currentTileId`
+ * within `radius` hex steps.
+ *
+ * This is the CANONICAL named export used by Push 3+ state wiring.  Callers:
+ *   • fog-map.tsx (derive visibleTileIds for FogOfWarLayer)
+ *   • Any future effect that needs the live FOV ring without a full fog recompute
+ *
+ * The result is the same FOV ring that `computeFogAfterMove` passes to
+ * `tilesWithinRadius` internally — single source of truth, no duplication.
+ *
+ * @param currentTileId  id of the tile the player is currently standing on ("q,r").
+ * @param tiles          All tiles in the run (must have id/q/r).
+ * @param radius         Reveal radius in hex steps (default: REVEAL_RADIUS = 1).
+ * @returns              Set<string> of tile ids currently in the player's FOV,
+ *                       including the current tile itself.
+ *                       Returns an empty set if currentTileId is not found.
+ */
+export function calculateVisibleTileIds(
+  currentTileId: string,
+  tiles: ReadonlyArray<{ readonly id: string; readonly q: number; readonly r: number }>,
+  radius: number = REVEAL_RADIUS,
+): Set<string> {
+  const current = tiles.find(t => t.id === currentTileId);
+  if (!current) return new Set<string>();
+  const tileIds = new Set(tiles.map(t => t.id));
+  return tilesWithinRadius(current.q, current.r, radius, tileIds);
+}
+
 // ── Fog computation ───────────────────────────────────────────────────────────
 
 /** Minimal tile shape required for initial fog calculation. */

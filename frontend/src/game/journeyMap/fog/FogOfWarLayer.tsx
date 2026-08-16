@@ -28,21 +28,52 @@ import { drawFogOfWar } from './fogOfWar';
 interface Props {
   worldWidth:  number;
   worldHeight: number;
+
+  // ── Push 3: exploration state (wired; not yet used for drawing) ────────────
+  /**
+   * Tile IDs that have ever entered the player's FOV.
+   * Passed through to drawFogOfWar; Push 4 will erase 'exploredButOutOfVision'
+   * lobes for these tiles (destination-out).
+   */
+  exploredTileIds?: readonly string[];
+
+  /**
+   * Live FOV ring — tile IDs currently visible from the player's position.
+   * Push 4 will erase sharper 'visibleNow' lobes for these tiles.
+   */
+  visibleTileIds?: ReadonlySet<string>;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Component
 // ─────────────────────────────────────────────────────────────────────────────
 
-export function FogOfWarLayer({ worldWidth, worldHeight }: Props): React.ReactElement | null {
+export function FogOfWarLayer({
+  worldWidth,
+  worldHeight,
+  exploredTileIds,
+  visibleTileIds,
+}: Props): React.ReactElement | null {
   // Web only — native has no canvas API at this layer.
   if (Platform.OS !== 'web') return null;
 
-  return <FogOfWarLayerWeb worldWidth={worldWidth} worldHeight={worldHeight} />;
+  return (
+    <FogOfWarLayerWeb
+      worldWidth={worldWidth}
+      worldHeight={worldHeight}
+      exploredTileIds={exploredTileIds}
+      visibleTileIds={visibleTileIds}
+    />
+  );
 }
 
 // Separated so the hooks always run (no early return before hooks rule).
-function FogOfWarLayerWeb({ worldWidth, worldHeight }: Props): React.ReactElement {
+function FogOfWarLayerWeb({
+  worldWidth,
+  worldHeight,
+  exploredTileIds,
+  visibleTileIds,
+}: Props): React.ReactElement {
   const containerRef = useRef<View>(null);
 
   // useLayoutEffect fires synchronously after DOM mutations but BEFORE the
@@ -68,10 +99,17 @@ function FogOfWarLayerWeb({ worldWidth, worldHeight }: Props): React.ReactElemen
     container.appendChild(canvas);
 
     // Push 2: draw one continuous full-map fog field.
+    // Push 3: exploredTileIds + visibleTileIds are threaded through but not
+    //         used for drawing yet — Push 4 adds destination-out erasure.
     // Fire-and-forget — canvas is already in the DOM; the draw updates it
     // asynchronously as the texture loads (foundation renders immediately,
     // texture appears on the next frame once the image resolves).
-    drawFogOfWar(canvas, { worldWidth, worldHeight }).catch((err) => {
+    drawFogOfWar(canvas, {
+      worldWidth,
+      worldHeight,
+      exploredTileIds,
+      visibleTileIds,
+    }).catch((err) => {
       console.warn('[FogOfWarLayer] drawFogOfWar failed:', err);
     });
 

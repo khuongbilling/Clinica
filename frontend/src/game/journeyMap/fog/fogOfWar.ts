@@ -112,6 +112,23 @@ export interface FogOfWarParams {
   /** CSS / world dimensions — drawing space before DPR scaling. */
   worldWidth:  number;
   worldHeight: number;
+
+  // ── Push 3: exploration state ──────────────────────────────────────────────
+  // Passed from FogOfWarLayer → drawFogOfWar so Push 4 can erase reveal lobes
+  // with destination-out compositing.  Not yet used for drawing — accepted here
+  // to establish the prop contract before the erasure pass is added.
+
+  /**
+   * Tile IDs that have ever entered the player's FOV (monotonically growing).
+   * Push 4 will erase 'exploredButOutOfVision' lobes for these tiles.
+   */
+  exploredTileIds?: readonly string[];
+
+  /**
+   * Tile IDs currently within the player's live FOV ring (moves with the player).
+   * Push 4 will erase sharper 'visibleNow' lobes for these tiles.
+   */
+  visibleTileIds?: ReadonlySet<string>;
 }
 
 // ── Main draw function ────────────────────────────────────────────────────────

@@ -48,6 +48,7 @@ import {
 } from '@/src/game/journeyMap/chapterBossKeys';
 import { journeyRunRepository }            from '@/src/game/journeyMap/journeyRunRepository';
 import { validateMove, applyMoveToRun, MOVE_STAMINA_COST } from '@/src/game/journeyMap/movement';
+import { calculateVisibleTileIds }         from '@/src/game/journeyMap/fogCalculator';
 import {
   resolveVisionBonuses,
   computeEffectiveVisionRadius,
@@ -718,6 +719,18 @@ export default function ChapterFogMapShell() {
     [player?.class_tree_id],
   );
 
+  // ── Push 3: live FOV ring for FogOfWarLayer ───────────────────────────────
+  // calculateVisibleTileIds returns the set of tile IDs currently within the
+  // player's vision radius — identical geometry to what computeFogAfterMove
+  // marks as 'visibleNow'.  Recomputed whenever the run or radius changes
+  // (movement updates run.currentTileId which changes the tile identity check).
+  const fogVisibleTileIds = useMemo((): ReadonlySet<string> => {
+    if (!run) return new Set<string>();
+    const currentTile = run.tiles.find(t => t.current);
+    if (!currentTile) return new Set<string>();
+    return calculateVisibleTileIds(currentTile.id, run.tiles, effectiveVisionRadius);
+  }, [run, effectiveVisionRadius]);
+
   // Push 24: canonical terrain cell count (includes gate tile — 30 for Ch1-5).
   // run.tileCount excluded the gate tile (tiles.length - 1) and was the source
   // of the "X / 29" display bug.  getChapterTerrainCellCount is the authoritative
@@ -1194,6 +1207,8 @@ export default function ChapterFogMapShell() {
               offsetY: chapterVisuals.backgroundOffsetY,
             }}
             runSeed={run?.seed}
+            fogExploredTileIds={run?.exploredTileIds}
+            fogVisibleTileIds={fogVisibleTileIds}
             diagRef={__DEV__ ? diagRef : undefined}
             devOverlay={__DEV__ ? devOverlay : undefined}
           />
