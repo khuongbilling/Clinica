@@ -274,14 +274,32 @@ export class JourneyRunRepository implements IJourneyRunRepository {
     if (!raw) return null;
     const run = fromWire(raw);
     // Legacy compatibility: runs created before the tile-count doubling (Push 1)
-    // carry fewer tiles than the current config expects.  Returning null here
-    // causes loadOrCreateJourneyRun to create a fresh run rather than crashing
-    // with TERRAIN ASSERTION FAIL in the fog-map screen.
+    // carry fewer tiles than the current config expects.
+    //
+    // Strategy: abandon the stale run on the backend so that getLatestRun
+    // (called next by the lifecycle) sees it as abandoned.  The lifecycle
+    // then follows the "abandoned → createRechallengeRun" branch, which
+    // creates a fresh run (attempt N+1) with the current tile count — no
+    // TERRAIN ASSERTION FAIL.
+    //
+    // We do NOT just return null without abandoning: that would leave an
+    // active run on the server, causing createFirstRun to conflict and
+    // preventing recovery.
     if (run.tiles.length !== getChapterTerrainCellCount(chapterId)) {
+      const expected = getChapterTerrainCellCount(chapterId);
       console.warn(
-        `[journeyRunRepository] legacy run discarded for ch${chapterId}: ` +
-        `tiles.length=${run.tiles.length} expected=${getChapterTerrainCellCount(chapterId)}`,
+        `[journeyRunRepository] legacy run for ch${chapterId} has ` +
+        `${run.tiles.length} tiles (expected ${expected}); ` +
+        `abandoning run ${run.id} so a fresh run can be created.`,
       );
+      try {
+        await this.abandonRun(run.id);
+      } catch (err) {
+        // Log but don't crash — the lifecycle will surface a clean error
+        // if the backend is in an inconsistent state rather than silently
+        // crashing the fog-map screen.
+        console.error('[journeyRunRepository] failed to abandon legacy run:', err);
+      }
       return null;
     }
     return run;
@@ -292,16 +310,13 @@ export class JourneyRunRepository implements IJourneyRunRepository {
       `/player/${playerId}/journey-runs/${chapterId}/latest`,
     );
     if (!raw) return null;
-    const run = fromWire(raw);
-    // Same legacy tile-count guard as getActiveRun.
-    if (run.tiles.length !== getChapterTerrainCellCount(chapterId)) {
-      console.warn(
-        `[journeyRunRepository] legacy run discarded for ch${chapterId}: ` +
-        `tiles.length=${run.tiles.length} expected=${getChapterTerrainCellCount(chapterId)}`,
-      );
-      return null;
-    }
-    return run;
+    // No tile-count guard here.  The lifecycle calls getLatestRun after
+    // getActiveRun returns null and needs to inspect the run's *status* and
+    // *attemptNumber* to decide whether to rechallenge or start fresh.  A
+    // stale-tile-count run that has been abandoned (by getActiveRun above)
+    // will surface here with status='abandoned', letting the lifecycle call
+    // createRechallengeRun correctly.
+    return fromWire(raw);
   }
 
   // ── Mutations ──────────────────────────────────────────────────────────────
