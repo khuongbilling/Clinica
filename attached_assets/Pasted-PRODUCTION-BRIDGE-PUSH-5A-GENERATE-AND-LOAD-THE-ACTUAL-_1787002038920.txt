@@ -1,0 +1,510 @@
+PRODUCTION BRIDGE PUSH 5A — GENERATE AND LOAD THE ACTUAL CHAPTER 1 BLUEPRINT BACKGROUND
+
+The production Blueprint / Pathway / HexLayout pipeline is now working.
+
+DO NOT modify:
+
+- Map DNA
+- PathwayGraph
+- HexLayout
+- 60-tile Chapter 1 footprint
+- lane/clearing classifications
+- encounter logic
+- Fog of War
+- FOV
+- camera follow
+- 80px tile scale
+- player/object grounding
+
+The remaining problem is ART ONLY.
+
+==================================================
+CURRENT ROOT CAUSE — CONFIRMED
+==================================================
+
+Chapter 1 now enters the blueprint-backed visual branch.
+
+However:
+
+getChapterMapVisuals()
+
+still returns:
+
+base.background
+
+from the old static Chapter 1 courtyard PNG.
+
+The current background manifest status:
+
+generated
+
+is only bookkeeping.
+
+It does NOT reference a newly generated raster image.
+
+chapterBackgroundSpec.ts successfully produces:
+
+- blueprint-aware AI prompt
+- target dimensions
+- target asset path
+
+but no image generator has actually been called.
+
+Therefore the old courtyard remains visible.
+
+==================================================
+1. DO NOT CREATE ANOTHER MAP SYSTEM
+==================================================
+
+Do not change any blueprint-generation code.
+
+The current Chapter 1 Blueprint is now the source of truth.
+
+Use its existing:
+
+- topology
+- pathway graph
+- lane cells
+- clearing cells
+- transition cells
+- scenery safety mask
+- world dimensions
+- blueprint hash
+
+to produce the background artwork.
+
+==================================================
+2. GENERATE A NEW CHAPTER 1 DAY BACKGROUND FIRST
+==================================================
+
+Start with DAY ONLY.
+
+Do not generate all three shifts simultaneously yet.
+
+Read the current production:
+
+getChapterBackgroundSpec(
+  1,
+  "day"
+)
+
+Use:
+
+.aiPrompt
+.dimensions
+.blueprintHash / corresponding map identity
+.world proportions
+
+Generate a NEW raster environment based on that specification.
+
+==================================================
+3. VERY IMPORTANT ART REQUIREMENT
+==================================================
+
+The image must be designed around the CURRENT 60-HEX BLUEPRINT.
+
+It is NOT:
+
+"a beautiful courtyard"
+
+It is:
+
+"a fantasy medical university simulation map with broad clearly traversable
+pathways and multiple open encounter clearings."
+
+The walkable blueprint must visually correspond to OPEN FLOOR.
+
+==================================================
+4. PATHWAYS MUST BE VISIBLE IN THE ART
+==================================================
+
+Where the blueprint contains:
+
+PRIMARY LANE
+
+paint:
+
+broad uninterrupted academy paving / simulation flooring.
+
+Target visual width should comfortably support the corresponding
+2–3-hex-wide pathway.
+
+Where the blueprint contains:
+
+SECONDARY LANE
+
+paint:
+
+a smaller but still clearly traversable path.
+
+Where the blueprint contains:
+
+TRANSITION
+
+visually widen/narrow the paving naturally.
+
+The rendered environment should make the player intuitively understand:
+
+"I can walk here."
+
+even before the hex outlines are visible.
+
+==================================================
+5. CLEARINGS MUST BE REAL OPEN AREAS
+==================================================
+
+The current Chapter 1 blueprint contains multiple clearings.
+
+Each clearing must visually become a real open environment feature.
+
+Possible Chapter 1 university interpretations:
+
+- clinical skills practice court
+- simulation assessment plaza
+- student training commons
+- standardized-patient practice space
+- observation court
+- diagnostic exercise area
+
+Their CENTER must remain visually open.
+
+Do NOT place:
+
+- fountain
+- statue
+- tree
+- planter
+- pillar
+- stairs
+- large furniture
+- decorative structure
+
+in the center of a clearing.
+
+This is where:
+
+- battles
+- treasure
+- Ward Events
+- merchants
+- Area Bosses
+
+may later appear.
+
+==================================================
+6. SCENERY GOES INTO NEGATIVE SPACE
+==================================================
+
+Use the existing SceneryLayout / walkable safety information.
+
+Major scenery belongs OUTSIDE the walkable mask.
+
+Appropriate scenery:
+
+- university teaching wings
+- fantasy medical academy buildings
+- medicinal gardens
+- observation balconies
+- simulation pavilions
+- decorative pillars
+- academic statues
+- planters
+- trees
+- arches
+- teaching equipment
+
+But these should FRAME the pathways.
+
+They must never randomly interrupt them.
+
+==================================================
+7. THIS SHOULD NOT BE ANOTHER CIRCULAR COURTYARD
+==================================================
+
+Chapter 1's current blueprint/path shape must control the composition.
+
+Do NOT force the new pathways back into:
+
+- circular atrium
+- radial courtyard
+- central fountain composition
+- giant symmetric disk
+
+If the blueprint is Academic Quad / branching-campus shaped,
+the painting must follow that geometry.
+
+The background must visually change substantially from the existing image.
+
+==================================================
+8. UNIVERSITY + SIMULATION ERA
+==================================================
+
+Chapter 1 theme:
+
+Simulation Era
+The Fading Apprentice
+University clinical training environment
+
+Visual identity:
+
+fantasy medical university
++
+high-end clinical simulation academy
++
+donghua/JRPG environment design
+
+It should feel educational and aspirational rather than like a dungeon.
+
+Possible details:
+
+- medical academy crests
+- subtle healing motifs
+- simulation stations
+- training banners
+- anatomy/medicinal gardens
+- observation galleries
+- elegant teaching architecture
+- crystal-assisted clinical technology
+
+Do not add UI text into the raster background.
+
+==================================================
+9. TOP-DOWN / 2.5D CAMERA REQUIREMENT
+==================================================
+
+The background must use the same perspective as the exploration game:
+
+high top-down / 2.5D tactical perspective.
+
+The floor is the dominant traversable surface.
+
+Avoid low-angle cinematic perspective.
+
+Avoid architecture that visually blocks large portions of the walkable floor.
+
+==================================================
+10. WORLD-FILL REQUIREMENT
+==================================================
+
+The blueprint-backed renderer no longer uses the old manual:
+
+backgroundScale
+backgroundOffsetX
+backgroundOffsetY
+
+alignment compensation.
+
+Therefore author the new image to correspond naturally to the complete
+Chapter world bounds.
+
+The map should work under normal cover rendering without hand-adjusted
+old-courtyard offsets.
+
+==================================================
+11. USE A VERSIONED ASSET FIRST — DO NOT DESTROY THE OLD PNG
+==================================================
+
+Do NOT immediately overwrite the old Chapter 1 image.
+
+Keep it available for rollback.
+
+Generate something equivalent to:
+
+map-platform-background-ch1-day-blueprint-v1.png
+
+Then register that exact raster asset in the blueprint background manifest.
+
+Associate it with:
+
+chapterId = 1
+shift = day
+current mapBlueprintHash
+current mapLayoutVersion
+
+Only a matching blueprint hash may use this asset.
+
+==================================================
+12. FIX THE BACKGROUND MANIFEST
+==================================================
+
+The background manifest must stop using only:
+
+"generated"
+
+as its usable runtime state.
+
+A generated entry needs an actual raster asset reference.
+
+Conceptually it needs:
+
+status: generated
+rasterAsset: actual bundled image
+blueprintHash: ...
+layoutVersion: ...
+shift: ...
+
+The renderer must receive:
+
+manifest.rasterAsset
+
+not:
+
+base.background
+
+for a successfully matched blueprint-backed Chapter.
+
+==================================================
+13. GETCHAPTERMAPVISUALS
+==================================================
+
+For a blueprint-backed Chapter with a valid matched generated asset:
+
+background must resolve from:
+
+the blueprint background manifest.
+
+Do NOT retain the old behavior where:
+
+...base
+
+silently supplies the old courtyard background.
+
+The old static base background should only be:
+
+fallback / legacy behavior.
+
+==================================================
+14. FAIL LOUDLY IN DEVELOPMENT
+==================================================
+
+If:
+
+Chapter is blueprint-backed
+
+but:
+
+no matched raster asset exists
+
+show a development warning:
+
+BLUEPRINT BACKGROUND MISSING
+
+Do NOT label the old courtyard:
+
+BLUEPRINT BACKED
+
+while silently rendering it.
+
+Display:
+
+Chapter: 1
+Blueprint hash: ...
+Background asset hash: MISSING
+Fallback: LEGACY COURTYARD
+
+This will prevent this exact problem from being hidden again.
+
+==================================================
+15. ADD MAP BLUEPRINT DEBUG OVERLAY
+==================================================
+
+Keep/add a DIAG toggle:
+
+BLUEPRINT
+
+Overlay on top of the newly generated background:
+
+GREEN:
+primary/secondary walkable lanes
+
+CYAN:
+clearings
+
+AMBER:
+transitions
+
+RED:
+scenery exclusion / obstacle areas
+
+GOLD:
+start
+
+PURPLE:
+gate
+
+This is DEV ONLY.
+
+The purpose is to visually compare the generated raster against the
+logical blueprint.
+
+==================================================
+16. VISUAL ACCEPTANCE TEST
+==================================================
+
+Turn the BLUEPRINT overlay ON.
+
+Every GREEN lane must sit over:
+
+open floor / pathway.
+
+Every CYAN clearing must sit over:
+
+open usable space.
+
+No large:
+
+shrub
+pillar
+fountain
+wall
+staircase
+building
+planter
+
+may occupy a green/cyan playable region.
+
+The scenery should predominantly occupy negative space.
+
+==================================================
+17. DO NOT GENERATE EVENING/NIGHT YET
+==================================================
+
+First get Chapter 1 DAY correct.
+
+Once approved:
+
+derive Evening and Night from the SAME composition.
+
+Those variants must preserve pixel-compatible:
+
+- pathways
+- clearings
+- buildings
+- gardens
+- obstacles
+- landmarks
+
+Only lighting/atmosphere changes.
+
+==================================================
+18. PASS CRITERIA
+==================================================
+
+PASS only when the live Chapter 1 DAY screenshot visibly shows:
+
+✓ same current 60-hex blueprint
+✓ clearly identifiable pathway network
+✓ visible open clearings
+✓ university simulation environment
+✓ scenery outside playable lanes
+✓ no old circular courtyard composition
+✓ new raster background loaded by production
+✓ blueprint hash matches background asset
+✓ fog remains unchanged
+✓ FOV remains unchanged
+✓ camera remains unchanged
+✓ hexes align naturally with painted paths
+
+Commit:
+
+feat(journey): generate and load chapter 1 blueprint-matched day background

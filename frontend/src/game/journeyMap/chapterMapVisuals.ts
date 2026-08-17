@@ -148,6 +148,21 @@ export interface ChapterShiftVisuals {
    *     manual alignment compensation.
    */
   isBlueprintBacked?: boolean;
+
+  /**
+   * Push 5A: set true when the chapter IS blueprint-backed but NO matched
+   * raster asset has been registered in BLUEPRINT_RASTER_REGISTRY for the
+   * current blueprintHash.
+   *
+   * When true:
+   *   • background falls back to the legacy static PNG (base.background).
+   *   • DevDiagnostics shows "⚠ BLUEPRINT BACKGROUND MISSING" with hash info.
+   *   • Never silently labels legacy art as "BLUEPRINT BACKED".
+   *
+   * Fix: generate a new raster from getBackgroundAuthoringManifest(chapter,
+   * shift).aiPrompt and register it in BLUEPRINT_RASTER_REGISTRY.
+   */
+  blueprintBackgroundMissing?: boolean;
 }
 
 // ── Shared asset references (module-level statics required by Metro) ──────────
@@ -215,6 +230,27 @@ const DEFAULT_SHIFT_VISUALS: Record<TimeOfDay, ChapterShiftVisuals> = {
 // ── Per-chapter shift visuals registry ───────────────────────────────────────
 
 const CHAPTER_SHIFT_VISUALS: Partial<Record<number, Record<TimeOfDay, ChapterShiftVisuals>>> = {};
+
+// ── Push 5A: Blueprint-matched raster registry ────────────────────────────────
+//
+// Maps `chapter:shift:blueprintHash` → Metro asset number (static require).
+//
+// RULES:
+//   1. Only register a raster here AFTER the PNG exists at its require() path.
+//   2. Key must include the exact blueprintHash from the current pipeline;
+//      a geometry change will produce a new hash → this entry becomes stale
+//      → DevDiagnostics surfaces "BLUEPRINT BACKGROUND MISSING" automatically.
+//   3. Versioned filename convention: map-platform-background-ch{N}-{shift}-blueprint-v{N}.png
+//      This preserves the old static PNG as a rollback target.
+//
+// Ch1 day — blueprint hash 6439241b (MAP_LAYOUT_VERSION v1):
+const CH1_DAY_BG_BLUEPRINT_V1 = require(
+  '@/assets/ui/journey/map/map-platform-background-ch1-day-blueprint-v1.png',
+) as number;
+
+const BLUEPRINT_RASTER_REGISTRY: Record<string, number> = {
+  '1:day:6439241b': CH1_DAY_BG_BLUEPRINT_V1,
+};
 
 // ── Chapter 1: "Atrium Approach" ─────────────────────────────────────────────
 //
@@ -412,23 +448,47 @@ export function getChapterMapVisuals(
 ): ChapterShiftVisuals {
   const base = CHAPTER_SHIFT_VISUALS[chapter]?.[timeOfDay] ?? DEFAULT_SHIFT_VISUALS[timeOfDay];
 
-  // Blueprint-pipeline chapters: augment with manifest identity and strip
-  // manual alignment so contentFit="cover" fills worldW × worldH directly.
+  // Push 5A — blueprint-pipeline chapters:
+  //   1. Look up the versioned raster in BLUEPRINT_RASTER_REGISTRY by
+  //      chapter:shift:blueprintHash.  If found → use it as the background,
+  //      strip old alignment offsets.
+  //   2. If NOT found → set blueprintBackgroundMissing:true so DevDiagnostics
+  //      can surface "⚠ BLUEPRINT BACKGROUND MISSING" instead of silently
+  //      rendering the legacy courtyard as a blueprint-backed background.
   if (BLUEPRINT_PIPELINE_CHAPTERS.has(chapter)) {
     try {
       const manifest = getBackgroundAuthoringManifest(chapter, timeOfDay);
-      return {
-        ...base,
-        blueprintHash:          manifest.mapBlueprintHash,
-        blueprintLayoutVersion: manifest.mapLayoutVersion,
-        isBlueprintBacked:      true,
-        // No manual alignment: the generated raster was produced to cover
-        // the exact world canvas.  Remove any hand-tuned offsets from the
-        // static registry entry so they don't skew the blueprint art.
-        backgroundScale:   undefined,
-        backgroundOffsetX: undefined,
-        backgroundOffsetY: undefined,
-      };
+      const registryKey = `${chapter}:${timeOfDay}:${manifest.mapBlueprintHash}`;
+      const blueprintRaster = BLUEPRINT_RASTER_REGISTRY[registryKey];
+
+      if (blueprintRaster != null) {
+        // ✓ Blueprint-matched raster found — use it.
+        // Strip old manual alignment: the generated art fills worldW × worldH
+        // via contentFit="cover" without compensation.
+        return {
+          ...base,
+          background:             blueprintRaster,
+          blueprintHash:          manifest.mapBlueprintHash,
+          blueprintLayoutVersion: manifest.mapLayoutVersion,
+          isBlueprintBacked:      true,
+          blueprintBackgroundMissing: false,
+          backgroundScale:   undefined,
+          backgroundOffsetX: undefined,
+          backgroundOffsetY: undefined,
+        };
+      } else {
+        // ✗ Blueprint chapter but no matched raster registered for this hash.
+        // Keep base.background (legacy art) for a usable map, but flag the
+        // miss so DevDiagnostics displays "⚠ BLUEPRINT BACKGROUND MISSING".
+        // Do NOT label this path as fully "BLUEPRINT BACKED".
+        return {
+          ...base,
+          blueprintHash:          manifest.mapBlueprintHash,
+          blueprintLayoutVersion: manifest.mapLayoutVersion,
+          isBlueprintBacked:      true,
+          blueprintBackgroundMissing: true,
+        };
+      }
     } catch {
       // Manifest lookup failed (unregistered chapter, env error, etc.).
       // Return the static entry unchanged — better than a blank map.

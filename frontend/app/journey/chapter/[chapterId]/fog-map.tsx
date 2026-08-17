@@ -373,10 +373,17 @@ function DevDiagnostics({
   run,
   chapterKeysCollected,
   chapterNum,
+  blueprintBackgroundMissing,
 }: {
   run: JourneyRun;
   chapterKeysCollected: number;
   chapterNum: number;
+  /**
+   * Push 5A: true when the chapter is blueprint-backed but no matched raster
+   * has been registered for the current blueprintHash.  The legacy courtyard
+   * is showing as a fallback.  DevDiagnostics must surface this visibly.
+   */
+  blueprintBackgroundMissing?: boolean;
 }) {
   const { counts, tiers } = useMemo(() => countEncounters(run.tiles), [run.tiles]);
   const exploredPct = run.tileCount > 0
@@ -539,6 +546,23 @@ function DevDiagnostics({
               {pipelineArtifact.scenerySafetyPass ? 'PASS ✓' : 'FAIL ✗'}
             </Text>
           </Text>
+
+          {/* Push 5A: blueprint background missing warning ─────────────────
+            * Fires when this chapter IS blueprint-backed but BLUEPRINT_RASTER_REGISTRY
+            * has no entry for the current hash.  The legacy courtyard is showing.
+            * Fix: generate art from getBackgroundAuthoringManifest(N,shift).aiPrompt
+            * and register it in BLUEPRINT_RASTER_REGISTRY in chapterMapVisuals.ts.  */}
+          {blueprintBackgroundMissing && pipelineArtifact && (
+            <View style={sDev.mismatchBanner}>
+              <Text style={sDev.mismatchText}>
+                {'⚠ BLUEPRINT BACKGROUND MISSING\n'}
+                {'Chapter: '}{chapterNum}{'\n'}
+                {'Blueprint hash: '}{pipelineArtifact.blueprintHash}{'\n'}
+                {'Background asset hash: MISSING\n'}
+                {'Fallback: LEGACY COURTYARD'}
+              </Text>
+            </View>
+          )}
 
           {/* ── Background manifest section — Push 4 ──────────────────────── */}
           {bgManifests != null && (
@@ -1621,7 +1645,12 @@ export default function ChapterFogMapShell() {
 
         {/* ── 5. Dev diagnostics (real run only, dev route) ─────────────── */}
         {run !== null && debugTiles === null && (
-          <DevDiagnostics run={run} chapterKeysCollected={keysCollected} chapterNum={chNum} />
+          <DevDiagnostics
+            run={run}
+            chapterKeysCollected={keysCollected}
+            chapterNum={chNum}
+            blueprintBackgroundMissing={chapterVisuals?.blueprintBackgroundMissing}
+          />
         )}
 
         {/* ── 6. Tile-outcome legend (collapsed by default; ⓘ to expand) ── */}
