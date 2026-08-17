@@ -1671,6 +1671,25 @@ export interface HexMapDevOverlay {
    * MUST NOT ship — gated with __DEV__.
    */
   playableBounds?:   boolean;
+
+  /**
+   * DEV ONLY — blueprint zone overlay (Push 5).
+   *
+   * Renders a coloured translucent tint over each tile keyed by zoneType,
+   * plus RED dots at scenery exclusion zone centroids.
+   *
+   *   GREEN  — lane      (primary walkable path cell)
+   *   CYAN   — clearing  (open encounter zone)
+   *   AMBER  — transition (cross-lane / connecting cell)
+   *   GOLD   — start tile (player origin)
+   *   PURPLE — gate tile (chapter exit / boss anchor)
+   *   RED    — scenery exclusion zone centroid (dot, from blueprintSceneryZones)
+   *
+   * Use alongside the blueprint-backed background art to confirm every
+   * green / cyan region corresponds to open floor in the raster.
+   * MUST NOT ship — gated with __DEV__.
+   */
+  mapBlueprint?: boolean;
 }
 
 /**
@@ -1890,6 +1909,21 @@ export interface HexMapLayerProps {
    * No-op in production — never called when `__DEV__` is false.
    */
   onMetricsUpdate?: (metrics: HexMapWorldMetrics) => void;
+
+  // ── Push 5: blueprint debug overlay props ────────────────────────────────
+
+  /**
+   * DEV-only: start tile id used by the MAP BLUEPRINT debug overlay to render
+   * a GOLD tint on the player origin tile.  No effect in production.
+   */
+  startTileId?: string;
+
+  /**
+   * DEV-only: scenery exclusion zone centroids (axial coords) from the
+   * BackgroundAuthoringManifest.  The MAP BLUEPRINT overlay renders a RED
+   * dot at each centroid to confirm exclusion zones align with raster art.
+   */
+  blueprintSceneryZones?: readonly { readonly q: number; readonly r: number }[];
 }
 
 export function HexMapLayer({
@@ -1914,6 +1948,8 @@ export function HexMapLayer({
   fogEffectiveFieldOfVision,
   worldTileSize,
   onMetricsUpdate,
+  startTileId,
+  blueprintSceneryZones,
 }: HexMapLayerProps) {
   // ── Push 10: resolved shift fog/overlay theme ─────────────────────────────
   // Drives all SVG atmospheric colors: fog blobs, memory veil, frontier glow,
@@ -2855,6 +2891,66 @@ export function HexMapLayer({
                 height:          sz,
                 zIndex:          JOURNEY_Z.DEV_OVERLAY,
                 backgroundColor: tintColor,
+              }}
+            />
+          );
+        })}
+
+        {/* ── Dev MAP BLUEPRINT zone overlay — Push 5 / __DEV__ only ─────────
+         * Tints each tile by its blueprint zone classification:
+         *   GREEN  — lane      (primary walkable path)
+         *   CYAN   — clearing  (open encounter zone)
+         *   AMBER  — transition (connecting / cross-lane)
+         *   GOLD   — start tile (player origin)
+         *   PURPLE — gate tile (chapter exit / boss anchor)
+         * Renders RED dots at scenery exclusion zone centroids (blueprintSceneryZones).
+         * Use alongside blueprint-backed raster art to verify every open
+         * walkable region corresponds to unobstructed floor.
+         * MUST NOT ship — __DEV__ guard.
+         */}
+        {__DEV__ && devOverlay?.mapBlueprint && sorted.map(tile => {
+          const { left: px, top: py } = coords.axialToWorld(tile.q, tile.r);
+          const isStart = tile.id === startTileId;
+          const isGate  = tile.id === gateArt?.gateTileId;
+          const bgColor =
+            isStart                          ? 'rgba(251,191,36,0.68)' :   // GOLD
+            isGate                           ? 'rgba(168,85,247,0.68)' :   // PURPLE
+            tile.zoneType === 'clearing'     ? 'rgba(6,182,212,0.44)'  :   // CYAN
+            tile.zoneType === 'lane'         ? 'rgba(34,197,94,0.40)'  :   // GREEN
+            tile.zoneType === 'transition'   ? 'rgba(245,158,11,0.32)' :   // AMBER
+            'rgba(148,163,184,0.22)';                                       // unlabelled
+          return (
+            <View
+              key={`bp-tile-${tile.id}`}
+              pointerEvents="none"
+              style={{
+                position:        'absolute',
+                left:            px,
+                top:             py,
+                width:           sz,
+                height:          sz,
+                zIndex:          JOURNEY_Z.DEV_OVERLAY - 1,
+                backgroundColor: bgColor,
+              }}
+            />
+          );
+        })}
+        {__DEV__ && devOverlay?.mapBlueprint && blueprintSceneryZones?.map((zone, zIdx) => {
+          const { cx, cy } = coords.axialToWorld(zone.q, zone.r);
+          const dotR = Math.max(4, Math.round(sz * 0.18));
+          return (
+            <View
+              key={`bp-scenery-${zIdx}`}
+              pointerEvents="none"
+              style={{
+                position:        'absolute',
+                left:            cx - dotR,
+                top:             cy - dotR,
+                width:           dotR * 2,
+                height:          dotR * 2,
+                zIndex:          JOURNEY_Z.DEV_OVERLAY,
+                backgroundColor: 'rgba(239,68,68,0.78)',  // RED
+                borderRadius:    dotR,
               }}
             />
           );

@@ -1,11 +1,20 @@
 /**
- * chapterMapVisuals.ts — PUSH 23
+ * chapterMapVisuals.ts — PUSH 23 / PUSH 5
  *
  * Shift-aware visual theme registry for chapter fog-maps.
  *
  * Each chapter registers three shift variants (day / evening / night).
  * `getChapterMapVisuals(chapter, timeOfDay)` is the single call-site for
  * resolving which assets to use; callers never hard-code asset paths.
+ *
+ * Push 5: for blueprint-pipeline chapters (BLUEPRINT_PIPELINE_CHAPTERS),
+ * getChapterMapVisuals resolves the background through the versioned
+ * BackgroundAuthoringManifest:
+ *   • blueprintHash / blueprintLayoutVersion are attached to the return value
+ *     so callers can detect background / run hash mismatches.
+ *   • Manual alignment compensation (backgroundScale / backgroundOffsetX /
+ *     backgroundOffsetY) is cleared — the generated raster covers the full
+ *     worldWidth × worldHeight canvas without hand-tuning.
  *
  * Metro bundler requires STATIC require() calls — asset paths cannot be
  * constructed from runtime strings.  All fields are `number` (the resolved
@@ -27,6 +36,8 @@
  */
 
 import type { TimeOfDay } from './types';
+import { BLUEPRINT_PIPELINE_CHAPTERS } from './config';
+import { getBackgroundAuthoringManifest } from './backgroundAuthoringManifest';
 
 // ── Visual theme interface ────────────────────────────────────────────────────
 
@@ -105,6 +116,38 @@ export interface ChapterShiftVisuals {
    * Omit until a dedicated ambient raster is approved.
    */
   ambientOverlay?: number;
+
+  // ── Push 5: blueprint manifest identity ───────────────────────────────────
+
+  /**
+   * Blueprint hash that was current when this chapter background was generated.
+   * Present only for blueprint-pipeline chapters (BLUEPRINT_PIPELINE_CHAPTERS).
+   *
+   * Callers compare this to JourneyRun.mapBlueprintHash:
+   *   match   → background art aligns with the run's hex geometry
+   *   mismatch → the raster predates the current geometry — flag as stale
+   *
+   * Absent for non-pipeline chapters (static legacy registry entries).
+   */
+  blueprintHash?: string;
+
+  /**
+   * MAP_LAYOUT_VERSION that was active when this background was generated.
+   * Present only for blueprint-pipeline chapters.
+   */
+  blueprintLayoutVersion?: string;
+
+  /**
+   * True for blueprint-pipeline chapters whose background is managed through
+   * the versioned BackgroundAuthoringManifest.
+   *
+   * When true:
+   *   • backgroundScale / backgroundOffsetX / backgroundOffsetY are absent.
+   *   • The raster was generated to cover worldWidth × worldHeight exactly.
+   *   • contentFit="cover" at absoluteFillObject fills the world canvas without
+   *     manual alignment compensation.
+   */
+  isBlueprintBacked?: boolean;
 }
 
 // ── Shared asset references (module-level statics required by Metro) ──────────
@@ -211,6 +254,13 @@ const CH1_EVE_REVEALED = require('@/assets/ui/journey/tiles/hex-revealed-evening
 const CH1_EVE_FRONTIER = require('@/assets/ui/journey/tiles/hex-frontier-evening.png')               as number;
 const CH1_EVE_CURRENT  = require('@/assets/ui/journey/tiles/hex-current-evening.png')                as number;
 
+// Push 4: Ch1 Night — dedicated raster generated from blueprint spatial brief.
+//   background  map-platform-background-ch1-night.png — academic quad at night:
+//               teal bioluminescent lanterns, deep navy, floor rune circuits,
+//               amber window glow, same geometry as day/evening.
+//               Generated from the Push 4 BackgroundAuthoringManifest spec.
+const CH1_NIGHT_BG = require('@/assets/ui/journey/map/map-platform-background-ch1-night.png') as number;
+
 // ── Push 12: Chapter 1 painting alignment — all three shifts ─────────────────
 //
 // COORDINATE BASIS (sz = 88 px, containerWidth ≈ 390 px)
@@ -312,21 +362,19 @@ CHAPTER_SHIFT_VISUALS[1] = {
     terrainFrontier:   CH1_EVE_FRONTIER,
   },
   night: {
-    // Night: map-platform-background.webp — deep navy/blue-black ward,
-    // teal corridors, purple lanterns, gold compass mandala at centre.
-    // Compass sits at exactly 50 % image width and height → offsetX = −64
-    // centres it on the grid x-centre; offsetY = −112 satisfies top-tile
-    // coverage and keeps the compass at grid y ≈ 64 (vs grid centre 71).
-    // The cross-shaped corridor plan maps naturally to the hex-field shape:
-    //   top staircase  → top-cap tiles (r = −3)
-    //   right corridor → gate tile column (q = 3)
-    //   left corridor  → start tile column (q = −1)
-    background:        BG_NIGHT,
+    // Push 4: map-platform-background-ch1-night.png — blueprint-derived raster.
+    // Academic quad at night: teal bioluminescent lanterns, deep navy sky,
+    // arcane floor rune circuits, amber window glow.  Same walkable geometry
+    // (clearings, paths, start/gate positions) as the day and evening variants.
+    //
+    // Paint alignment (same as day/evening — geometry shared):
+    //   backgroundScale  = 1.60
+    //   backgroundOffsetX = −64   (architectural centre ≈ 50 % image width)
+    //   backgroundOffsetY = −112  (covers top-cap tiles at r = −3)
+    background:        CH1_NIGHT_BG,
     backgroundScale:   1.60,
     backgroundOffsetX: -64,
     backgroundOffsetY: -112,
-    // Push 23: TERRAIN_NIGHT = hex-terrain-normal.png — the Push 10 canonical
-    // jade-teal cracked stone; already designed for the dark visual direction.
     terrainTexture:    TERRAIN_NIGHT,
     terrainBase:       TILE_BASE,
     terrainCurrent:    TILE_CURRENT,
@@ -343,6 +391,14 @@ CHAPTER_SHIFT_VISUALS[1] = {
  *   1. Per-chapter shift entry  → CHAPTER_SHIFT_VISUALS[chapter][timeOfDay]
  *   2. Global default for shift → DEFAULT_SHIFT_VISUALS[timeOfDay]
  *
+ * Push 5 — blueprint-pipeline chapters:
+ *   When the chapter is in BLUEPRINT_PIPELINE_CHAPTERS, the lookup is routed
+ *   through the versioned BackgroundAuthoringManifest.  The returned visuals:
+ *     • Include blueprintHash / blueprintLayoutVersion / isBlueprintBacked.
+ *     • Omit backgroundScale / backgroundOffsetX / backgroundOffsetY so the
+ *       raster fills worldWidth × worldHeight naturally (no manual alignment).
+ *   On manifest lookup failure the static registry entry is returned as-is.
+ *
  * Always returns a complete ChapterShiftVisuals object — callers never
  * receive undefined.  Pass the result's fields directly to HexMapLayer
  * (`tileVisuals`) and the map background Image (`background`).
@@ -354,7 +410,33 @@ export function getChapterMapVisuals(
   chapter:    number,
   timeOfDay:  TimeOfDay,
 ): ChapterShiftVisuals {
-  return CHAPTER_SHIFT_VISUALS[chapter]?.[timeOfDay] ?? DEFAULT_SHIFT_VISUALS[timeOfDay];
+  const base = CHAPTER_SHIFT_VISUALS[chapter]?.[timeOfDay] ?? DEFAULT_SHIFT_VISUALS[timeOfDay];
+
+  // Blueprint-pipeline chapters: augment with manifest identity and strip
+  // manual alignment so contentFit="cover" fills worldW × worldH directly.
+  if (BLUEPRINT_PIPELINE_CHAPTERS.has(chapter)) {
+    try {
+      const manifest = getBackgroundAuthoringManifest(chapter, timeOfDay);
+      return {
+        ...base,
+        blueprintHash:          manifest.mapBlueprintHash,
+        blueprintLayoutVersion: manifest.mapLayoutVersion,
+        isBlueprintBacked:      true,
+        // No manual alignment: the generated raster was produced to cover
+        // the exact world canvas.  Remove any hand-tuned offsets from the
+        // static registry entry so they don't skew the blueprint art.
+        backgroundScale:   undefined,
+        backgroundOffsetX: undefined,
+        backgroundOffsetY: undefined,
+      };
+    } catch {
+      // Manifest lookup failed (unregistered chapter, env error, etc.).
+      // Return the static entry unchanged — better than a blank map.
+      return base;
+    }
+  }
+
+  return base;
 }
 
 /**

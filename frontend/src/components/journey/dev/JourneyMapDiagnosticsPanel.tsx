@@ -247,6 +247,7 @@ export function JourneyMapDiagnosticsPanel(props: JourneyMapDiagnosticsProps) {
           <ToggleRow label="fog debug tint"    active={!!overlay.fogDebug}         onToggle={() => toggle('fogDebug')} />
           <ToggleRow label="fog mask canvas"   active={!!overlay.fogMask}          onToggle={() => toggle('fogMask')} />
           <ToggleRow label="playable bounds"   active={!!overlay.playableBounds}   onToggle={() => toggle('playableBounds')} />
+          <ToggleRow label="MAP BLUEPRINT"     active={!!overlay.mapBlueprint}     onToggle={() => toggle('mapBlueprint')} />
         </Section>
 
       </ScrollView>

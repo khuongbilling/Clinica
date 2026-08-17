@@ -52,6 +52,14 @@ export interface HexMapTile {
    * No gameplay effect; used by the terrain renderer for visual variety.
    */
   visualVariant?: TerrainVisualVariant;
+
+  /**
+   * Push 5: blueprint zone classification from the canonical map pipeline.
+   * Forwarded from JourneyTile so the MAP BLUEPRINT dev overlay in HexMapLayer
+   * can colour each tile by its role without knowing about the pipeline.
+   * Absent for non-pipeline chapters and legacy runs.
+   */
+  zoneType?: 'lane' | 'clearing' | 'transition';
 }
 
 // ── Legacy types (internal only) ─────────────────────────────────────────────

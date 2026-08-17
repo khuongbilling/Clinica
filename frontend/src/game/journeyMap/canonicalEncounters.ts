@@ -1,10 +1,13 @@
 /**
- * canonicalEncounters.ts — Push 2: one-roll-per-tile canonical encounter generator.
+ * canonicalEncounters.ts — Push 3: zone-aware encounter placement.
  *
- * Algorithm
- * ─────────
+ * Algorithm (Push 2 baseline + Push 3 spatial layer)
+ * ──────────────────────────────────────────────────
  * 1. Build initial rate weights from canonicalConfig (chapter + timeOfDay).
  * 2. Separate all topology tiles into eligible (rolled) vs frozen (start, gate).
+ *    - Compute each tile's zone metadata and dead-end flag from topology.zoneMeta
+ *      and adjacency degree.  Tiles without zoneMeta (authored/procedural chapters)
+ *      carry undefined zone fields → spatial multipliers are passthrough (×1.0).
  * 3. Fisher-Yates shuffle the eligible tile processing order so that cap
  *    cut-offs do not systematically bias one region of the map.
  * 4. For each eligible tile in shuffled order:
@@ -12,12 +15,14 @@
  *    b. Zero-out categories that have hit their cap (accumulative state):
  *         - areaBoss:  count ≥ CANONICAL_AREA_BOSS_HARD_MAX  OR  tile distance < 3
  *         - battle:    count ≥ battleDensityCap (computed from canonicalConfig)
- *    c. Perform exactly ONE weighted categorical roll.
- *    d. Increment the counter for the chosen category.
- *    e. If encounter === 'treasure': immediately roll a ChestTier from the
- *       canonical chest-quality distribution.
- *    f. If encounter === 'wardEvent': immediately roll a WardEventSubtype
- *       from the uniform five-type distribution.
+ *    c. [Push 3] Apply zone-aware spatial multipliers from encounterSpatialWeights.ts.
+ *       Multipliers modify WHERE encounters land without changing the rate tables
+ *       in canonicalConfig.ts.  The `none` weight is intentionally not multiplied —
+ *       it absorbs redistribution naturally.
+ *    d. Perform exactly ONE weighted categorical roll.
+ *    e. Increment the counter for the chosen category.
+ *    f. If encounter === 'treasure': immediately roll a ChestTier.
+ *    g. If encounter === 'wardEvent': immediately roll a WardEventSubtype.
  * 5. Frozen tiles (start, gate) are always 'none'; no roll is performed.
  *
  * Determinism guarantee
@@ -25,11 +30,13 @@
  * The PRNG is seeded as  mulberry32(fnv1a32(`${seed}:canonical:${chapter}:${timeOfDay}`))
  * so identical (seed, chapter, timeOfDay) inputs always produce identical output.
  *
- * What is unchanged
- * ─────────────────
- * encounters.ts and all code that calls assignJourneyEncounters() are not
- * touched.  This module is NOT yet wired to the journey run lifecycle;
- * it will be connected when JOURNEY_CANONICAL_V1 is enabled in a later push.
+ * Rate-table invariant
+ * ────────────────────
+ * Nothing in this file modifies canonicalConfig.ts.
+ * The encounter RATES (30% battle, 5% treasure, etc.) are unchanged.
+ * Spatial multipliers redistribute encounters across zone types while
+ * keeping the integrated expected count approximately equal to the base-rate
+ * prediction.  See encounterSpatialWeights.ts for the preservation analysis.
  */
 
 import { mulberry32, fnv1a32 } from './prng';
@@ -44,6 +51,7 @@ import {
   type TimeOfDay,
 } from './canonicalConfig';
 import { rollWardEventSubtype } from './wardEventSubtypes';
+import { computeSpatialMultipliers } from './encounterSpatialWeights';
 
 // ── Public types ───────────────────────────────────────────────────────────────
 
@@ -61,7 +69,7 @@ export type CanonicalEncounterType =
   | 'wardEvent';
 
 // WardEventSubtype is defined in types.ts and the roll engine lives in
-// wardEventSubtypes.ts (Push 3).  Re-exported here for backwards compatibility
+// wardEventSubtypes.ts.  Re-exported here for backwards compatibility
 // with any import that still references canonicalEncounters.
 export type { WardEventSubtype };
 
@@ -125,6 +133,17 @@ function weightedRoll(weights: Record<string, number>, rng: () => number): strin
   return 'none';
 }
 
+/**
+ * Axial hex neighbour directions (6-connected flat-top grid).
+ * Used for dead-end detection: a tile with exactly one walkable
+ * neighbour is a dead end and receives a reward-encounter bonus.
+ */
+const HEX_DIRS = [
+  { q:  1, r:  0 }, { q: -1, r:  0 },
+  { q:  0, r:  1 }, { q:  0, r: -1 },
+  { q:  1, r: -1 }, { q: -1, r:  1 },
+] as const;
+
 // ── Main export ────────────────────────────────────────────────────────────────
 
 /**
@@ -144,24 +163,59 @@ export function assignCanonicalEncounters({
   const rng = mulberry32(fnv1a32(`${seed}:canonical:${chapter}:${timeOfDay}`));
 
   // ── Base rates (constant for this run) ────────────────────────────────────────
-  const baseRates     = canonicalEncounterRatesBp(chapter, timeOfDay);
-  const chestRates    = canonicalChestQualityRatesBp(chapter);
-  const frozenKeys    = new Set([topology.startTileId, topology.gateAnchorId]);
+  const baseRates  = canonicalEncounterRatesBp(chapter, timeOfDay);
+  const chestRates = canonicalChestQualityRatesBp(chapter);
+  const frozenKeys = new Set([topology.startTileId, topology.gateAnchorId]);
+
+  // ── Tile coordinate set (for adjacency / dead-end detection) ─────────────────
+  // Build once up-front — O(N) — so per-tile lookups are O(1).
+  const tileCoordSet = new Set<string>(
+    topology.tiles.map(c => `${c.q},${c.r}`),
+  );
 
   // ── Partition tiles ───────────────────────────────────────────────────────────
-  type EligibleEntry = { tileKey: string; q: number; r: number; dist: number };
-  type FrozenEntry   = { tileKey: string; q: number; r: number; dist: number };
+  type EligibleEntry = {
+    tileKey:      string;
+    q:            number;
+    r:            number;
+    dist:         number;
+    // Zone metadata (Push 3 — undefined for authored/procedural chapters).
+    zoneType:     'lane' | 'clearing' | 'transition' | undefined;
+    laneClass:    'primary' | 'secondary' | undefined;
+    clearingType: string | undefined;
+    isDeadEnd:    boolean;
+  };
+  type FrozenEntry = { tileKey: string; q: number; r: number; dist: number };
 
   const eligibleTiles: EligibleEntry[] = [];
   const frozenTiles:   FrozenEntry[]   = [];
 
   for (const coord of topology.tiles) {
-    const tileKey = `${coord.q},${coord.r}`;
-    const dist    = topology.graphDistances.get(tileKey) ?? 0;
+    const tileKey  = `${coord.q},${coord.r}`;
+    const dist     = topology.graphDistances.get(tileKey) ?? 0;
+    const zoneMeta = topology.zoneMeta?.get(tileKey);
+
     if (frozenKeys.has(tileKey)) {
       frozenTiles.push({ tileKey, q: coord.q, r: coord.r, dist });
     } else {
-      eligibleTiles.push({ tileKey, q: coord.q, r: coord.r, dist });
+      // Adjacency degree for dead-end detection.
+      // A tile with exactly 1 walkable neighbour is a dead end (branch terminus).
+      // Frozen tiles (start/gate) are excluded from being classified as dead ends
+      // because they are always assigned 'none' and are not eligible for rewards.
+      const degree = HEX_DIRS.reduce((n, d) =>
+        n + (tileCoordSet.has(`${coord.q + d.q},${coord.r + d.r}`) ? 1 : 0), 0);
+      const isDeadEnd = degree === 1;
+
+      eligibleTiles.push({
+        tileKey,
+        q:            coord.q,
+        r:            coord.r,
+        dist,
+        zoneType:     zoneMeta?.zoneType,
+        laneClass:    zoneMeta?.laneClass,
+        clearingType: zoneMeta?.clearingType,
+        isDeadEnd,
+      });
     }
   }
 
@@ -188,6 +242,7 @@ export function assignCanonicalEncounters({
     // Using spread so the base is never mutated.
     const liveWeights: Record<string, number> = { ...baseRates };
 
+    // ── Hard caps ────────────────────────────────────────────────────────────
     // Area boss: hard maximum
     if (areaBossCount >= CANONICAL_AREA_BOSS_HARD_MAX) {
       liveWeights.areaBoss = 0;
@@ -199,6 +254,32 @@ export function assignCanonicalEncounters({
     // Battle: density ceiling (proportion of eligible tiles)
     if (battleCount >= battleDensityCap) {
       liveWeights.battle = 0;
+    }
+
+    // ── Spatial weight multipliers (Push 3) ───────────────────────────────────
+    // Zone-aware biasing for blueprint-pipeline chapters.
+    // For non-blueprint chapters (no zone metadata), computeSpatialMultipliers
+    // returns {} → no modification → existing behaviour fully preserved.
+    //
+    // Multipliers are applied AFTER hard caps so:
+    //   a) A cap-zeroed weight (e.g. areaBoss=0 from count cap) stays zero
+    //      regardless of the spatial multiplier (0 × anything = 0).
+    //   b) A spatial zero (e.g. areaBoss=0 on a lane tile) is not re-opened
+    //      by the count cap; the cap check only further restricts.
+    //
+    // The `none` weight is intentionally NOT included in spatialMults so it
+    // absorbs the redistribution naturally — clearings get more empty terrain,
+    // lanes get denser encounters, without explicit `none` accounting.
+    const spatialMults = computeSpatialMultipliers({
+      zoneType:     tile.zoneType,
+      laneClass:    tile.laneClass,
+      clearingType: tile.clearingType,
+      isDeadEnd:    tile.isDeadEnd,
+    });
+    for (const [key, mult] of Object.entries(spatialMults)) {
+      if (key in liveWeights && mult !== undefined) {
+        liveWeights[key] = (liveWeights[key] ?? 0) * mult;
+      }
     }
 
     // ── Single roll ─────────────────────────────────────────────────────────────
@@ -222,10 +303,12 @@ export function assignCanonicalEncounters({
 
     // Chest tier: assigned immediately on treasure roll from the same RNG stream.
     if (encounter === 'treasure') {
-      assignedTile.chestTier = weightedRoll(chestRates as unknown as Record<string, number>, rng) as ChestTier;
+      assignedTile.chestTier = weightedRoll(
+        chestRates as unknown as Record<string, number>, rng,
+      ) as ChestTier;
     }
 
-    // Ward event subtype: shift-weighted roll from wardEventSubtypes.ts (Push 3).
+    // Ward event subtype: shift-weighted roll from wardEventSubtypes.ts.
     // Assigned in-stream so the same PRNG position always yields the same subtype.
     if (encounter === 'wardEvent') {
       assignedTile.wardEventSubtype = rollWardEventSubtype(timeOfDay, rng);

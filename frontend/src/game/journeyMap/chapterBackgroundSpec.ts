@@ -319,21 +319,95 @@ function metroRequirePath(chapter: number, shift: TimeOfDay): string {
   return `@/assets/ui/journey/map/map-platform-background-ch${chapter}-${shift}.png`;
 }
 
+// ── Spatial context builder ───────────────────────────────────────────────────
+//
+// Push 4: Adds explicit, geometry-grounded spatial description to each prompt.
+// This ensures the AI generator understands:
+//   1. WHERE the start and gate regions are
+//   2. HOW MANY clearings there are and roughly where they sit
+//   3. The WALKABLE REGIONS MUST REMAIN OPEN constraint
+//
+// All positions are described in relative terms (north-west, central, etc.)
+// derived from the actual hex centroid of each tile vs the layout bounding box.
+
+function describeQuadrant(q: number, r: number, cells: HexLaneLayout['cells']): string {
+  if (cells.length === 0) return 'central';
+  let minQ = Infinity, maxQ = -Infinity, minR = Infinity, maxR = -Infinity;
+  for (const c of cells) {
+    if (c.q < minQ) minQ = c.q;
+    if (c.q > maxQ) maxQ = c.q;
+    if (c.r < minR) minR = c.r;
+    if (c.r > maxR) maxR = c.r;
+  }
+  const midQ = (minQ + maxQ) / 2;
+  const midR = (minR + maxR) / 2;
+
+  const h = q < midQ - 0.5 ? 'west' : q > midQ + 0.5 ? 'east' : 'centre';
+  const v = r < midR - 0.5 ? 'north' : r > midR + 0.5 ? 'south' : 'middle';
+  if (h === 'centre' && v === 'middle') return 'central';
+  if (h === 'centre') return v;
+  if (v === 'middle') return h;
+  return `${v}-${h}`;
+}
+
+function buildSpatialContext(
+  layout:    HexLaneLayout,
+  dna:       ChapterMapDNA,
+): string {
+  const primaryCount   = layout.laneSegments.filter(s => s.width === 'primary').length;
+  const secondaryCount = layout.laneSegments.filter(s => s.width === 'secondary').length;
+
+  const startDesc = describeQuadrant(
+    layout.startCell.q, layout.startCell.r, layout.cells,
+  );
+  const gateDesc = describeQuadrant(
+    layout.gateCell.q, layout.gateCell.r, layout.cells,
+  );
+
+  const clearingList = layout.clearingZones
+    .map(cz => {
+      const pos  = describeQuadrant(cz.center.q, cz.center.r, layout.cells);
+      const kind = cz.type.replace(/_/g, ' ').toLowerCase();
+      return `${kind} at ${pos}`;
+    })
+    .join(', ');
+
+  const topologyLabel = dna.topologyFamily.replace(/_/g, ' ');
+
+  return [
+    `topology: ${topologyLabel} — ${dna.themeName}`,
+    `${layout.actualTileCount} walkable hexes: ${primaryCount} primary lanes ` +
+    `(3-hex-wide paved paths) and ${secondaryCount} secondary lanes (2-hex-wide passages)`,
+    `${layout.clearingZones.length} named clearings: ${clearingList}`,
+    `start region: ${startDesc} — paint as an open entrance threshold, ` +
+    `welcoming paved approach with no blocking elements`,
+    `gate region: ${gateDesc} — paint as a prominent sealed archway or landmark ` +
+    `(the player must see it as a destination across the map)`,
+    `CRITICAL walkable rule: all path corridors and clearing interiors MUST ` +
+    `appear as visually EMPTY open floor — no trees, shrubs, planters, fountains, ` +
+    `benches, walls, pillars, stairs, or buildings anywhere within the walkable ` +
+    `path corridors or clearing centres; all architectural elements strictly ` +
+    `in the negative-space gaps between paths`,
+  ].join('; ');
+}
+
 // ── AI prompt builder ─────────────────────────────────────────────────────────
 
 function buildAiPrompt(
-  envType:      ChapterEnvironmentType,
-  themeName:    string,
-  pathStyle:    string,
-  clearStyle:   string,
-  sceneryStyle: string,
-  shift:        TimeOfDay,
+  envType:        ChapterEnvironmentType,
+  themeName:      string,
+  pathStyle:      string,
+  clearStyle:     string,
+  sceneryStyle:   string,
+  shift:          TimeOfDay,
+  spatialContext: string,
 ): string {
   const lt = SHIFT_LIGHTING[shift];
   return [
     STYLE_ANCHOR,
     `environment: ${ENV_ART_DIRECTION[envType]}`,
     `named "${themeName}"`,
+    `spatial layout: ${spatialContext}`,
     `floor/ground layer: ${pathStyle} — visually obvious as the traversal space`,
     `open encounter spaces: ${clearStyle}`,
     `surrounding scenery: ${sceneryStyle}`,
@@ -379,8 +453,9 @@ function buildChapterBackgroundSpec(
   const zoneTypes = scenery.sceneryZones.map(z => z.type);
   const sceneryStyle = buildSceneryFramingStyle(envType, scenery.environmentalDensity, zoneTypes);
 
-  const geoNote   = buildGeometryInvariantNote(layout, dna.themeName);
-  const artDir    = ENV_ART_DIRECTION[envType];
+  const geoNote       = buildGeometryInvariantNote(layout, dna.themeName);
+  const artDir        = ENV_ART_DIRECTION[envType];
+  const spatialContext = buildSpatialContext(layout, dna);
 
   const SHIFTS: TimeOfDay[] = ['day', 'evening', 'night'];
   const shiftSpecs = {} as Record<TimeOfDay, ShiftBackgroundSpec>;
@@ -392,7 +467,7 @@ function buildChapterBackgroundSpec(
       lightingDescription:  lt.lighting,
       atmosphereDescription: lt.atmosphere,
       ambientDetail:         lt.ambientDetail,
-      aiPrompt: buildAiPrompt(envType, dna.themeName, pathStyle, clearStyle, sceneryStyle, shift),
+      aiPrompt: buildAiPrompt(envType, dna.themeName, pathStyle, clearStyle, sceneryStyle, shift, spatialContext),
       negativePrompt: NEGATIVE_PROMPT,
       targetAssetPath:  targetAssetPath(chapter, shift),
       metroRequirePath: metroRequirePath(chapter, shift),

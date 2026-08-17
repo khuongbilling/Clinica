@@ -267,12 +267,34 @@ const FAMILY_PROFILES: Readonly<Record<MapTopologyFamily, FamilyProfile>> = {
 // 10  | multi_court_campus        | Capstone Simulation Campus
 
 const BOOK1_DNA: Readonly<Record<number, ChapterMapDNA>> = {
+  // ── Production Bridge Push 1 ───────────────────────────────────────────────
+  // Ch1 migrated from open_plaza (circular blob) to academic_quad (campus lanes
+  // + clearings) as the first canary chapter for the blueprint pipeline.
+  // Ch2 receives Ch1's former open_plaza assignment to preserve BOOK1 diversity
+  // constraints (no consecutive chapters sharing a family, each family unique).
   1: {
     chapterId:             1,
     seed:                  dnaSeedFor(SAGA_ID, BOOK1_ID, 1),
-    themeName:             'Clinical Simulation Commons',
-    topologyFamily:        'open_plaza',
+    themeName:             'University Simulation Campus',
+    topologyFamily:        'academic_quad',
     aspectRatio:           'balanced',
+    symmetry:              'partial',
+    primaryLaneWidth:      3,
+    secondaryLaneWidth:    2,
+    branchCount:           2,
+    loopCount:             2,
+    hubCount:              2,
+    clearingPattern:       'scattered',
+    obstaclePattern:       'none',
+    startGateRelationship: 'diagonal',
+    routeBias:             'mixed',
+  },
+  2: {
+    chapterId:             2,
+    seed:                  dnaSeedFor(SAGA_ID, BOOK1_ID, 2),
+    themeName:             'Academic Training Quad',
+    topologyFamily:        'open_plaza',
+    aspectRatio:           'wide',
     symmetry:              'partial',
     primaryLaneWidth:      4,
     secondaryLaneWidth:    2,
@@ -283,23 +305,6 @@ const BOOK1_DNA: Readonly<Record<number, ChapterMapDNA>> = {
     obstaclePattern:       'none',
     startGateRelationship: 'opposite',
     routeBias:             'open',
-  },
-  2: {
-    chapterId:             2,
-    seed:                  dnaSeedFor(SAGA_ID, BOOK1_ID, 2),
-    themeName:             'Academic Training Quad',
-    topologyFamily:        'academic_quad',
-    aspectRatio:           'wide',
-    symmetry:              'partial',
-    primaryLaneWidth:      3,
-    secondaryLaneWidth:    2,
-    branchCount:           3,
-    loopCount:             2,
-    hubCount:              2,
-    clearingPattern:       'scattered',
-    obstaclePattern:       'islands',
-    startGateRelationship: 'diagonal',
-    routeBias:             'looping',
   },
   3: {
     chapterId:             3,

@@ -34,7 +34,8 @@ import type { IJourneyRunRepository }   from './journeyRunLifecycle';
 import type { JourneyRun, TimeOfDay }   from './types';
 import { resolveRunShift }              from './chapterShiftRules';
 import { computeFogAfterMove, REVEAL_RADIUS } from './fogCalculator';
-import { getChapterTerrainCellCount }   from './config';
+import { getChapterTerrainCellCount, BLUEPRINT_PIPELINE_CHAPTERS } from './config';
+import { getCanonicalChapterMapArtifact } from './canonicalMapArtifact';
 
 // ── HTTP helpers ──────────────────────────────────────────────────────────────
 
@@ -136,6 +137,10 @@ interface WireRun {
   cards?:                   unknown[];
   blessings?:               unknown[];
   pressure?:                number;
+  // Push 2 map identity — optional for legacy runs that predate this field.
+  map_layout_version?:      string;
+  map_blueprint_hash?:      string;
+  topology_family?:         string;
 }
 
 /**
@@ -200,6 +205,12 @@ function fromWire(w: WireRun): JourneyRun {
     seed:                   w.seed,
     // Canonical fields: fall back to sensible defaults for legacy runs.
     shift:                  (w.shift as TimeOfDay | undefined) ?? 'day',
+    // Push 2 map identity: '' / 'legacy' for runs that predate these fields.
+    // getActiveRun() compares these against the current artifact for blueprint
+    // chapters — a mismatch triggers stale-run abandonment.
+    mapLayoutVersion:       w.map_layout_version ?? 'legacy',
+    mapBlueprintHash:       w.map_blueprint_hash  ?? '',
+    topologyFamily:         w.topology_family,
     status:                 w.status,
     createdAt:              w.created_at,
     updatedAt:              w.updated_at,
@@ -230,6 +241,9 @@ function toWire(run: JourneyRun): Omit<WireRun, 'id' | 'created_at' | 'updated_a
     attempt_number:           run.attemptNumber,
     seed:                     run.seed,
     shift:                    run.shift,
+    map_layout_version:       run.mapLayoutVersion,
+    map_blueprint_hash:       run.mapBlueprintHash,
+    topology_family:          run.topologyFamily,
     status:                   run.status,
     tile_count:               run.tileCount,
     tiles:                    run.tiles,
@@ -302,6 +316,36 @@ export class JourneyRunRepository implements IJourneyRunRepository {
       }
       return null;
     }
+
+    // ── Blueprint identity check (Push 2) ─────────────────────────────────────
+    // For chapters on the canonical blueprint pipeline, also validate the map
+    // geometry fingerprint.  Tile count alone cannot distinguish an old circular-
+    // blob run (60 tiles, hash='') from a new campus-lane run (also 60 tiles, but
+    // different physical coordinates and a known hash).
+    //
+    // Strategy: same as the tile-count guard — abandon the stale run so that
+    // getLatestRun sees it as abandoned and the lifecycle creates a rechallenge
+    // run with the current geometry.
+    if (BLUEPRINT_PIPELINE_CHAPTERS.has(chapterId)) {
+      const artifact = getCanonicalChapterMapArtifact(chapterId);
+      const hashOk    = run.mapBlueprintHash === artifact.blueprintHash;
+      const versionOk = run.mapLayoutVersion  === artifact.mapLayoutVersion;
+      if (!hashOk || !versionOk) {
+        console.warn(
+          `[journeyRunRepository] ch${chapterId}: stale blueprint identity — ` +
+          `stored ${run.mapLayoutVersion}/${run.mapBlueprintHash} ` +
+          `expected ${artifact.mapLayoutVersion}/${artifact.blueprintHash}; ` +
+          `abandoning run ${run.id}`,
+        );
+        try {
+          await this.abandonRun(run.id);
+        } catch (err) {
+          console.error('[journeyRunRepository] failed to abandon stale-blueprint run:', err);
+        }
+        return null;
+      }
+    }
+
     return run;
   }
 
@@ -493,7 +537,13 @@ export class JourneyRunRepository implements IJourneyRunRepository {
     // caller). Fallback resolves the chapter rule with no canonical record —
     // deterministic (never the device clock).
     const shift = explicitShift ?? resolveRunShift(chapterId, () => undefined);
-    const { topology, encounters } = generateRunData(chapterId, seed, shift);
+    const {
+      topology,
+      encounters,
+      mapLayoutVersion,
+      mapBlueprintHash,
+      topologyFamily,
+    } = generateRunData(chapterId, seed, shift);
     return buildInitialJourneyRun({
       id: '',      // server will assign the real UUID
       playerId,
@@ -503,6 +553,9 @@ export class JourneyRunRepository implements IJourneyRunRepository {
       shift,
       topology,
       encounters,
+      mapLayoutVersion,
+      mapBlueprintHash,
+      topologyFamily,
       initialAreaBossKeysCollected,
     });
   }

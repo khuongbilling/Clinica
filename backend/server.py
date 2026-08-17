@@ -519,6 +519,13 @@ class JourneyRunCreate(BaseModel):
     cards:                   List[Any]      = []
     blessings:               List[Any]      = []
     pressure:                float          = 0.0
+    # Push 2 map identity — set at creation, never mutated.
+    # mapLayoutVersion: 'v1' (blueprint), 'authored', 'procedural', 'legacy'
+    # mapBlueprintHash: 8-char hex fingerprint of tile footprint
+    # topologyFamily:   DNA topology family (e.g. 'academic_quad'); absent for non-blueprint
+    map_layout_version:      str            = "legacy"
+    map_blueprint_hash:      str            = ""
+    topology_family:         Optional[str]  = None
 
 
 class JourneyRunSave(BaseModel):

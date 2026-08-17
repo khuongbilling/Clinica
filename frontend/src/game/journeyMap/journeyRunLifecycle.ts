@@ -57,6 +57,8 @@ import {
 } from './chapterBossKeys';
 import type { ChapterBossKeyState }    from './chapterBossKeys';
 import { JOURNEY_CANONICAL_V1 }        from '../featureFlags';
+import { BLUEPRINT_PIPELINE_CHAPTERS } from './config';
+import { getCanonicalChapterMapArtifact } from './canonicalMapArtifact';
 import type { HexTopology }            from './topology';
 import type {
   JourneyRun,
@@ -200,6 +202,18 @@ export interface BuildRunOptions {
   topology:      HexTopology;
   encounters:    RunEncounterInput;
   /**
+   * Physical map geometry identity from generateRunData().
+   *
+   * These describe the tile footprint used to create the run and are stored
+   * on the run for stale-run detection by getActiveRun().
+   *
+   * See JourneyRun.mapLayoutVersion / mapBlueprintHash / topologyFamily
+   * for the full field semantics.
+   */
+  mapLayoutVersion: string;
+  mapBlueprintHash: string;
+  topologyFamily?:  string;
+  /**
    * Chapter Boss Keys accumulated on PREVIOUS attempts for this chapter.
    * Passed only by Rechallenge Map so keys carry forward across map resets.
    * Defaults to 0 for first runs and post-clear challenge runs.
@@ -239,6 +253,9 @@ export function buildInitialJourneyRun({
   shift,
   topology,
   encounters,
+  mapLayoutVersion,
+  mapBlueprintHash,
+  topologyFamily,
   initialAreaBossKeysCollected = 0,
   visionRadius,
 }: BuildRunOptions): JourneyRun {
@@ -273,6 +290,8 @@ export function buildInitialJourneyRun({
     const tileKey  = `${coord.q},${coord.r}`;
     const assigned = assignedByKey.get(tileKey);
     const dist     = topology.graphDistances.get(tileKey) ?? 0;
+    // Zone metadata from canonical map pipeline (undefined for authored/blob chapters).
+    const zoneMeta = topology.zoneMeta?.get(tileKey);
 
     const visibility: TileVisibility = visMap.get(tileKey) ?? 'unexplored';
 
@@ -298,6 +317,10 @@ export function buildInitialJourneyRun({
       wardEventSubtype,
       // Cosmetic variant — only on empty terrain, no gameplay effect.
       visualVariant:          encounter === 'none' ? terrainVariant(tileKey) : undefined,
+      // Zone metadata — present only for blueprint-pipeline chapters.
+      zoneType:               zoneMeta?.zoneType,
+      clearingId:             zoneMeta?.clearingId,
+      laneClass:              zoneMeta?.laneClass,
       visibility,
       visited:                tileKey === startKey,
       resolved:               false,
@@ -325,6 +348,10 @@ export function buildInitialJourneyRun({
     chapterId,
     attemptNumber,
     seed,
+    // Map geometry identity — persisted so getActiveRun can detect stale runs.
+    mapLayoutVersion,
+    mapBlueprintHash,
+    topologyFamily,
     shift,
     status:                 'active',
     createdAt:              now,
@@ -374,23 +401,109 @@ export function buildInitialJourneyRun({
  *
  * The returned object satisfies RunEncounterInput plus { topology }.
  */
+/** Return shape of generateRunData — includes map geometry identity (Push 2). */
+export interface GenerateRunDataResult {
+  topology:         HexTopology;
+  encounters:       RunEncounterInput;
+  /**
+   * Physical map geometry identity fields to persist on the JourneyRun.
+   *
+   * mapLayoutVersion / mapBlueprintHash are used by getActiveRun() to detect
+   * stale runs whose tile footprint no longer matches the current pipeline.
+   *
+   * For blueprint chapters (BLUEPRINT_PIPELINE_CHAPTERS):
+   *   mapLayoutVersion = MAP_LAYOUT_VERSION ('v1')
+   *   mapBlueprintHash = artifact.blueprintHash (8-hex; stable across seeds/shifts)
+   *   topologyFamily   = dna.topologyFamily
+   *
+   * For authored chapters (Ch2–10):
+   *   mapLayoutVersion = 'authored'
+   *   mapBlueprintHash = fnv1a32 of sorted tile keys
+   *   topologyFamily   = undefined
+   *
+   * For procedural chapters (Ch11+):
+   *   mapLayoutVersion = 'procedural'
+   *   mapBlueprintHash = fnv1a32 of seed + sorted tile keys
+   *   topologyFamily   = undefined
+   */
+  mapLayoutVersion: string;
+  mapBlueprintHash: string;
+  topologyFamily?:  string;
+}
+
 export function generateRunData(
   chapter: number,
   seed:    string,
   shift:   TimeOfDay,
-): { topology: HexTopology; encounters: RunEncounterInput } {
-  // Geometry: authored template (fixed) OR procedural (seed-derived fallback).
-  const topology = isAuthoredChapter(chapter)
-    ? getChapterHexTopology(chapter)
-    : generateHexTopology({ chapter, seed });
+): GenerateRunDataResult {
+  // ── GEOMETRY SOURCE ────────────────────────────────────────────────────────
+  //
+  // 1. Blueprint pipeline (BLUEPRINT_PIPELINE_CHAPTERS) — highest priority.
+  //    Calls the canonical DNA→PathwayGraph→HexLayout pipeline for designated
+  //    canary chapters.  The run seed has NO influence on physical layout;
+  //    all attempts and shifts share the same tile footprint.
+  //
+  // 2. Authored template (PRODUCTION_AUTHORED_CHAPTERS) — Ch2–10 still on
+  //    their authored circular/shaped geometry while awaiting pipeline migration.
+  //
+  // 3. Procedural BFS fallback (Ch11+) — seed-derived organic blob growth.
+
+  let topology:         HexTopology;
+  let mapLayoutVersion: string;
+  let mapBlueprintHash: string;
+  let topologyFamily:   string | undefined;
+
+  if (BLUEPRINT_PIPELINE_CHAPTERS.has(chapter)) {
+    // Blueprint pipeline path — tile footprint from canonical map artifact.
+    // Hash and version are pre-computed in the artifact; no sorting needed here.
+    const artifact = getCanonicalChapterMapArtifact(chapter);
+    topology = {
+      chapter,
+      seed:           artifact.dna.seed,
+      tiles:          artifact.walkableCells,
+      startTileId:    artifact.asTopology.startTileId,
+      gateAnchorId:   artifact.asTopology.gateAnchorId,
+      graphDistances: artifact.asTopology.graphDistances,
+      zoneMeta:       artifact.zoneMeta,
+    };
+    mapLayoutVersion = artifact.mapLayoutVersion;          // 'v1' (MAP_LAYOUT_VERSION)
+    mapBlueprintHash = artifact.blueprintHash;             // 8-char hex, shift-invariant
+    topologyFamily   = artifact.dna.topologyFamily;
+  } else {
+    // Authored template or procedural BFS fallback.
+    topology = isAuthoredChapter(chapter)
+      ? getChapterHexTopology(chapter)
+      : generateHexTopology({ chapter, seed });
+
+    // Compute a tile-footprint fingerprint for non-blueprint geometry so
+    // getActiveRun() has an identity anchor even before full pipeline migration.
+    // Sort keys for stability (tile order from template/BFS is not guaranteed).
+    const sortedKeys = topology.tiles
+      .map(c => `${c.q},${c.r}`)
+      .sort()
+      .join('|');
+
+    if (isAuthoredChapter(chapter)) {
+      // Authored: geometry never changes → hash is seed-independent.
+      mapLayoutVersion = 'authored';
+      mapBlueprintHash = fnv1a32(`authored:${chapter}:${sortedKeys}`)
+        .toString(16).padStart(8, '0');
+    } else {
+      // Procedural: geometry varies with seed → include seed in hash.
+      mapLayoutVersion = 'procedural';
+      mapBlueprintHash = fnv1a32(`procedural:${chapter}:${seed}:${sortedKeys}`)
+        .toString(16).padStart(8, '0');
+    }
+    topologyFamily = undefined;
+  }
 
   if (JOURNEY_CANONICAL_V1) {
     const enc = assignCanonicalEncounters({ chapter, seed, timeOfDay: shift, topology });
-    return { topology, encounters: enc };
+    return { topology, encounters: enc, mapLayoutVersion, mapBlueprintHash, topologyFamily };
   }
 
   const enc = assignJourneyEncounters({ chapter, seed, topology });
-  return { topology, encounters: enc };
+  return { topology, encounters: enc, mapLayoutVersion, mapBlueprintHash, topologyFamily };
 }
 
 // ── Lifecycle state machine ───────────────────────────────────────────────────

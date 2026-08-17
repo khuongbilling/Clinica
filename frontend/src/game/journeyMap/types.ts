@@ -199,6 +199,31 @@ export interface JourneyTile {
    */
   visualVariant?: TerrainVisualVariant;
 
+  /**
+   * Authoring zone classification from the canonical map blueprint pipeline.
+   * Only present for chapters in BLUEPRINT_PIPELINE_CHAPTERS; undefined for
+   * chapters that still use authored circular/blob geometry.
+   *
+   *   'lane'       — hex corridor tile between nodes
+   *   'clearing'   — open area tile at a named clearing or junction node
+   *   'transition' — widened approach near a clearing, or BFS expansion filler
+   *
+   * Will be used in Production Bridge Push 2 for encounter placement hints.
+   */
+  zoneType?:   'lane' | 'clearing' | 'transition';
+
+  /**
+   * Id of the ClearingZone that contains this tile.
+   * Only set when zoneType === 'clearing'.
+   */
+  clearingId?: string;
+
+  /**
+   * Lane width class for this corridor tile.
+   * Only set when zoneType === 'lane'.
+   */
+  laneClass?:  'primary' | 'secondary';
+
   /** Fog visibility state. */
   visibility: TileVisibility;
 
@@ -247,6 +272,33 @@ export interface JourneyRun {
    * Fixed for the lifetime of the run — never changes, never re-rolled.
    */
   readonly seed: string;
+
+  /**
+   * Physical map geometry identity — set at run creation, never changes.
+   *
+   * mapLayoutVersion: pipeline version that produced the tile footprint.
+   *   'v1'         — canonical blueprint pipeline (DNA → PathwayGraph → HexLayout)
+   *   'authored'   — static authored hex coordinate template (Ch2–10)
+   *   'procedural' — procedural BFS blob growth from seed (Ch11+)
+   *   'legacy'     — run predates this field (no geometry guarantee)
+   *
+   * mapBlueprintHash: 8-char hex fingerprint of the exact tile footprint.
+   *   Blueprint chapters: stable across ALL attempts, shifts, and seeds —
+   *     the same physical layout is always produced for the same chapter.
+   *   Authored chapters:  stable (derived from the fixed template coordinates).
+   *   Procedural chapters: varies with seed (geometry is seed-derived).
+   *   Legacy:             empty string ''.
+   *
+   * topologyFamily: DNA topology family string (e.g. 'academic_quad', 'open_plaza').
+   *   Present for blueprint chapters.  Absent for procedural/legacy runs.
+   *
+   * getActiveRun() validates these fields for blueprint chapters; a mismatch
+   * (e.g. old circular-blob run vs new campus-lane geometry) causes the run
+   * to be abandoned so a fresh rechallenge attempt can be created.
+   */
+  readonly mapLayoutVersion: string;
+  readonly mapBlueprintHash: string;
+  readonly topologyFamily?:  string;
 
   status: JourneyRunStatus;
 

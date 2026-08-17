@@ -46,6 +46,30 @@ export interface AxialCoord {
   r: number;
 }
 
+/**
+ * Per-tile authoring zone metadata injected by the canonical map pipeline.
+ *
+ * Only present on HexTopology objects produced by the blueprint pipeline
+ * (chapters in BLUEPRINT_PIPELINE_CHAPTERS).  Always undefined for authored
+ * circular/blob topology and procedural fallback chapters.
+ *
+ *   zoneType:
+ *     'lane'       — hex corridor tile along a primary or secondary lane
+ *     'clearing'   — open area tile at a named clearing/junction node
+ *     'transition' — widened approach near a clearing, or BFS expansion filler
+ *
+ *   clearingId:   Clearing zone id (only when zoneType === 'clearing')
+ *   clearingType: ClearingType value (only when zoneType === 'clearing')
+ *   laneClass:    Lane width class (only when zoneType === 'lane')
+ */
+export interface HexTileZoneMeta {
+  zoneType:     'lane' | 'clearing' | 'transition';
+  clearingId?:  string;
+  /** Matches ClearingType values from chapterMapTemplate.types.ts. */
+  clearingType?: string;
+  laneClass?:   'primary' | 'secondary';
+}
+
 export interface HexTopology {
   chapter:        number;
   seed:           string | number;
@@ -57,6 +81,12 @@ export interface HexTopology {
   gateAnchorId:   string;
   /** BFS graph distances from startTileId to every tile. */
   graphDistances: Map<string, number>;
+  /**
+   * Optional per-tile zone metadata from the canonical map pipeline.
+   * tileKey ("q,r") → HexTileZoneMeta.
+   * Only present for chapters in BLUEPRINT_PIPELINE_CHAPTERS.
+   */
+  zoneMeta?:      Map<string, HexTileZoneMeta>;
 }
 
 export interface GenerateTopologyOptions {

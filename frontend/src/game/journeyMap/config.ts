@@ -55,6 +55,24 @@ export function getChapterTerrainCellCount(chapter: number): number {
   return 80 + 10 * Math.floor((chapter - 11) / 10);
 }
 
+/**
+ * Chapters whose production geometry is sourced from the canonical map
+ * blueprint pipeline (DNA → PathwayGraph → HexLayout → SceneryLayout).
+ *
+ * MIGRATION GATE — add a chapter here only after its pipeline geometry has
+ * been accepted as the production replacement for the authored circular blob.
+ *
+ * Priority rule: BLUEPRINT_PIPELINE_CHAPTERS beats PRODUCTION_AUTHORED_CHAPTERS.
+ * When a chapter appears here, generateRunData bypasses both isAuthoredChapter()
+ * and generateHexTopology() and calls getCanonicalChapterMapArtifact() instead.
+ *
+ * ⚠ NEVER remove a chapter from this set once players have active runs on it.
+ */
+export const BLUEPRINT_PIPELINE_CHAPTERS = new Set<number>([
+  // Production Bridge Push 1 — Ch1 canary (academic_quad, 60 cells)
+  1,
+]);
+
 /** Alias exported for callers that use the old name — see chapterTileCount. */
 export function chapterTileCount(chapter: number): number {
   return getChapterTerrainCellCount(chapter);

@@ -80,8 +80,10 @@ import { SERIF, UI }                       from '@/src/theme/ui';
 import { getExplorationAvatar }             from '@/src/game/explorationAvatar';
 import { MAP_SPRITE }                        from '@/src/game/illustratedAssets';
 import { getChapterMapVisuals, DEV_FALLBACK_VISUALS } from '@/src/game/journeyMap/chapterMapVisuals';
-import { getChapterTerrainCellCount }                  from '@/src/game/journeyMap/config';
+import { getChapterTerrainCellCount, BLUEPRINT_PIPELINE_CHAPTERS } from '@/src/game/journeyMap/config';
 import { getChapterMapTemplate }                      from '@/src/game/journeyMap/chapterMapTemplates';
+import { getCanonicalChapterMapArtifact }             from '@/src/game/journeyMap/canonicalMapArtifact';
+import { getBackgroundAuthoringManifests }           from '@/src/game/journeyMap/backgroundAuthoringManifest';
 
 // ── Journey raster assets ────────────────────────────────────────────────────
 // Map backgrounds and terrain tiles are now resolved through getChapterMapVisuals()
@@ -146,6 +148,8 @@ function toHexMapTile(t: JourneyTile, gateId: string | undefined): HexMapTile {
     isGate:       t.id === gateId,
     // Cosmetic only — no gameplay effect. Only present on 'none' tiles.
     visualVariant: t.visualVariant,
+    // Push 5: blueprint zone — forwarded to HexMapLayer for MAP BLUEPRINT overlay.
+    zoneType:     t.zoneType,
   };
 }
 
@@ -368,13 +372,40 @@ function CameraDiagnosticsPanel({
 function DevDiagnostics({
   run,
   chapterKeysCollected,
+  chapterNum,
 }: {
   run: JourneyRun;
   chapterKeysCollected: number;
+  chapterNum: number;
 }) {
   const { counts, tiers } = useMemo(() => countEncounters(run.tiles), [run.tiles]);
   const exploredPct = run.tileCount > 0
     ? Math.round((run.exploredTileCount / run.tileCount) * 100) : 0;
+
+  // Blueprint pipeline diagnostics (Ch1 and any future pipeline canaries).
+  const pipelineArtifact = useMemo(() => {
+    if (!BLUEPRINT_PIPELINE_CHAPTERS.has(chapterNum)) return null;
+    try { return getCanonicalChapterMapArtifact(chapterNum); } catch { return null; }
+  }, [chapterNum]);
+
+  // Background authoring manifests — one per shift.
+  const bgManifests = useMemo(() => {
+    if (!BLUEPRINT_PIPELINE_CHAPTERS.has(chapterNum)) return null;
+    try { return getBackgroundAuthoringManifests(chapterNum); } catch { return null; }
+  }, [chapterNum]);
+
+  // Zone counts read from the run tiles (populated at run-creation time).
+  const zoneCounts = useMemo(() => {
+    if (!pipelineArtifact) return null;
+    let lane = 0, clearing = 0, transition = 0, unlabelled = 0;
+    for (const tile of run.tiles) {
+      if (tile.zoneType === 'lane')       lane++;
+      else if (tile.zoneType === 'clearing')   clearing++;
+      else if (tile.zoneType === 'transition') transition++;
+      else                               unlabelled++;
+    }
+    return { lane, clearing, transition, unlabelled };
+  }, [pipelineArtifact, run.tiles]);
 
   return (
     <View style={sDev.panel}>
@@ -425,6 +456,109 @@ function DevDiagnostics({
         <Text style={sDev.key}>Created</Text>
         <Text style={sDev.val}>{run.createdAt.slice(0, 19).replace('T', ' ')}</Text>
       </Text>
+
+      {/* ── Blueprint pipeline section (Ch1 canary and future pipeline chapters) */}
+      {pipelineArtifact != null && (
+        <>
+          <View style={sDev.divider} />
+          <Text style={sDev.subhead}>🗺 MAP PIPELINE: BLUEPRINT</Text>
+
+          <Text style={sDev.row}>
+            <Text style={sDev.key}>Chapter   </Text>
+            <Text style={sDev.val}>{chapterNum}</Text>
+          </Text>
+          <Text style={sDev.row}>
+            <Text style={sDev.key}>Topology  </Text>
+            <Text style={sDev.val}>{pipelineArtifact.dna.topologyFamily.replace(/_/g, ' ')}</Text>
+          </Text>
+          <Text style={sDev.row}>
+            <Text style={sDev.key}>Tiles     </Text>
+            <Text style={sDev.val}>{pipelineArtifact.tileCount} / {pipelineArtifact.tileCount} ✓</Text>
+          </Text>
+          {zoneCounts != null && (
+            <>
+              <Text style={sDev.row}>
+                <Text style={sDev.key}>Lane cells</Text>
+                <Text style={sDev.val}>{zoneCounts.lane}</Text>
+              </Text>
+              <Text style={sDev.row}>
+                <Text style={sDev.key}>Clearing  </Text>
+                <Text style={sDev.val}>{zoneCounts.clearing}</Text>
+              </Text>
+              <Text style={sDev.row}>
+                <Text style={sDev.key}>Transition</Text>
+                <Text style={sDev.val}>{zoneCounts.transition}</Text>
+              </Text>
+            </>
+          )}
+          <Text style={sDev.row}>
+            <Text style={sDev.key}>Clearings </Text>
+            <Text style={sDev.val}>{pipelineArtifact.clearingCount}</Text>
+          </Text>
+          <Text style={sDev.row}>
+            <Text style={sDev.key}>Loops     </Text>
+            <Text style={sDev.val}>{pipelineArtifact.loopCount}</Text>
+          </Text>
+          <Text style={sDev.row}>
+            <Text style={sDev.key}>Start     </Text>
+            <Text style={sDev.val}>{pipelineArtifact.asTopology.startTileId}</Text>
+          </Text>
+          <Text style={sDev.row}>
+            <Text style={sDev.key}>Gate      </Text>
+            <Text style={sDev.val}>{pipelineArtifact.asTopology.gateAnchorId}</Text>
+          </Text>
+          <Text style={sDev.row}>
+            <Text style={sDev.key}>Hash      </Text>
+            <Text style={sDev.val}>{pipelineArtifact.blueprintHash}</Text>
+          </Text>
+          <Text style={sDev.row}>
+            <Text style={sDev.key}>Version   </Text>
+            <Text style={sDev.val}>{pipelineArtifact.mapLayoutVersion}</Text>
+          </Text>
+          {/* Push 5: background / blueprint hash mismatch warning.
+            * Fires when the run was created for a different blueprint hash
+            * than the current pipeline (stale run that slipped past Push 2
+            * abandonment detection, or a dev fixture with an old hash).
+            * Non-empty run hash is required — legacy runs use '' as hash.   */}
+          {run.mapBlueprintHash !== '' &&
+           run.mapBlueprintHash !== pipelineArtifact.blueprintHash && (
+            <View style={sDev.mismatchBanner}>
+              <Text style={sDev.mismatchText}>
+                {'⚠ BACKGROUND / BLUEPRINT MISMATCH\n'}
+                {'run: '}{run.mapBlueprintHash.slice(0, 10)}{'…\n'}
+                {'art: '}{pipelineArtifact.blueprintHash.slice(0, 10)}{'…'}
+              </Text>
+            </View>
+          )}
+          <Text style={sDev.row}>
+            <Text style={sDev.key}>Scenery   </Text>
+            <Text style={[
+              sDev.val,
+              { color: pipelineArtifact.scenerySafetyPass ? '#4ade80' : '#f87171' },
+            ]}>
+              {pipelineArtifact.scenerySafetyPass ? 'PASS ✓' : 'FAIL ✗'}
+            </Text>
+          </Text>
+
+          {/* ── Background manifest section — Push 4 ──────────────────────── */}
+          {bgManifests != null && (
+            <>
+              <View style={sDev.divider} />
+              <Text style={sDev.subhead}>🖼 BACKGROUND MANIFESTS</Text>
+              {bgManifests.map(m => {
+                const synced = m.assetStatus !== 'pending';
+                const color  = synced ? '#4ade80' : '#facc15';
+                return (
+                  <Text key={m.shift} style={[sDev.row, { color }]}>
+                    {synced ? '✓' : '⚠'}{' '}
+                    {m.shift}: {m.assetStatus.toUpperCase()} · {m.assetVersion}
+                  </Text>
+                );
+              })}
+            </>
+          )}
+        </>
+      )}
     </View>
   );
 }
@@ -847,6 +981,18 @@ export default function ChapterFogMapShell() {
     // renders.  DEV_FALLBACK_VISUALS is the same as DEFAULT_SHIFT_VISUALS.night.
     // This path is only reachable when __DEV__ && debugTiles !== null.
     : (debugTiles !== null ? DEV_FALLBACK_VISUALS : null);
+
+  // ── Push 5: blueprint scenery zone centroids for MAP BLUEPRINT overlay ───────
+  // Pre-computed once per chapter (DEV only) so the HexMapLayer overlay can
+  // show RED exclusion-zone dots without calling the pipeline on every render.
+  const blueprintSceneryZones = useMemo(() => {
+    if (!__DEV__) return undefined;
+    if (!BLUEPRINT_PIPELINE_CHAPTERS.has(chNum)) return undefined;
+    try {
+      const artifact = getCanonicalChapterMapArtifact(chNum);
+      return artifact.sceneryLayout.sceneryZones.map(z => z.centroid);
+    } catch { return undefined; }
+  }, [chNum]);
 
   // ── Exploration character sprite ──────────────────────────────────────────
   // Push 3: resolved via getExplorationAvatar() — progression-aware resolver
@@ -1391,6 +1537,8 @@ export default function ChapterFogMapShell() {
             devOverlay={__DEV__ ? devOverlay : undefined}
             worldTileSize={AUTHORED_MAP_TILE_SZ}
             onMetricsUpdate={__DEV__ ? setMapMetrics : undefined}
+            startTileId={__DEV__ ? run?.startTileId : undefined}
+            blueprintSceneryZones={__DEV__ ? blueprintSceneryZones : undefined}
           />
         )}
 
@@ -1473,7 +1621,7 @@ export default function ChapterFogMapShell() {
 
         {/* ── 5. Dev diagnostics (real run only, dev route) ─────────────── */}
         {run !== null && debugTiles === null && (
-          <DevDiagnostics run={run} chapterKeysCollected={keysCollected} />
+          <DevDiagnostics run={run} chapterKeysCollected={keysCollected} chapterNum={chNum} />
         )}
 
         {/* ── 6. Tile-outcome legend (collapsed by default; ⓘ to expand) ── */}
@@ -2214,6 +2362,15 @@ const sDev = StyleSheet.create({
   key:  { color: '#4CAF5088', fontSize: 10, fontFamily: SERIF, minWidth: 52 },
   val:  { color: '#A5D6A7', fontSize: 10, fontFamily: SERIF, flex: 1 },
   divider: { height: 1, backgroundColor: '#2E7D4444', marginVertical: 4 },
+  mismatchBanner: {
+    backgroundColor: '#7f1d1d44',
+    borderWidth: 1, borderColor: '#ef4444aa',
+    borderRadius: 4, padding: 6, marginTop: 4,
+  },
+  mismatchText: {
+    color: '#fca5a5', fontSize: 9, fontFamily: SERIF, fontWeight: '700',
+    lineHeight: 13,
+  },
 });
 
 // CORRECTIVE PUSH A — Camera diagnostics panel styles

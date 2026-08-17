@@ -20,6 +20,7 @@
 import { getChapterHexTopology, isAuthoredChapter } from './chapterMapTemplates';
 import { generateHexTopology } from './topology';
 import { assignJourneyEncounters } from './encounters';
+import { fnv1a32 } from './prng';
 import type { JourneyRun, JourneyTile, TimeOfDay } from './types';
 
 // ── Public types ──────────────────────────────────────────────────────────────
@@ -90,6 +91,16 @@ export function createJourneyRun({
     ? getChapterHexTopology(chapterId)            // authored: seed has no effect on layout
     : generateHexTopology({ chapter: chapterId, seed }); // procedural: seed-derived
 
+  // ── Map geometry identity (Push 2) ────────────────────────────────────────
+  // createRun.ts is a legacy factory that bypasses generateRunData(), so we
+  // compute identity fields inline.  Blueprint chapters do not route through
+  // this factory; it only handles authored/procedural geometry.
+  const sortedTileKeys = topology.tiles.map(c => `${c.q},${c.r}`).sort().join('|');
+  const mapLayoutVersion = isAuthoredChapter(chapterId) ? 'authored' : 'procedural';
+  const mapBlueprintHash = isAuthoredChapter(chapterId)
+    ? fnv1a32(`authored:${chapterId}:${sortedTileKeys}`).toString(16).padStart(8, '0')
+    : fnv1a32(`procedural:${chapterId}:${seed}:${sortedTileKeys}`).toString(16).padStart(8, '0');
+
   // ── Assign encounters and chest tiers to every tile ─────────────────────────
   const { tiles: assignedTiles, areaBossCount } = assignJourneyEncounters({
     chapter: chapterId,
@@ -142,6 +153,9 @@ export function createJourneyRun({
     chapterId,
     attemptNumber,
     seed,
+    mapLayoutVersion,
+    mapBlueprintHash,
+    topologyFamily:       undefined,
     status:               'active',
     createdAt:            now,
     updatedAt:            now,
