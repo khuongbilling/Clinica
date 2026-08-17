@@ -50,11 +50,12 @@ Format: `map-platform-background-ch{N}-{shift}-blueprint-v{M}.png`
 - V1 had baked text labels → regenerated as V2; V2 accepted (no text, horizontal west-east campus, open paved corridors clearly visible)
 - Use `resolution: 'high'` for production map backgrounds
 
-## Current registry state
+## Current registry state (Push 6 complete)
 | Key | File | Status |
 |-----|------|--------|
 | 1:day:6439241b | map-platform-background-ch1-day-blueprint-v1.png | registered |
-| 1:evening:* | (not yet generated) | blueprintBackgroundMissing=true |
-| 1:night:* | (not yet generated) | blueprintBackgroundMissing=true |
+| 1:evening:6439241b | map-platform-background-ch1-evening-blueprint-v1.png | registered |
+| 1:night:6439241b | map-platform-background-ch1-night-blueprint-v1.png | registered |
 
-Evening and night must be generated from the SAME composition (identical geometry, only lighting changes).
+All three Ch1 shifts generated from Push 6 bed-aware prompts (walkableBedGenerator.ts).
+Day/Evening/Night share the SAME blueprint hash — geometry is shift-invariant.

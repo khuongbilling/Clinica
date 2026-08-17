@@ -32,6 +32,7 @@
 import { getChapterMapDNA }         from './chapterMapDNA';
 import { getChapterHexLayout }      from './chapterHexLayout';
 import { getChapterSceneryLayout }  from './chapterSceneryLayout';
+import { getWalkableBed }           from './walkableBedGenerator';
 import type { TimeOfDay }           from './types';
 import type {
   ChapterMapDNA,
@@ -43,6 +44,7 @@ import type {
   ShiftBackgroundSpec,
   HexLaneLayout,
   SceneryLayout,
+  WalkableBed,
 } from './chapterMapTemplate.types';
 
 // ── Target image dimensions ───────────────────────────────────────────────────
@@ -392,21 +394,35 @@ function buildSpatialContext(
 }
 
 // ── AI prompt builder ─────────────────────────────────────────────────────────
+//
+// Push 6: bedPromptFragment is injected FIRST (after style anchor) as the
+// authoritative geometry source.  The AI reads geometry before art direction,
+// so floor positions are fixed before style choices are applied.
+// sceneryConstraintFragment is injected after the environment description to
+// reinforce that scenery belongs only in negative space.
 
 function buildAiPrompt(
-  envType:        ChapterEnvironmentType,
-  themeName:      string,
-  pathStyle:      string,
-  clearStyle:     string,
-  sceneryStyle:   string,
-  shift:          TimeOfDay,
-  spatialContext: string,
+  envType:                  ChapterEnvironmentType,
+  themeName:                string,
+  pathStyle:                string,
+  clearStyle:               string,
+  sceneryStyle:             string,
+  shift:                    TimeOfDay,
+  spatialContext:           string,
+  bedPromptFragment:        string,
+  sceneryConstraintFragment: string,
 ): string {
   const lt = SHIFT_LIGHTING[shift];
   return [
     STYLE_ANCHOR,
+    // Push 6: geometry-authoritative bed specification comes first.
+    // This establishes WHERE the floor is before any art-direction text.
+    bedPromptFragment,
     `environment: ${ENV_ART_DIRECTION[envType]}`,
     `named "${themeName}"`,
+    // Scenery constraint follows immediately after environment so the AI
+    // cannot misplace architectural elements.
+    sceneryConstraintFragment,
     `spatial layout: ${spatialContext}`,
     `floor/ground layer: ${pathStyle} — visually obvious as the traversal space`,
     `open encounter spaces: ${clearStyle}`,
@@ -442,6 +458,7 @@ function buildChapterBackgroundSpec(
   dna:      ChapterMapDNA,
   layout:   HexLaneLayout,
   scenery:  SceneryLayout,
+  bed:      WalkableBed,
 ): ChapterBackgroundSpec {
   const chapter    = dna.chapterId;
   const envType    = FAMILY_TO_ENV[dna.topologyFamily] ?? 'SIMULATION_PLAZA';
@@ -453,8 +470,8 @@ function buildChapterBackgroundSpec(
   const zoneTypes = scenery.sceneryZones.map(z => z.type);
   const sceneryStyle = buildSceneryFramingStyle(envType, scenery.environmentalDensity, zoneTypes);
 
-  const geoNote       = buildGeometryInvariantNote(layout, dna.themeName);
-  const artDir        = ENV_ART_DIRECTION[envType];
+  const geoNote        = buildGeometryInvariantNote(layout, dna.themeName);
+  const artDir         = ENV_ART_DIRECTION[envType];
   const spatialContext = buildSpatialContext(layout, dna);
 
   const SHIFTS: TimeOfDay[] = ['day', 'evening', 'night'];
@@ -464,11 +481,17 @@ function buildChapterBackgroundSpec(
     const lt = SHIFT_LIGHTING[shift];
     shiftSpecs[shift] = {
       shift,
-      lightingDescription:  lt.lighting,
+      lightingDescription:   lt.lighting,
       atmosphereDescription: lt.atmosphere,
       ambientDetail:         lt.ambientDetail,
-      aiPrompt: buildAiPrompt(envType, dna.themeName, pathStyle, clearStyle, sceneryStyle, shift, spatialContext),
-      negativePrompt: NEGATIVE_PROMPT,
+      aiPrompt: buildAiPrompt(
+        envType, dna.themeName, pathStyle, clearStyle, sceneryStyle, shift,
+        spatialContext,
+        // Push 6: bed fragments injected for Blueprint-first geometry
+        bed.bedPromptFragment,
+        bed.sceneryConstraintFragment,
+      ),
+      negativePrompt:   NEGATIVE_PROMPT,
       targetAssetPath:  targetAssetPath(chapter, shift),
       metroRequirePath: metroRequirePath(chapter, shift),
       targetDimensions: { width: TARGET_WIDTH, height: TARGET_HEIGHT },
@@ -476,14 +499,14 @@ function buildChapterBackgroundSpec(
   }
 
   return {
-    chapterId:            chapter,
-    seed:                 dna.seed,
-    environmentType:      envType,
-    environmentName:      dna.themeName,
-    artDirection:         artDir,
-    walkablePathStyle:    pathStyle,
-    clearingStyle:        clearStyle,
-    sceneryFramingStyle:  sceneryStyle,
+    chapterId:             chapter,
+    seed:                  dna.seed,
+    environmentType:       envType,
+    environmentName:       dna.themeName,
+    artDirection:          artDir,
+    walkablePathStyle:     pathStyle,
+    clearingStyle:         clearStyle,
+    sceneryFramingStyle:   sceneryStyle,
     geometryInvariantNote: geoNote,
     shifts: shiftSpecs,
   };
@@ -515,8 +538,9 @@ export function getChapterBackgroundSpec(chapter: number): ChapterBackgroundSpec
   const dna     = getChapterMapDNA(chapter);
   const layout  = getChapterHexLayout(chapter);
   const scenery = getChapterSceneryLayout(chapter);
+  const bed     = getWalkableBed(chapter);   // Push 6: blueprint-first geometry
 
-  const result = buildChapterBackgroundSpec(dna, layout, scenery);
+  const result = buildChapterBackgroundSpec(dna, layout, scenery, bed);
   specCache.set(chapter, result);
   return result;
 }

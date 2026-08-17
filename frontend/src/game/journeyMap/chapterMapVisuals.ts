@@ -231,7 +231,7 @@ const DEFAULT_SHIFT_VISUALS: Record<TimeOfDay, ChapterShiftVisuals> = {
 
 const CHAPTER_SHIFT_VISUALS: Partial<Record<number, Record<TimeOfDay, ChapterShiftVisuals>>> = {};
 
-// ── Push 5A: Blueprint-matched raster registry ────────────────────────────────
+// ── Push 5A / Push 6: Blueprint-matched raster registry ──────────────────────
 //
 // Maps `chapter:shift:blueprintHash` → Metro asset number (static require).
 //
@@ -242,14 +242,24 @@ const CHAPTER_SHIFT_VISUALS: Partial<Record<number, Record<TimeOfDay, ChapterShi
 //      → DevDiagnostics surfaces "BLUEPRINT BACKGROUND MISSING" automatically.
 //   3. Versioned filename convention: map-platform-background-ch{N}-{shift}-blueprint-v{N}.png
 //      This preserves the old static PNG as a rollback target.
+//   4. Day / Evening / Night share the SAME blueprint hash (geometry is shift-invariant).
+//      Generated from Push 6 bed-aware prompts (walkableBedGenerator.ts).
 //
-// Ch1 day — blueprint hash 6439241b (MAP_LAYOUT_VERSION v1):
+// Ch1 — blueprint hash 6439241b (MAP_LAYOUT_VERSION v1):
 const CH1_DAY_BG_BLUEPRINT_V1 = require(
   '@/assets/ui/journey/map/map-platform-background-ch1-day-blueprint-v1.png',
 ) as number;
+const CH1_EVENING_BG_BLUEPRINT_V1 = require(
+  '@/assets/ui/journey/map/map-platform-background-ch1-evening-blueprint-v1.png',
+) as number;
+const CH1_NIGHT_BG_BLUEPRINT_V1 = require(
+  '@/assets/ui/journey/map/map-platform-background-ch1-night-blueprint-v1.png',
+) as number;
 
 const BLUEPRINT_RASTER_REGISTRY: Record<string, number> = {
-  '1:day:6439241b': CH1_DAY_BG_BLUEPRINT_V1,
+  '1:day:6439241b':     CH1_DAY_BG_BLUEPRINT_V1,
+  '1:evening:6439241b': CH1_EVENING_BG_BLUEPRINT_V1,
+  '1:night:6439241b':   CH1_NIGHT_BG_BLUEPRINT_V1,
 };
 
 // ── Chapter 1: "Atrium Approach" ─────────────────────────────────────────────

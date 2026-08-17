@@ -867,6 +867,133 @@ export interface SceneryZone {
   nearestClearingDist: number;
 }
 
+// ══════════════════════════════════════════════════════════════════════════════
+// Push 6 — WALKABLE BED (Blueprint-first floor geometry)
+// ══════════════════════════════════════════════════════════════════════════════
+//
+// The walkable bed converts the abstract canonical blueprint (HexLaneLayout)
+// into a concrete floor-geometry description used by the AI background
+// generator.
+//
+// Pipeline position:
+//   ChapterMapDNA → PathwayGraph → HexLayout → WalkableBed → AI background
+//
+// The bed is the authoritative geometry source for background generation.
+// The background image must depict what the bed specifies — never the reverse.
+//
+// ARCHITECTURE RULE (canonical — applies to every future chapter):
+//   Blueprint → Walkable Bed → Scenery Dressing → Final Raster Background
+//   The background does NOT decide where pathways exist.
+//   The blueprint does.
+
+/** Semantic role of a zone in the walkable floor bed. */
+export type WalkableBedZoneRole =
+  | 'primaryLane'
+  | 'secondaryLane'
+  | 'clearing';
+
+/**
+ * One spatially coherent region in the walkable floor bed.
+ *
+ * Every cell in a bed zone is part of the canonical walkable hex footprint.
+ * The region must appear as completely open, flat, navigable stone in the
+ * final raster background — no scenery element may be placed inside it.
+ */
+export interface WalkableBedZone {
+  /** Unique identifier within the chapter, e.g. "clearing_0", "lane_p_0". */
+  id: string;
+  /** Semantic role of this zone in the walkable floor system. */
+  role: WalkableBedZoneRole;
+  /** All hex cells belonging to this zone. */
+  cells: AxialCoord[];
+  /** Rounded centroid Q coordinate (may not be a valid tile). */
+  centroidQ: number;
+  /** Rounded centroid R coordinate (may not be a valid tile). */
+  centroidR: number;
+  /**
+   * Relative world position: 'west', 'east', 'north', 'south', 'central',
+   * 'north-west', 'south-east', etc.  Derived from centroid vs layout bounds.
+   */
+  worldPosition: string;
+  /** Approximate bounding width in hex tile units. */
+  approxWidthHexes: number;
+  /** Approximate bounding height in hex tile units. */
+  approxHeightHexes: number;
+  /** IDs of adjacent zones in the bed (shares a hex-neighbour edge). */
+  connectsTo: string[];
+
+  // ── Clearing-specific fields (role === 'clearing') ─────────────────────────
+  clearingType?:  ClearingType;
+  clearingShape?: ClearingShape;
+  clearingSize?:  'small' | 'normal' | 'major';
+  exitCount?:     number;
+
+  // ── Lane-specific fields (role === 'primaryLane' | 'secondaryLane') ────────
+  laneWidth?:     'primary' | 'secondary';
+  /** Dominant direction of travel along this lane. */
+  laneDirection?: 'horizontal' | 'vertical' | 'diagonal';
+  /** True when this lane's cells include (or are adjacent to) the layout startCell. */
+  isStartLane?:   boolean;
+  /** True when this lane's cells include (or are adjacent to) the layout gateCell. */
+  isGateLane?:    boolean;
+}
+
+/**
+ * The complete walkable floor bed for one chapter map.
+ *
+ * Produced by `getWalkableBed(chapter)` from `HexLaneLayout` data.
+ *
+ * The bed is fed into the AI background prompt as authoritative geometry:
+ *   bedPromptFragment  → injected BEFORE environment / floor-style descriptions
+ *   sceneryConstraintFragment → injected AFTER environment art direction
+ *
+ * Guaranteed:
+ *   • `walkableCellKeys` covers every AxialCoord in the source HexLaneLayout.cells.
+ *   • Every ClearingZone in HexLaneLayout.clearingZones has a corresponding zone
+ *     in `clearings`.
+ *   • Primary lane count matches HexLaneLayout primary laneSegments count.
+ *   • `bedPromptFragment` is non-empty and references each clearing by position.
+ */
+export interface WalkableBed {
+  chapterId: number;
+  /** All zones ordered: clearings first (most important for gameplay), then lanes. */
+  zones: WalkableBedZone[];
+
+  // ── Derived role views ─────────────────────────────────────────────────────
+  clearings:      WalkableBedZone[];
+  primaryLanes:   WalkableBedZone[];
+  secondaryLanes: WalkableBedZone[];
+
+  /**
+   * Zone containing the layout startCell, or the zone nearest to it.
+   * This is where the chapter entrance is.
+   */
+  startZone: WalkableBedZone | null;
+
+  /**
+   * Zone containing the layout gateCell, or the zone nearest to it.
+   * This is where the boss gate / chapter end is.
+   */
+  gateZone: WalkableBedZone | null;
+
+  /** "q,r" key strings for every walkable cell in the source HexLaneLayout. */
+  walkableCellKeys: readonly string[];
+
+  /**
+   * Geometry-authoritative AI prompt fragment.
+   * Describes exactly where the floor is and where scenery must NOT be.
+   * Must be injected into the AI background prompt BEFORE environment styling.
+   */
+  bedPromptFragment: string;
+
+  /**
+   * Short negative-constraint fragment.
+   * Confirms that scenery belongs exclusively in negative space.
+   * Injected after environment art direction.
+   */
+  sceneryConstraintFragment: string;
+}
+
 /**
  * The full scenery analysis for one chapter map.
  *

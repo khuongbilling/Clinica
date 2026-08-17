@@ -33,9 +33,11 @@ import { getChapterMapDNA }        from './chapterMapDNA';
 import { getChapterHexLayout }     from './chapterHexLayout';
 import { getChapterSceneryLayout } from './chapterSceneryLayout';
 import { getChapterBackgroundSpec } from './chapterBackgroundSpec';
+import { getWalkableBed }          from './walkableBedGenerator';
 import { MAP_LAYOUT_VERSION }      from './canonicalMapArtifact';
 import { fnv1a32 }                 from './prng';
 import type { TimeOfDay }          from './types';
+import type { WalkableBed }        from './chapterMapTemplate.types';
 import type {
   HexLaneLayout,
   SceneryLayout,
@@ -125,6 +127,18 @@ export interface BackgroundAuthoringManifest {
    */
   readonly sceneryZones:     readonly ManifestSceneryZone[];
 
+  /**
+   * Push 6: Walkable Bed — the authoritative floor-geometry specification
+   * derived from the canonical HexLaneLayout blueprint.
+   *
+   * Contains the bedPromptFragment that was injected into aiPrompt, plus the
+   * full zone/adjacency data for diagnostic and tooling use.
+   *
+   * All three shift manifests for a chapter share the SAME walkableBed
+   * (geometry is shift-invariant; only lighting changes between day/evening/night).
+   */
+  readonly walkableBed:      WalkableBed;
+
   // Art specification
   readonly aiPrompt:         string;
   readonly negativePrompt:   string;
@@ -180,9 +194,9 @@ export interface BackgroundAuthoringManifest {
 
 const ASSET_REGISTRY: Partial<Record<number, Record<TimeOfDay, ManifestAssetStatus>>> = {
   1: {
-    day:     'generated',
-    evening: 'generated',
-    night:   'generated',   // Push 4: generated from pipeline spatial brief
+    day:     'generated',   // Push 6: bed-aware re-generation (blueprint-first)
+    evening: 'generated',   // Push 6: bed-aware generation (new asset)
+    night:   'generated',   // Push 6: bed-aware generation (new asset)
   },
 };
 
@@ -227,12 +241,13 @@ function computeBlueprintHash(layout: HexLaneLayout): string {
 // ── Builder ───────────────────────────────────────────────────────────────────
 
 function buildManifest(
-  chapter:    number,
-  shift:      TimeOfDay,
-  layout:     HexLaneLayout,
-  scenery:    SceneryLayout,
-  bgSpec:     ChapterBackgroundSpec,
+  chapter:       number,
+  shift:         TimeOfDay,
+  layout:        HexLaneLayout,
+  scenery:       SceneryLayout,
+  bgSpec:        ChapterBackgroundSpec,
   blueprintHash: string,
+  bed:           WalkableBed,
 ): BackgroundAuthoringManifest {
   const registry = ASSET_REGISTRY[chapter];
   const assetStatus: ManifestAssetStatus = registry?.[shift] ?? 'pending';
@@ -275,6 +290,7 @@ function buildManifest(
     walkableBounds,
     clearingZones,
     sceneryZones,
+    walkableBed:      bed,
     aiPrompt:         shiftSpec.aiPrompt,
     negativePrompt:   shiftSpec.negativePrompt,
     rasterAsset:      shiftSpec.targetAssetPath,
@@ -314,11 +330,12 @@ export function getBackgroundAuthoringManifests(
   const layout   = getChapterHexLayout(chapter);
   const scenery  = getChapterSceneryLayout(chapter);
   const bgSpec   = getChapterBackgroundSpec(chapter);
+  const bed      = getWalkableBed(chapter);   // Push 6: blueprint-first bed
   const hash     = computeBlueprintHash(layout);
 
   const SHIFTS: TimeOfDay[] = ['day', 'evening', 'night'];
   const manifests = SHIFTS.map(shift =>
-    buildManifest(chapter, shift, layout, scenery, bgSpec, hash),
+    buildManifest(chapter, shift, layout, scenery, bgSpec, hash, bed),
   );
 
   manifestCache.set(chapter, manifests);
