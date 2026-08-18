@@ -1628,6 +1628,7 @@ export default function ChapterFogMapShell() {
               offsetX: chapterVisuals.backgroundOffsetX,
               offsetY: chapterVisuals.backgroundOffsetY,
             }}
+            isBlueprintChapter={chapterVisuals.isBlueprintBacked === true}
             runSeed={run?.seed}
             fogExploredTileIds={fogExploredTileIds}
             fogVisibleTileIds={fogVisibleTileIds}

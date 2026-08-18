@@ -30,12 +30,24 @@ const FOG_BASE_DAY_SOURCE = JOURNEY_ASSETS.fog.baseDay;
 
 // ── Tuning constants (easy to adjust for art direction) ───────────────────────
 
-/** Atmospheric foundation colour — warm blue-grey at high opacity.
- *  Keeps the map readable (not nearly black) while providing full coverage. */
-const FOUNDATION_COLOR = 'rgba(55, 72, 86, 0.82)';
+/**
+ * Atmospheric foundation colour — dark ink-navy at reduced opacity.
+ *
+ * Blueprint Push: opacity reduced from 0.82 → 0.64 so that BlueprintHexLayer
+ * (z=0) shows through the fog canvas in unexplored areas.  The dark navy hue
+ * (rather than warm blue-grey) matches the blueprint aesthetic and makes the
+ * architectural linework visible as a dark ghost through the fog mass.
+ *
+ * Visual effect per zone:
+ *   Unexplored  → fog at ~64 % + texture ~18 % = ~82 % total; blueprint visible ~18 %
+ *   Explored    → destination-out partial erase → environment painting + light fog haze
+ *   Visible-now → destination-out strong erase  → environment painting at full richness
+ */
+const FOUNDATION_COLOR = 'rgba(12, 22, 48, 0.64)';
 
 /** Opacity of the base texture drawn over the foundation.
- *  Range 0.40–0.50 — provides mist depth without obscuring the foundation tint. */
+ *  Range 0.40–0.50 — provides mist depth without obscuring the foundation tint.
+ *  Blueprint Push: kept at 0.45 — texture weight unchanged; only foundation changed. */
 const TEXTURE_ALPHA = 0.45;
 
 // ── Push 4: reveal erasure strengths ─────────────────────────────────────────

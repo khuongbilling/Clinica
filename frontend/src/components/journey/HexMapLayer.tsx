@@ -203,6 +203,8 @@ import {
   computeHexWorldCoords,
   type HexWorldCoords,
 } from './hexWorldCoords';
+import { BlueprintHexLayer } from './BlueprintHexLayer';
+import { EnvironmentRevealLayer } from './EnvironmentRevealLayer';
 
 // ── Hex layout constants — imported from hexWorldCoords.ts (Push 6) ──────────
 // Q_STEP, R_STEP, Q_VOFF, MIN_TILE_SZ, MAX_TILE_SZ are re-exported from the
@@ -316,33 +318,29 @@ const FOG_THEMES: Record<'day' | 'evening' | 'night', FogTheme> = {
   },
 };
 
-// ── Push 8: 2.5D character sprite sizing ─────────────────────────────────────
+// ── Blueprint Push: slim anime-style exploration sprite ──────────────────────
 //
-// Sprites in assets/map-sprites/ are 1024 × 1024 square PNGs (transparent bg).
-// The character body is centred horizontally; feet/boots land at ~90 % of the
-// image height.  There is no baked-in contact shadow — Layer 4a supplies it.
+// The exploration sprite has been slimmed from 1.15 × sz → 0.90 × sz wide.
+// This matches the second approved variation — a smaller, slimmer chibi figure
+// that reads as lighter/more agile against the blueprint environment reveal.
 //
-// Container is a SQUARE bounding box (CHR_W_RATIO = CHR_H_RATIO):
-//   contentFit="contain" fills the square exactly — no letterbox centering offset.
-//   charW = charH = CHR_W_RATIO × sz  (1.15 hex widths)
-//   charX = (sz − charW) / 2 = −0.075 × sz  (extends 7.5 % beyond tile edges)
-//   charY = −CHR_Y_SHIFT × sz         (shifts sprite upward from tile top)
+// Container is a near-square bounding box:
+//   charW = CHR_W_RATIO × sz  = 0.90 × sz  (90 % of tile width — slimmer)
+//   charH = CHR_H_RATIO × sz  = 0.95 × sz  (slightly taller aspect for anime look)
+//   charX = (sz − charW) / 2  = 0.05 × sz  (5 % inset, stays well inside tile)
+//   charY = −CHR_Y_SHIFT × sz              (shifts sprite upward from tile top)
 //
-// Sizing goal: feet contact lower-centre of tile (~0.65 × sz from tile top).
+// Feet-anchor invariant: CHR_H_RATIO − CHR_Y_SHIFT = 0.77
+//   0.95 − 0.18 = 0.77 ✓
 //
 // Math:
 //   feet_y = charY + 0.90 × charH
-//          = −CHR_Y_SHIFT × sz + 0.90 × CHR_W_RATIO × sz
-//   target = 0.655 × sz
-//   → CHR_Y_SHIFT = 0.90 × 1.15 − 0.655 = 1.035 − 0.655 = 0.38            ✓
+//          = −0.18 × sz + 0.90 × 0.95 × sz
+//          = (−0.18 + 0.855) × sz  = 0.675 × sz
 //
-// Head rises to: charY + 0.05 × charH ≈ −0.38sz + 0.058sz = −0.32sz
-// (about 32 % of tile width above the tile top — overlaps the cell above in
-//  isometric depth.  Push 21: sorts correctly via OBJECT_BASE + worldY*DEPTH —
-//  no special-case zIndex needed.)
+// Head rises to: charY + 0.05 × charH ≈ −0.18sz + 0.0475sz = −0.1325sz
+// (about 13 % of tile width above the tile top — tighter, slimmer footprint)
 //
-// The jade glow ellipse (Layer 4a) is centred at the feet position and widens
-// slightly beyond the sprite footprint for a magical ambient halo effect.
 // ── Push 4A.6: exploration sprite scale normalization ────────────────────────
 //
 // Scale classes (all fractions of sz — the 80 px authored tile):
@@ -360,12 +358,12 @@ const FOG_THEMES: Record<'day' | 'evening' | 'night', FogTheme> = {
 // Feet-anchor invariant: sz × (CHR_H_RATIO − CHR_Y_SHIFT) = 0.77 × sz.
 //   Push 8:    1.38 − 0.61 = 0.77 ✓
 //   Push 4A.6: 1.15 − 0.38 = 0.77 ✓  (reverted to original Push 8 target ratio)
-const CHR_W_RATIO          = 1.15;   // Push 4A.6: 1.38 → 1.15 — STANDARD_CHARACTER midpoint
-const CHR_H_RATIO          = 1.15;   // Push 4A.6: 1.38 → 1.15 — square bounding box
+const CHR_W_RATIO          = 0.90;   // Blueprint Push: 1.15 → 0.90 — slimmer sprite variant
+const CHR_H_RATIO          = 0.95;   // Blueprint Push: 1.15 → 0.95 — tall slender proportions
 // CHR_Y_SHIFT: keeps feet anchored at 0.77 × sz from tile top regardless of ratio.
 // Formula: CHR_Y_SHIFT = CHR_H_RATIO − 0.77
-const CHR_Y_SHIFT          = 0.38;   // Push 4A.6: 0.61 → 0.38 (1.15 − 0.77 = 0.38 ✓)
-const CHR_GLOW_CY          = 0.65;   // jade glow centre Y = feet position (fraction of sz)
+const CHR_Y_SHIFT          = 0.18;   // Blueprint Push: 0.38 → 0.18 (0.95 − 0.77 = 0.18 ✓)
+const CHR_GLOW_CY          = 0.675;  // Blueprint Push: 0.65 → 0.675 — tracks new feet pos (0.675 × sz)
 const CHR_GLOW_RX          = 0.36;   // jade glow horizontal radius (wider than 1.0× era)
 const CHR_GLOW_RY          = 0.11;   // jade glow vertical radius (flattened ellipse)
 const CHR_GLOW_COLOR       = 'rgba(60,220,180,1)'; // jade/teal to match tile ring glow
@@ -1970,6 +1968,21 @@ export interface HexMapLayerProps {
    * in <SceneryPropLayerView>.
    */
   worldSceneryChildren?: ReactNode;
+
+  /**
+   * Blueprint Push: when true the background slot switches from a plain Image
+   * to the blueprint-to-developed dual-layer system:
+   *
+   *   z=0  BlueprintHexLayer   — dark-navy architectural linework (always visible)
+   *   z=1  EnvironmentReveal   — environment painting revealed only in explored tiles
+   *
+   * The FogOfWarLayer (z=5200) uses a reduced-opacity foundation so the
+   * blueprint shows through the fog in unexplored areas.
+   *
+   * Pass `chapterVisuals.isBlueprintBacked` from fog-map.tsx.
+   * When absent (non-blueprint chapters) the plain background Image is used.
+   */
+  isBlueprintChapter?: boolean;
 }
 
 export function HexMapLayer({
@@ -1998,6 +2011,7 @@ export function HexMapLayer({
   blueprintSceneryZones,
   footprintOverlay,
   worldSceneryChildren,
+  isBlueprintChapter,
 }: HexMapLayerProps) {
   // ── Push 10: resolved shift fog/overlay theme ─────────────────────────────
   // Drives all SVG atmospheric colors: fog blobs, memory veil, frontier glow,
@@ -2598,39 +2612,85 @@ export function HexMapLayer({
           },
         ]}
       >
-        {/* ── Push 7: Chapter environment background ────────────────────────
-          * First child of MapWorld: paints beneath all terrain cells, encounter
-          * objects, gate art, player sprite, and fog.
+        {/* ── Chapter environment background ────────────────────────────────
           *
-          * This is the fix for "stationary background + moving grid" bug:
-          * background is now INSIDE the Animated.View that receives
-          * cameraAnim.getTranslateTransform(), so it moves in lockstep with
-          * every other world-space element.
+          * Two render paths:
           *
-          * The image fills worldW × worldH (same canvas as the tile grid).
-          * overflow:"hidden" on the viewport View clips the edges.
-          * The scale/offsetX/offsetY transform is forwarded verbatim from
-          * ChapterShiftVisuals — these were the per-chapter alignment tuning
-          * values and remain valid in world space.
+          * A) BLUEPRINT CHAPTER  (isBlueprintChapter === true)
+          *    A dark architectural blueprint + progressive environment reveal.
+          *    Two canvas layers replace the plain image:
+          *
+          *      z=0  BlueprintHexLayer
+          *           Dark-navy background + hex linework for ALL tiles.
+          *           Always visible everywhere (including unexplored areas).
+          *           The semi-transparent FogOfWarLayer above lets the blueprint
+          *           show through as a ghost in unexplored regions.
+          *
+          *      z=1  EnvironmentRevealLayer
+          *           The environment painting (environmentBackground.source)
+          *           revealed ONLY in tiles the player has explored or can see.
+          *           Uses canvas destination-in masking with organic feathered
+          *           lobes that exactly match the fog's erasure geometry.
+          *           Transparent in unexplored areas → blueprint visible.
+          *
+          * B) STANDARD CHAPTER  (isBlueprintChapter false / absent)
+          *    Plain Image: the environment painting fills the full world rect,
+          *    fog conceals unexplored areas on top (original behaviour).
+          *
+          * In both paths the background moves in lockstep with terrain,
+          * encounters, and fog because all layers live inside MapWorld (this
+          * Animated.View) which receives cameraAnim.getTranslateTransform().
           *
           * Not rendered during loading / error (environmentBackground absent).
           */}
-        {environmentBackground && (
-          <Image
-            source={environmentBackground.source}
-            style={[
-              StyleSheet.absoluteFillObject,
-              {
-                transform: [
-                  { scale:      environmentBackground.scale   ?? 1 },
-                  { translateX: environmentBackground.offsetX ?? 0 },
-                  { translateY: environmentBackground.offsetY ?? 0 },
-                ],
-              },
-            ]}
-            contentFit="cover"
-            testID="map-background"
-          />
+        {isBlueprintChapter ? (
+          /* ── Blueprint path: linework base + environment reveal ──────── */
+          <>
+            {/* Blueprint layer — always visible, z=JOURNEY_Z.BACKGROUND (0) */}
+            <BlueprintHexLayer
+              tiles={tiles}
+              coords={coords}
+              worldWidth={worldW}
+              worldHeight={worldH}
+              startTileId={startTileId}
+              gateTileId={gateArt?.gateTileId}
+              runSeed={runSeed}
+            />
+
+            {/* Environment reveal — only shown where explored/visible, z=1 */}
+            {environmentBackground && (
+              <EnvironmentRevealLayer
+                source={environmentBackground.source}
+                worldWidth={worldW}
+                worldHeight={worldH}
+                sz={sz}
+                tileCenters={fogTileCenters}
+                exploredTileIds={fogExploredTileIds}
+                visibleTileIds={fogVisibleTileIds}
+                effectiveFieldOfVision={fogEffectiveFieldOfVision}
+                runSeed={runSeed}
+              />
+            )}
+          </>
+        ) : (
+          /* ── Standard path: plain environment image (original) ─────────── */
+          environmentBackground ? (
+            <Image
+              source={environmentBackground.source}
+              style={[
+                StyleSheet.absoluteFillObject,
+                {
+                  transform: [
+                    { scale:      environmentBackground.scale   ?? 1 },
+                    { translateX: environmentBackground.offsetX ?? 0 },
+                    { translateY: environmentBackground.offsetY ?? 0 },
+                  ],
+                },
+              ]}
+              contentFit="cover"
+              testID="map-background"
+            />
+          ) : null
         )}
 
         {/* ── TERRAIN PASS: Pressable + state rings + contact shadow ─────────

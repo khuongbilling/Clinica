@@ -48,6 +48,14 @@
 export const JOURNEY_Z = {
   BACKGROUND:          0,
 
+  /**
+   * Blueprint Push: developed environment reveal canvas.
+   * Sits just above the BlueprintHexLayer background (0) so the environment
+   * painting is progressively composited over the blueprint as tiles are
+   * explored.  Still below all terrain tiles (100+) and world content.
+   */
+  ENV_REVEAL:          1,
+
   TERRAIN_BASE:      100,
 
   WORLD_CONTENT_BASE: 3000,
