@@ -63,7 +63,11 @@ import type { BackgroundAuthoringManifest }        from './backgroundAuthoringMa
  * The version is embedded in the blueprint hash so external callers can
  * detect stale layouts and trigger tile-count guard abandonment.
  */
-export const MAP_LAYOUT_VERSION = 'v1';
+// Imported from the leaf-level constants module to avoid a circular require
+// with backgroundAuthoringManifest.ts.  Re-exported here so any consumer that
+// imports MAP_LAYOUT_VERSION from canonicalMapArtifact continues to work.
+import { MAP_LAYOUT_VERSION } from './journeyMapVersion';
+export { MAP_LAYOUT_VERSION };
 
 // ── Internal hex geometry (self-contained, no topology.ts import needed) ────
 

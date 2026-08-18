@@ -34,7 +34,7 @@ import { getChapterHexLayout }     from './chapterHexLayout';
 import { getChapterSceneryLayout } from './chapterSceneryLayout';
 import { getChapterBackgroundSpec } from './chapterBackgroundSpec';
 import { getWalkableBed }          from './walkableBedGenerator';
-import { MAP_LAYOUT_VERSION }      from './canonicalMapArtifact';
+import { MAP_LAYOUT_VERSION }      from './journeyMapVersion';    // leaf import — no cycle
 import { fnv1a32 }                 from './prng';
 import type { TimeOfDay }          from './types';
 import type { WalkableBed }        from './chapterMapTemplate.types';
