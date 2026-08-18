@@ -1,0 +1,511 @@
+PRODUCTION FIX — SEPARATE COLLISION-CRITICAL SCENERY FROM THE RASTER BACKGROUND
+
+Current screenshot confirms:
+
+✓ Blueprint active
+✓ 60-cell Chapter 1 map active
+✓ World 876 × 722
+✓ Camera correct
+✓ Fog/FOV correct
+✓ New simulation-university background active
+
+BUT:
+
+The generated raster still paints hospital beds, consoles and other raised
+objects underneath playable hexes.
+
+Therefore the current strategy is not reliable enough:
+
+BLUEPRINT
+→ AI paints complete furnished environment
+→ hexes placed on top
+
+The AI artwork can approximate the blueprint but cannot guarantee
+pixel-accurate obstacle avoidance.
+
+Change the production architecture.
+
+==================================================
+CANONICAL MAP ART ARCHITECTURE
+==================================================
+
+Use:
+
+Chapter Blueprint
+        ↓
+Walkable Bed
+        ↓
+CLEAN ENVIRONMENT BACKGROUND
+        ↓
+Hex Terrain
+        ↓
+Scenery Props
+        ↓
+Encounter Objects
+        ↓
+Player
+        ↓
+Fog
+
+Collision-critical scenery must NOT be baked into the base background.
+
+==================================================
+1. BASE BACKGROUND BECOMES NON-BLOCKING
+==================================================
+
+Regenerate Chapter 1's base raster using the SAME:
+
+blueprint
+walkable bed
+world size
+pathways
+clearings
+
+But remove collision-critical freestanding objects.
+
+The background may contain:
+
+✓ floor
+✓ floor patterns
+✓ embedded medical markings
+✓ lighting
+✓ wall surfaces outside playable areas
+✓ distant architectural framing
+✓ windows
+✓ recessed structures
+✓ ceiling/ambient shadows
+✓ non-raised floor decoration
+✓ landscaping completely outside playable bounds
+✓ permanent architecture outside safety mask
+
+The background must NOT contain inside or adjacent to playable areas:
+
+✗ hospital beds
+✗ exam tables
+✗ desks
+✗ freestanding consoles
+✗ carts
+✗ large machines
+✗ planters
+✗ benches
+✗ statues
+✗ freestanding pillars
+✗ supply cabinets
+✗ other collision-critical props
+
+These become separate world objects.
+
+==================================================
+2. WALKABLE BED MUST BE VISUALLY CLEAN
+==================================================
+
+The 60 playable cells already define the authoritative traversable space.
+
+Merge them into the existing continuous walkable bed.
+
+Inside that protected bed, artwork may contain only:
+
+- open flooring
+- embedded lines
+- decorative inlays
+- floor lighting
+- subtle markings
+- flat textures
+
+If a character could not physically walk across something,
+it does not belong inside the bed.
+
+==================================================
+3. CREATE SCENERY PROP LAYER
+==================================================
+
+Use the existing:
+
+ChapterSceneryLayout
+
+as the source of truth for freestanding objects.
+
+Create a world-scene layer conceptually equivalent to:
+
+SceneryObjectLayer
+
+This layer renders actual raster/2.5D assets.
+
+It must NOT generate scenery using:
+- CSS shapes
+- SVG scenery
+- vector placeholder artwork
+
+Use actual PNG/WebP 2.5D game assets.
+
+==================================================
+4. SCENERY PROP TYPES
+==================================================
+
+For the university Simulation Era, support objects such as:
+
+SIMULATION_BED
+EXAM_TABLE
+MEDICAL_CONSOLE
+SUPPLY_CART
+WORKSTATION
+OBSERVATION_TERMINAL
+ACADEMY_PLANTER
+BENCH
+TRAINING_MACHINE
+MEDICAL_DISPLAY
+DECORATIVE_COLUMN
+
+Each prop definition contains:
+
+type
+asset
+world position
+ground anchor
+visual size
+collision footprint
+depth-sort groundY
+
+==================================================
+5. PLACE PROPS ONLY IN SCENERY-SAFE SPACE
+==================================================
+
+For every candidate scenery object:
+
+calculate its collision footprint BEFORE rendering.
+
+Require:
+
+propFootprint
+∩
+walkableSafetyMask
+=
+empty
+
+If not:
+
+reject placement.
+
+Do not render it and hope it looks acceptable.
+
+Try another scenery-safe location.
+
+==================================================
+6. KEEP AN ADDITIONAL BUFFER FROM WALKABLE HEXES
+==================================================
+
+Do not merely prevent literal polygon overlap.
+
+Large objects should also maintain visual breathing room.
+
+Suggested safety separation:
+
+normal prop:
+0.15–0.20 × tile size
+
+large prop:
+0.25–0.35 × tile size
+
+from playable footprint.
+
+This prevents beds/counters from visually intruding into a hex even if
+their collision polygons technically do not cross.
+
+==================================================
+7. CLEARINGS RECEIVE AN EVEN STRONGER RULE
+==================================================
+
+Clearing interiors should remain mostly EMPTY.
+
+Do not fill open encounter spaces with decorative props.
+
+Allow scenery primarily around clearing PERIMETERS.
+
+For example:
+
+      equipment       equipment
+
+          OPEN
+        CLEARING
+          AREA
+
+      console          planter
+
+This leaves room for:
+
+- battle representations
+- treasure
+- merchant
+- Ward Event NPC
+- Area Boss
+- future special encounter assets
+
+==================================================
+8. PROP CLUSTERS SHOULD FRAME PATHS
+==================================================
+
+Use scenery composition intelligently.
+
+Example:
+
+Instead of:
+
+HEX — BED — HEX — CONSOLE — HEX
+
+use:
+
+        bed   bed
+          |
+HEX — HEX — HEX — HEX
+          |
+       console
+
+The objects visually explain what is beside the path.
+
+They do not become the path.
+
+==================================================
+9. REVISE CHAPTER 1 COMPOSITION
+==================================================
+
+The current medical-simulation art direction is good.
+
+KEEP:
+
+- futuristic clinical academy aesthetic
+- white/teal simulation flooring
+- training-facility atmosphere
+- clinical technology
+- university simulation identity
+
+CHANGE:
+
+remove the many beds and equipment stations baked directly into the
+traversable floor.
+
+The base environment should look more like:
+
+large clinical simulation training floor
+with broad open circulation spaces
+
+rather than:
+
+fully furnished hospital ward underneath a tactical grid.
+
+==================================================
+10. USE EQUIPMENT TO DEFINE NEGATIVE SPACE
+==================================================
+
+The beds/equipment can still appear prominently.
+
+Place them in:
+
+- simulation bays beside paths
+- observation stations
+- side training areas
+- non-walkable islands
+- alcoves
+- architectural pockets
+- scenery zones between braided paths
+
+This will actually make the pathway blueprint MORE legible.
+
+==================================================
+11. PROP DEPTH SORTING
+==================================================
+
+All freestanding scenery belongs in world space.
+
+Depth sort by ground anchor:
+
+zIndex =
+SCENERY_BASE
++
+groundY * depthScale
+
+Therefore:
+
+player can walk visually behind or in front of scenery appropriately.
+
+Do not simply bake these interactions into one flat background.
+
+==================================================
+12. PROP GROUNDING
+==================================================
+
+Use the same grounded-object system already approved for:
+
+player
+chest
+encounters
+
+Every scenery prop uses:
+
+bottom-center ground anchor.
+
+No floating furniture.
+
+Shadow and physical base must agree on the floor position.
+
+==================================================
+13. SCENERY DOES NOT BECOME GAMEPLAY ENCOUNTERS
+==================================================
+
+Environmental props are presentation/collision scenery.
+
+They are separate from:
+
+treasure
+merchant
+Ward Event
+enemy
+Area Boss
+
+Encounter randomization remains unchanged.
+
+Rechallenge:
+same scenery arrangement
+different encounter arrangement.
+
+==================================================
+14. SCENERY IS FIXED TO CHAPTER BLUEPRINT
+==================================================
+
+Generate scenery layout using:
+
+chapter blueprint seed
++
+scenery layout version
+
+NOT:
+
+attempt number
+player
+shift
+
+Therefore Chapter 1 always has the same physical environmental objects.
+
+Day / Evening / Night:
+same furniture/obstacle positions.
+
+Only atmosphere/lighting changes.
+
+==================================================
+15. SHIFT VARIANTS
+==================================================
+
+Because collision scenery is no longer baked into the background,
+Day / Evening / Night become easier.
+
+Base architecture:
+same geometry
+
+Scenery props:
+same positions
+
+Only modify:
+
+- asset lighting/tint where needed
+- environment lighting
+- lamps
+- ambient effects
+
+Do not move beds/equipment between shifts.
+
+==================================================
+16. DEVELOPMENT COLLISION OVERLAY
+==================================================
+
+Add DIAG toggle:
+
+SCENERY COLLISION
+
+DEV ONLY.
+
+Show:
+
+GREEN
+walkable safety bed
+
+RED
+scenery collision footprint
+
+MAGENTA
+illegal intersection
+
+PASS condition:
+
+MAGENTA count = 0
+
+Display:
+
+Playable cells: 60
+Scenery props: N
+Illegal overlaps: 0
+Clearings obstructed: 0
+
+==================================================
+17. BACKGROUND VALIDATION CHANGES
+==================================================
+
+The background validator no longer needs to understand every painted object.
+
+Instead enforce:
+
+BASE BACKGROUND:
+no intentionally blocking foreground scenery inside walkable bed.
+
+LOGICAL SCENERY LAYER:
+all blocking objects have known collision geometry.
+
+This creates deterministic gameplay.
+
+==================================================
+18. DO NOT CHANGE
+==================================================
+
+DO NOT modify:
+
+- current Chapter blueprint
+- pathway graph
+- HexLayout
+- 60 tiles
+- 80px tile size
+- world 876 × 722 geometry
+- map DNA
+- fog
+- FOV
+- camera
+- encounter percentages
+- chapter keys
+
+This is an art-layer architecture correction only.
+
+==================================================
+19. ACCEPTANCE
+==================================================
+
+After regeneration:
+
+A player should never visually stand on:
+
+- bed
+- desk
+- machine
+- console
+- planter
+- other raised scenery
+
+All playable hex centers visibly correspond to usable floor.
+
+Blocking scenery sits BETWEEN or BESIDE pathways.
+
+Clearings remain open.
+
+The map retains the current clinical simulation aesthetic.
+
+Camera/Fog/FOV remain unchanged.
+
+Commit:
+
+refactor(journey): separate obstacle scenery from blueprint background

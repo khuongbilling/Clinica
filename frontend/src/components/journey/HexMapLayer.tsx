@@ -163,6 +163,7 @@ import {
   useRef,
   useState,
   type MutableRefObject,
+  type ReactNode,
 } from 'react';
 import {
   AccessibilityInfo,
@@ -1955,6 +1956,20 @@ export interface HexMapLayerProps {
     readonly blockingCells: readonly { readonly q: number; readonly r: number }[];
     readonly overlapCells:  readonly { readonly q: number; readonly r: number }[];
   };
+
+  /**
+   * Scenery prop layer rendered between terrain tiles and world content.
+   *
+   * Pass the output of <SceneryPropLayerView> here.  It will be rendered
+   * inside the world Animated.View and therefore shares the camera transform.
+   * Depth sorting is controlled by each prop's zIndex (WORLD_CONTENT range)
+   * so props interleave correctly with player and encounter sprites.
+   *
+   * The caller is responsible for computing placed props from
+   * `computeSceneryProps(sceneryLayout, coords, chapterId)` and wrapping them
+   * in <SceneryPropLayerView>.
+   */
+  worldSceneryChildren?: ReactNode;
 }
 
 export function HexMapLayer({
@@ -1982,6 +1997,7 @@ export function HexMapLayer({
   startTileId,
   blueprintSceneryZones,
   footprintOverlay,
+  worldSceneryChildren,
 }: HexMapLayerProps) {
   // ── Push 10: resolved shift fog/overlay theme ─────────────────────────────
   // Drives all SVG atmospheric colors: fog blobs, memory veil, frontier glow,
@@ -2636,6 +2652,21 @@ export function HexMapLayer({
             fogState={fogVisibilityFromTileState(tile.visibility, tile.current)}
           />
         ))}
+
+        {/* ── SCENERY PROP LAYER ─────────────────────────────────────────────
+          * Freestanding environmental props (simulation beds, consoles, tables,
+          * planters) placed in non-walkable scenery zones.
+          *
+          * Each prop has its own absolute zIndex in the WORLD_CONTENT range
+          * (3000–4900), so props depth-sort correctly against the player sprite
+          * and encounter objects rendered by HexObjectLayer below.
+          *
+          * Collision-safe placement is guaranteed by the caller
+          * (computeSceneryProps in sceneryPropPlacer.ts) which checks every
+          * prop footprint against the walkable safety mask before including it.
+          *
+          * pointerEvents="none" — taps fall through to terrain Pressables.      */}
+        {worldSceneryChildren}
 
         {/* ── WORLD CONTENT PASS: encounter nodes + jade glow + player ─────────
           * z JOURNEY_Z.WORLD_CONTENT_BASE (3000) + worldY×OBJECT_DEPTH,

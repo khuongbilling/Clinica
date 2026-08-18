@@ -85,6 +85,9 @@ import { getChapterMapTemplate }                      from '@/src/game/journeyMa
 import { getCanonicalChapterMapArtifact }             from '@/src/game/journeyMap/canonicalMapArtifact';
 import { getBackgroundAuthoringManifests }           from '@/src/game/journeyMap/backgroundAuthoringManifest';
 import { isBlockingSceneryZone }                      from '@/src/game/journeyMap/sceneryClassification';
+import { computeHexWorldCoords }                      from '@/src/components/journey/hexWorldCoords';
+import { computeSceneryProps }                        from '@/src/game/journeyMap/sceneryPropPlacer';
+import { SceneryPropLayerView }                       from '@/src/components/journey/SceneryPropLayerView';
 
 // ── Journey raster assets ────────────────────────────────────────────────────
 // Map backgrounds and terrain tiles are now resolved through getChapterMapVisuals()
@@ -1067,6 +1070,29 @@ export default function ChapterFogMapShell() {
     } catch { return undefined; }
   }, [chNum]);
 
+  // ── Scenery prop layer — placed props for blueprint-pipeline chapters ────────
+  // Freestanding props (simulation beds, consoles, tables, etc.) are placed at
+  // runtime from the ChapterSceneryLayout so they never bake into the raster.
+  //
+  // Requires mapTiles (for coord origin) and mapSize.w (for authored world mode).
+  // Both are always available when a run is loaded and the map container has laid
+  // out.  Falls back to empty array for non-blueprint chapters and during init.
+  const sceneryCoords = useMemo(() => {
+    if (!BLUEPRINT_PIPELINE_CHAPTERS.has(chNum)) return null;
+    if (!mapTiles || mapTiles.length === 0 || !mapSize.w) return null;
+    try {
+      return computeHexWorldCoords(mapTiles, mapSize.w, AUTHORED_MAP_TILE_SZ);
+    } catch { return null; }
+  }, [chNum, mapTiles, mapSize.w]);
+
+  const placedSceneryProps = useMemo(() => {
+    if (!sceneryCoords) return [];
+    try {
+      const artifact = getCanonicalChapterMapArtifact(chNum);
+      return computeSceneryProps(artifact.sceneryLayout, sceneryCoords, chNum);
+    } catch { return []; }
+  }, [chNum, sceneryCoords]);
+
   // ── Exploration character sprite ──────────────────────────────────────────
   // Push 3: resolved via getExplorationAvatar() — progression-aware resolver
   // that factors in chapter era, class, and future skin/variant overrides.
@@ -1613,6 +1639,14 @@ export default function ChapterFogMapShell() {
             startTileId={__DEV__ ? run?.startTileId : undefined}
             blueprintSceneryZones={__DEV__ ? blueprintSceneryZones : undefined}
             footprintOverlay={__DEV__ ? footprintOverlay : undefined}
+            worldSceneryChildren={
+              placedSceneryProps.length > 0 ? (
+                <SceneryPropLayerView
+                  props={placedSceneryProps}
+                  sz={AUTHORED_MAP_TILE_SZ}
+                />
+              ) : undefined
+            }
           />
         )}
 

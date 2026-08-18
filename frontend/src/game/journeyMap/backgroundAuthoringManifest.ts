@@ -219,9 +219,14 @@ export interface BackgroundAuthoringManifest {
 
 const ASSET_REGISTRY: Partial<Record<number, Record<TimeOfDay, ManifestAssetStatus>>> = {
   1: {
-    day:     'validated',   // Task 766: v3 raster, composition check passed
-    evening: 'validated',   // Task 766: v3 raster, composition check passed
-    night:   'validated',   // Task 766: v3 raster, composition check passed
+    // v4 raster: architecture separation — collision-critical scenery removed from
+    // base raster; background shows clean floor + embedded inlays only.
+    // Blocking props (beds, consoles, tables, carts) placed by SceneryPropLayer
+    // at runtime.  Geometry validation still passes (all blocking zones remain
+    // outside the walkable safety mask per computeSceneryProps constraints).
+    day:     'validated',
+    evening: 'validated',
+    night:   'validated',
   },
 };
 

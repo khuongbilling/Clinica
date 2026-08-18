@@ -267,15 +267,35 @@ const CH1_NIGHT_BG_BLUEPRINT_V3 = require(
   '@/assets/ui/journey/map/map-platform-background-ch1-night-blueprint-v3.png',
 ) as number;
 
+// v4 — Architecture separation: collision-critical scenery removed from the
+//      base raster (spec: "SEPARATE COLLISION-CRITICAL SCENERY FROM THE RASTER
+//      BACKGROUND").  The background now shows ONLY floor, embedded inlays,
+//      lighting, and permanent perimeter architecture.  All freestanding
+//      blocking props (beds, consoles, tables, carts, machines, planters, etc.)
+//      are placed as a runtime SceneryPropLayer above the clean floor art.
+//      Prompts used: open-floor university simulation hall with NO freestanding
+//      furniture on traversable area; teal hex-grid inlays; simulation bays
+//      only in far-edge alcoves.  All three shifts share identical geometry;
+//      only lighting/atmosphere differs.
+const CH1_DAY_BG_BLUEPRINT_V4 = require(
+  '@/assets/ui/journey/map/map-platform-background-ch1-day-blueprint-v4.png',
+) as number;
+const CH1_EVENING_BG_BLUEPRINT_V4 = require(
+  '@/assets/ui/journey/map/map-platform-background-ch1-evening-blueprint-v4.png',
+) as number;
+const CH1_NIGHT_BG_BLUEPRINT_V4 = require(
+  '@/assets/ui/journey/map/map-platform-background-ch1-night-blueprint-v4.png',
+) as number;
+
 const BLUEPRINT_RASTER_REGISTRY: Record<string, number> = {
   // Node.js / offline-pipeline hash (clean build):
-  '1:day:6439241b':     CH1_DAY_BG_BLUEPRINT_V3,
-  '1:evening:6439241b': CH1_EVENING_BG_BLUEPRINT_V3,
-  '1:night:6439241b':   CH1_NIGHT_BG_BLUEPRINT_V3,
+  '1:day:6439241b':     CH1_DAY_BG_BLUEPRINT_V4,
+  '1:evening:6439241b': CH1_EVENING_BG_BLUEPRINT_V4,
+  '1:night:6439241b':   CH1_NIGHT_BG_BLUEPRINT_V4,
   // Metro browser-runtime hash (stale-cache build) — same assets:
-  '1:day:01dd9c64':     CH1_DAY_BG_BLUEPRINT_V3,
-  '1:evening:01dd9c64': CH1_EVENING_BG_BLUEPRINT_V3,
-  '1:night:01dd9c64':   CH1_NIGHT_BG_BLUEPRINT_V3,
+  '1:day:01dd9c64':     CH1_DAY_BG_BLUEPRINT_V4,
+  '1:evening:01dd9c64': CH1_EVENING_BG_BLUEPRINT_V4,
+  '1:night:01dd9c64':   CH1_NIGHT_BG_BLUEPRINT_V4,
 };
 
 // ── Chapter 1: "Atrium Approach" ─────────────────────────────────────────────
