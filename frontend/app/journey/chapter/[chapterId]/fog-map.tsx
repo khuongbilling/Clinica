@@ -84,6 +84,7 @@ import { getChapterTerrainCellCount, BLUEPRINT_PIPELINE_CHAPTERS } from '@/src/g
 import { getChapterMapTemplate }                      from '@/src/game/journeyMap/chapterMapTemplates';
 import { getCanonicalChapterMapArtifact }             from '@/src/game/journeyMap/canonicalMapArtifact';
 import { getBackgroundAuthoringManifests }           from '@/src/game/journeyMap/backgroundAuthoringManifest';
+import { isBlockingSceneryZone }                      from '@/src/game/journeyMap/sceneryClassification';
 
 // ── Journey raster assets ────────────────────────────────────────────────────
 // Map backgrounds and terrain tiles are now resolved through getChapterMapVisuals()
@@ -564,17 +565,35 @@ function DevDiagnostics({
             </View>
           )}
 
-          {/* ── Background manifest section — Push 4 ──────────────────────── */}
+          {/* ── Background manifest section — Push 4 / Task 766 ───────────── */}
           {bgManifests != null && (
             <>
               <View style={sDev.divider} />
               <Text style={sDev.subhead}>🖼 BACKGROUND MANIFESTS</Text>
+              {/* Task 766: BACKGROUND VALIDATED badge — geometry-level scenery
+                * check passed (no blocking scenery inside the walkable bed).
+                * validationResult is shared by all three shift manifests.   */}
+              {bgManifests[0] != null && (
+                <Text style={[
+                  sDev.row,
+                  { color: bgManifests[0].validationResult.pass ? '#4ade80' : '#f87171' },
+                ]}>
+                  {bgManifests[0].validationResult.pass
+                    ? '✓ BACKGROUND VALIDATED'
+                    : `✗ BACKGROUND INVALID — ${bgManifests[0].validationResult.violations.length} overlap(s)`}
+                </Text>
+              )}
               {bgManifests.map(m => {
-                const synced = m.assetStatus !== 'pending';
-                const color  = synced ? '#4ade80' : '#facc15';
+                // Task 766 status colours:
+                //   validated                → green ✓
+                //   invalid_overlap / failed → red ✗
+                //   everything else          → yellow ⚠
+                const good = m.assetStatus === 'validated';
+                const bad  = m.assetStatus === 'invalid_overlap' || m.assetStatus === 'failed';
+                const color = good ? '#4ade80' : bad ? '#f87171' : '#facc15';
                 return (
                   <Text key={m.shift} style={[sDev.row, { color }]}>
-                    {synced ? '✓' : '⚠'}{' '}
+                    {good ? '✓' : bad ? '✗' : '⚠'}{' '}
                     {m.shift}: {m.assetStatus.toUpperCase()} · {m.assetVersion}
                   </Text>
                 );
@@ -1015,6 +1034,36 @@ export default function ChapterFogMapShell() {
     try {
       const artifact = getCanonicalChapterMapArtifact(chNum);
       return artifact.sceneryLayout.sceneryZones.map(z => z.centroid);
+    } catch { return undefined; }
+  }, [chNum]);
+
+  // ── Task 766: walkable-footprint overlay data (DEV only) ─────────────────────
+  // GREEN  — walkable-bed cells (from the shared BackgroundAuthoringManifest bed)
+  // RED    — cells of BLOCKING scenery zones (negative-space obstacles)
+  // MAGENTA— illegal overlaps from the background validator (empty after a pass)
+  // Computed once per chapter, only for blueprint-pipeline chapters; the
+  // devOverlay.footprint toggle in the diagnostics panel controls rendering.
+  const footprintOverlay = useMemo(() => {
+    if (!__DEV__) return undefined;
+    if (!BLUEPRINT_PIPELINE_CHAPTERS.has(chNum)) return undefined;
+    try {
+      const manifests = getBackgroundAuthoringManifests(chNum);
+      const m = manifests[0];
+      if (!m) return undefined;
+      const walkableCells = m.walkableBed.walkableCellKeys.map(k => {
+        const [q, r] = k.split(',').map(Number);
+        return { q, r };
+      });
+      const artifact = getCanonicalChapterMapArtifact(chNum);
+      const blockingCells = artifact.sceneryLayout.sceneryZones
+        .filter(z => isBlockingSceneryZone(z.type))
+        .flatMap(z => z.cells.map(c => ({ q: c.q, r: c.r })));
+      const overlapCells = m.validationResult.violations
+        .flatMap(v => v.overlappingCellKeys.map(k => {
+          const [q, r] = k.split(',').map(Number);
+          return { q, r };
+        }));
+      return { walkableCells, blockingCells, overlapCells };
     } catch { return undefined; }
   }, [chNum]);
 
@@ -1563,6 +1612,7 @@ export default function ChapterFogMapShell() {
             onMetricsUpdate={__DEV__ ? setMapMetrics : undefined}
             startTileId={__DEV__ ? run?.startTileId : undefined}
             blueprintSceneryZones={__DEV__ ? blueprintSceneryZones : undefined}
+            footprintOverlay={__DEV__ ? footprintOverlay : undefined}
           />
         )}
 

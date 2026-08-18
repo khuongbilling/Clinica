@@ -1690,6 +1690,20 @@ export interface HexMapDevOverlay {
    * MUST NOT ship — gated with __DEV__.
    */
   mapBlueprint?: boolean;
+
+  /**
+   * DEV ONLY — walkable-footprint overlay (Task 766).
+   *
+   * Renders the obstacle-safe composition data from `footprintOverlay`:
+   *   GREEN   — semi-transparent fill on every walkable-bed cell
+   *   RED     — semi-transparent fill on every blocking scenery zone cell
+   *   MAGENTA — outline on any cell in BOTH sets (illegal overlap — always
+   *             empty after a passing background validation)
+   * Only meaningful for blueprint-pipeline chapters (caller passes data only
+   * when chapterVisuals.blueprintHash is set).
+   * MUST NOT ship — gated with __DEV__.
+   */
+  footprint?: boolean;
 }
 
 /**
@@ -1924,6 +1938,23 @@ export interface HexMapLayerProps {
    * dot at each centroid to confirm exclusion zones align with raster art.
    */
   blueprintSceneryZones?: readonly { readonly q: number; readonly r: number }[];
+
+  /**
+   * DEV-only (Task 766): data for the walkable-footprint overlay
+   * (devOverlay.footprint).  Caller computes this only for blueprint-pipeline
+   * chapters:
+   *   walkableCells — every cell of the walkable bed (GREEN fill)
+   *   blockingCells — every cell of a BLOCKING scenery zone (RED fill;
+   *                   these lie OUTSIDE the tile list, in negative space)
+   *   overlapCells  — cells present in both sets per the background validator
+   *                   (MAGENTA outline; empty after a passing validation)
+   * No effect in production.
+   */
+  footprintOverlay?: {
+    readonly walkableCells: readonly { readonly q: number; readonly r: number }[];
+    readonly blockingCells: readonly { readonly q: number; readonly r: number }[];
+    readonly overlapCells:  readonly { readonly q: number; readonly r: number }[];
+  };
 }
 
 export function HexMapLayer({
@@ -1950,6 +1981,7 @@ export function HexMapLayer({
   onMetricsUpdate,
   startTileId,
   blueprintSceneryZones,
+  footprintOverlay,
 }: HexMapLayerProps) {
   // ── Push 10: resolved shift fog/overlay theme ─────────────────────────────
   // Drives all SVG atmospheric colors: fog blobs, memory veil, frontier glow,
@@ -2951,6 +2983,73 @@ export function HexMapLayer({
                 zIndex:          JOURNEY_Z.DEV_OVERLAY,
                 backgroundColor: 'rgba(239,68,68,0.78)',  // RED
                 borderRadius:    dotR,
+              }}
+            />
+          );
+        })}
+
+        {/* ── Dev FOOTPRINT overlay — Task 766 / __DEV__ only ────────────────
+         * Obstacle-safe composition visualiser:
+         *   GREEN   — walkable-bed cell (must be open floor in the raster)
+         *   RED     — blocking scenery zone cell (negative space; furniture,
+         *             equipment, structures live ONLY here)
+         *   MAGENTA — illegal overlap per backgroundValidator (always empty
+         *             after a passing validation)
+         * Blocking cells lie OUTSIDE the terrain tile list, so all three
+         * passes render from the passed axial coords via coords.axialToWorld.
+         * MUST NOT ship — __DEV__ guard.
+         */}
+        {__DEV__ && devOverlay?.footprint && footprintOverlay?.walkableCells.map((c, i) => {
+          const { left: px, top: py } = coords.axialToWorld(c.q, c.r);
+          return (
+            <View
+              key={`fp-walk-${i}`}
+              pointerEvents="none"
+              style={{
+                position:        'absolute',
+                left:            px,
+                top:             py,
+                width:           sz,
+                height:          sz,
+                zIndex:          JOURNEY_Z.DEV_OVERLAY - 1,
+                backgroundColor: 'rgba(34,197,94,0.35)',   // GREEN
+              }}
+            />
+          );
+        })}
+        {__DEV__ && devOverlay?.footprint && footprintOverlay?.blockingCells.map((c, i) => {
+          const { left: px, top: py } = coords.axialToWorld(c.q, c.r);
+          return (
+            <View
+              key={`fp-block-${i}`}
+              pointerEvents="none"
+              style={{
+                position:        'absolute',
+                left:            px,
+                top:             py,
+                width:           sz,
+                height:          sz,
+                zIndex:          JOURNEY_Z.DEV_OVERLAY - 1,
+                backgroundColor: 'rgba(239,68,68,0.35)',   // RED
+              }}
+            />
+          );
+        })}
+        {__DEV__ && devOverlay?.footprint && footprintOverlay?.overlapCells.map((c, i) => {
+          const { left: px, top: py } = coords.axialToWorld(c.q, c.r);
+          return (
+            <View
+              key={`fp-overlap-${i}`}
+              pointerEvents="none"
+              style={{
+                position:     'absolute',
+                left:         px,
+                top:          py,
+                width:        sz,
+                height:       sz,
+                zIndex:       JOURNEY_Z.DEV_OVERLAY,
+                borderWidth:  3,
+                borderColor:  'rgba(236,72,153,0.95)',     // MAGENTA
               }}
             />
           );

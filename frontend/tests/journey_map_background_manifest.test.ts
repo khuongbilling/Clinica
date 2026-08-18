@@ -118,15 +118,17 @@ test('metroRequirePath starts with @/assets/', () => {
   for (const m of manifests) ok(m.metroRequirePath.startsWith('@/assets/'), `bad metro path: ${m.metroRequirePath}`);
 });
 
-test('assetStatus is one of pending/generated/approved', () => {
+test('assetStatus is a valid ManifestAssetStatus (Task 766 union)', () => {
+  const VALID = ['pending', 'spec_ready', 'raster_unvalidated', 'validated', 'invalid_overlap', 'failed'];
   for (const m of manifests) {
-    ok(['pending', 'generated', 'approved'].includes(m.assetStatus), `bad status: ${m.assetStatus}`);
+    ok(VALID.includes(m.assetStatus), `bad status: ${m.assetStatus}`);
   }
 });
 
-test('assetVersion is BACKGROUND_ASSET_REQUIRED when pending, version:hash otherwise', () => {
+test('assetVersion is BACKGROUND_ASSET_REQUIRED when no raster, version:hash otherwise', () => {
+  const NO_RASTER = ['pending', 'spec_ready', 'failed'];
   for (const m of manifests) {
-    if (m.assetStatus === 'pending') {
+    if (NO_RASTER.includes(m.assetStatus)) {
       eq(m.assetVersion, 'BACKGROUND_ASSET_REQUIRED');
     } else {
       ok(/^v\d+:[0-9a-f]{8}$/.test(m.assetVersion), `bad version: ${m.assetVersion}`);
@@ -202,16 +204,29 @@ test('scenery zone centroids are finite numbers', () => {
 console.log('\n[3] Ch1 asset registration');
 // ─────────────────────────────────────────────────────────────────────────────
 
-test('Ch1 day: assetStatus is generated or approved', () => {
-  ok(['generated', 'approved'].includes(dayMf.assetStatus), `status = ${dayMf.assetStatus}`);
+test('Ch1 day: assetStatus is validated (raster exists + composition check passed)', () => {
+  eq(dayMf.assetStatus, 'validated');
 });
 
-test('Ch1 evening: assetStatus is generated or approved', () => {
-  ok(['generated', 'approved'].includes(eveMf.assetStatus), `status = ${eveMf.assetStatus}`);
+test('Ch1 evening: assetStatus is validated (raster exists + composition check passed)', () => {
+  eq(eveMf.assetStatus, 'validated');
 });
 
-test('Ch1 night: assetStatus is generated or approved', () => {
-  ok(['generated', 'approved'].includes(ngtMf.assetStatus), `status = ${ngtMf.assetStatus}`);
+test('Ch1 night: assetStatus is validated (raster exists + composition check passed)', () => {
+  eq(ngtMf.assetStatus, 'validated');
+});
+
+test('Ch1 manifests expose a passing validationResult (Task 766)', () => {
+  for (const m of manifests) {
+    ok(m.validationResult != null, `${m.shift}: missing validationResult`);
+    ok(m.validationResult.pass, `${m.shift}: validation failed`);
+    eq(m.validationResult.violations.length, 0);
+  }
+});
+
+test('all three shifts share the same validationResult reference', () => {
+  ok(dayMf.validationResult === eveMf.validationResult, 'day vs evening');
+  ok(dayMf.validationResult === ngtMf.validationResult, 'day vs night');
 });
 
 test('Ch1 day: rasterAsset contains "day"', () => {
@@ -235,9 +250,10 @@ test('all three shifts share the same blueprint hash', () => {
   ok(dayMf.mapBlueprintHash === ngtMf.mapBlueprintHash, 'day vs night hash mismatch');
 });
 
-test('assetVersion encodes mapLayoutVersion:mapBlueprintHash for generated shifts', () => {
+test('assetVersion encodes mapLayoutVersion:mapBlueprintHash for raster-backed shifts', () => {
+  const HAS_RASTER = ['raster_unvalidated', 'validated', 'invalid_overlap'];
   for (const m of manifests) {
-    if (m.assetStatus !== 'pending') {
+    if (HAS_RASTER.includes(m.assetStatus)) {
       const expected = `${m.mapLayoutVersion}:${m.mapBlueprintHash}`;
       eq(m.assetVersion, expected);
     }
@@ -278,7 +294,7 @@ test('manifest clearingZones.length matches artifact.clearingCount', () => {
 console.log('\n[6] isChapterBackgroundSynced');
 // ─────────────────────────────────────────────────────────────────────────────
 
-test('isChapterBackgroundSynced(1) returns true (all shifts generated)', () => {
+test('isChapterBackgroundSynced(1) returns true (all shifts validated)', () => {
   ok(isChapterBackgroundSynced(1), 'Expected Ch1 to be fully synced');
 });
 

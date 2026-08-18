@@ -248,6 +248,8 @@ export function JourneyMapDiagnosticsPanel(props: JourneyMapDiagnosticsProps) {
           <ToggleRow label="fog mask canvas"   active={!!overlay.fogMask}          onToggle={() => toggle('fogMask')} />
           <ToggleRow label="playable bounds"   active={!!overlay.playableBounds}   onToggle={() => toggle('playableBounds')} />
           <ToggleRow label="MAP BLUEPRINT"     active={!!overlay.mapBlueprint}     onToggle={() => toggle('mapBlueprint')} />
+          {/* Task 766: walkable-bed footprint overlay (green=walkable, red=blocking scenery, magenta=illegal overlap) */}
+          <ToggleRow label="Show footprint overlay" active={!!overlay.footprint}   onToggle={() => toggle('footprint')} />
         </Section>
 
       </ScrollView>

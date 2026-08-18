@@ -12,14 +12,18 @@
  *   3. Provides per-shift asset status so DevDiagnostics can show
  *      "BACKGROUND SYNCED TO BLUEPRINT" vs "PENDING".
  *
- * ── Asset Status Lifecycle ────────────────────────────────────────────────────
- *   'pending'   — no usable raster asset exists; generation required.
- *                 DevDiagnostics shows ⚠.
- *   'generated' — raster was produced from the blueprint spec (or aligned to
- *                 the same geometry specification before the pipeline existed).
- *                 DevDiagnostics shows ✓.
- *   'approved'  — artist-reviewed; confirmed visually correct.
- *                 DevDiagnostics shows ✓✓.
+ * ── Asset Status Lifecycle (Task 766) ────────────────────────────────────────
+ *   'pending'            — no usable raster asset exists; generation required.
+ *                          DevDiagnostics shows ⚠.
+ *   'spec_ready'         — prompt/spec finalized, raster not yet generated.
+ *   'raster_unvalidated' — raster exists but has not passed the background
+ *                          composition validator.
+ *   'validated'          — raster exists AND validateBackgroundComposition
+ *                          passed (no blocking scenery inside the walkable bed).
+ *                          DevDiagnostics shows the BACKGROUND VALIDATED badge.
+ *   'invalid_overlap'    — validator found blocking scenery overlapping the
+ *                          walkable bed; raster must be regenerated.
+ *   'failed'             — generation attempt failed; regeneration required.
  *
  * ── No Circular Imports ───────────────────────────────────────────────────────
  *   This module imports from the same pipeline modules as canonicalMapArtifact
@@ -34,6 +38,8 @@ import { getChapterHexLayout }     from './chapterHexLayout';
 import { getChapterSceneryLayout } from './chapterSceneryLayout';
 import { getChapterBackgroundSpec } from './chapterBackgroundSpec';
 import { getWalkableBed }          from './walkableBedGenerator';
+import { validateBackgroundComposition } from './backgroundValidator';
+import type { BackgroundValidationResult } from './backgroundValidator';
 import { MAP_LAYOUT_VERSION }      from './journeyMapVersion';    // leaf import — no cycle
 import { fnv1a32 }                 from './prng';
 import type { TimeOfDay }          from './types';
@@ -48,8 +54,17 @@ import type {
 
 // ── Public types ─────────────────────────────────────────────────────────────
 
-/** Asset lifecycle status for one shift's raster background. */
-export type ManifestAssetStatus = 'pending' | 'generated' | 'approved';
+/**
+ * Asset lifecycle status for one shift's raster background (Task 766).
+ * See the lifecycle table in the module header for meanings.
+ */
+export type ManifestAssetStatus =
+  | 'pending'
+  | 'spec_ready'
+  | 'raster_unvalidated'
+  | 'validated'
+  | 'invalid_overlap'
+  | 'failed';
 
 /** Axial bounding box of all walkable tiles, plus total tile count. */
 export interface WalkableBounds {
@@ -156,47 +171,57 @@ export interface BackgroundAuthoringManifest {
    */
   readonly metroRequirePath: string;
   /**
-   * Lifecycle status.
-   * 'pending'   → no raster exists; ⚠ in DevDiagnostics.
-   * 'generated' → raster was produced from (or aligned to) this blueprint spec.
-   * 'approved'  → artist-reviewed.
+   * Lifecycle status (Task 766).
+   * 'pending' / 'spec_ready' / 'failed' → no usable raster; ⚠ in DevDiagnostics.
+   * 'raster_unvalidated'                → raster exists, validator not passed.
+   * 'validated'                         → raster exists AND composition check passed.
+   * 'invalid_overlap'                   → validator found blocking scenery in the bed.
    */
   readonly assetStatus:      ManifestAssetStatus;
   /**
    * Blueprint version string when the asset was generated.
    *
-   *   'BACKGROUND_ASSET_REQUIRED' — status is 'pending'
-   *   '{mapLayoutVersion}:{hash}'  — status is 'generated' or 'approved'
+   *   'BACKGROUND_ASSET_REQUIRED' — no usable raster ('pending' / 'spec_ready' / 'failed')
+   *   '{mapLayoutVersion}:{hash}'  — a raster exists for this blueprint
    *
    * DevDiagnostics compares this to the live artifact's version+hash to
    * detect whether the background is stale (geometry changed since generation).
    */
   readonly assetVersion:     string;
+
+  /**
+   * Task 766: result of validateBackgroundComposition for this chapter's
+   * scenery layout vs walkable bed.  Shared by all three shift manifests
+   * (geometry is shift-invariant).  Drives the 'validated' / 'invalid_overlap'
+   * status promotion and the DevDiagnostics BACKGROUND VALIDATED badge.
+   */
+  readonly validationResult: BackgroundValidationResult;
 }
 
 // ── Asset registry ────────────────────────────────────────────────────────────
 //
 // Manual declaration: which chapter+shift combos have approved raster assets.
 //
-// RULES FOR UPDATING:
-//   1. Set assetStatus to 'generated' only after the raster file exists at the
-//      targetAssetPath and is registered in chapterMapVisuals.ts.
-//   2. Set assetStatus to 'approved' only after an artist has reviewed the image
-//      and confirmed it aligns with the walkable layout.
-//   3. Day/Evening/Night variants must all be registered before the chapter is
-//      considered fully synced.
+// RULES FOR UPDATING (Task 766):
+//   1. Set assetStatus to 'raster_unvalidated' only after the raster file
+//      exists and is registered in chapterMapVisuals.ts — buildManifest will
+//      promote it to 'validated' (or demote to 'invalid_overlap') by running
+//      validateBackgroundComposition at manifest build time.
+//   2. 'validated' may also be declared directly once a raster generated from
+//      the hardened composition-discipline prompts has passed the validator
+//      AND been visually confirmed obstacle-safe.
+//   3. Day/Evening/Night variants must all be 'validated' before the chapter
+//      is considered fully synced.
 //
-// Ch1 — Production Bridge Push 4:
-//   day     — created in Push 9 from academic_quad specification;
-//              aligned with the same geometry that the pipeline produces.
-//   evening — created in Push 10; same geometry spec as day.
-//   night   — generated in Push 4 from the full pipeline spec + spatial brief.
+// Ch1 — Task 766: v3 rasters generated from the hardened composition-discipline
+// prompts (clean traversable floor in the walkable bed, blocking scenery pushed
+// to negative-space zone boundaries) and passed the geometry validator.
 
 const ASSET_REGISTRY: Partial<Record<number, Record<TimeOfDay, ManifestAssetStatus>>> = {
   1: {
-    day:     'generated',   // Push 6: bed-aware re-generation (blueprint-first)
-    evening: 'generated',   // Push 6: bed-aware generation (new asset)
-    night:   'generated',   // Push 6: bed-aware generation (new asset)
+    day:     'validated',   // Task 766: v3 raster, composition check passed
+    evening: 'validated',   // Task 766: v3 raster, composition check passed
+    night:   'validated',   // Task 766: v3 raster, composition check passed
   },
 };
 
@@ -248,12 +273,25 @@ function buildManifest(
   bgSpec:        ChapterBackgroundSpec,
   blueprintHash: string,
   bed:           WalkableBed,
+  validation:    BackgroundValidationResult,
 ): BackgroundAuthoringManifest {
   const registry = ASSET_REGISTRY[chapter];
-  const assetStatus: ManifestAssetStatus = registry?.[shift] ?? 'pending';
-  const assetVersion = assetStatus === 'pending'
-    ? 'BACKGROUND_ASSET_REQUIRED'
-    : `${MAP_LAYOUT_VERSION}:${blueprintHash}`;
+  const declaredStatus: ManifestAssetStatus = registry?.[shift] ?? 'pending';
+
+  // Task 766: statuses that assert "a raster exists" are re-derived from the
+  // geometry validator at build time — promote to 'validated' on pass, demote
+  // to 'invalid_overlap' on fail.  Non-raster statuses pass through unchanged.
+  const hasRaster =
+    declaredStatus === 'raster_unvalidated' ||
+    declaredStatus === 'validated' ||
+    declaredStatus === 'invalid_overlap';
+  const assetStatus: ManifestAssetStatus = hasRaster
+    ? (validation.pass ? 'validated' : 'invalid_overlap')
+    : declaredStatus;
+
+  const assetVersion = hasRaster
+    ? `${MAP_LAYOUT_VERSION}:${blueprintHash}`
+    : 'BACKGROUND_ASSET_REQUIRED';
 
   const walkableBounds  = computeWalkableBounds(layout.cells);
   const worldAspectRatio = computeAspectRatio(walkableBounds);
@@ -297,6 +335,7 @@ function buildManifest(
     metroRequirePath: shiftSpec.metroRequirePath,
     assetStatus,
     assetVersion,
+    validationResult: validation,
   };
 }
 
@@ -333,9 +372,13 @@ export function getBackgroundAuthoringManifests(
   const bed      = getWalkableBed(chapter);   // Push 6: blueprint-first bed
   const hash     = computeBlueprintHash(layout);
 
+  // Task 766: run the geometry-level composition validator once per chapter;
+  // the result is cached alongside the manifests (all shifts share it).
+  const validation = validateBackgroundComposition(chapter, scenery, bed);
+
   const SHIFTS: TimeOfDay[] = ['day', 'evening', 'night'];
   const manifests = SHIFTS.map(shift =>
-    buildManifest(chapter, shift, layout, scenery, bgSpec, hash, bed),
+    buildManifest(chapter, shift, layout, scenery, bgSpec, hash, bed, validation),
   );
 
   manifestCache.set(chapter, manifests);
@@ -355,14 +398,15 @@ export function getBackgroundAuthoringManifest(
 
 /**
  * Returns true when all three shifts for a chapter have an asset status of
- * 'generated' or 'approved', and their assetVersion matches the current
- * blueprint hash.  Used by DevDiagnostics to show the full-sync indicator.
+ * 'validated' (raster exists AND passed the composition validator), and their
+ * assetVersion matches the current blueprint hash.  Used by DevDiagnostics to
+ * show the full-sync indicator.
  */
 export function isChapterBackgroundSynced(chapter: number): boolean {
   const layout    = getChapterHexLayout(chapter);
   const hash      = computeBlueprintHash(layout);
   const currentVer = `${MAP_LAYOUT_VERSION}:${hash}`;
   return getBackgroundAuthoringManifests(chapter).every(
-    m => m.assetStatus !== 'pending' && m.assetVersion === currentVer,
+    m => m.assetStatus === 'validated' && m.assetVersion === currentVer,
   );
 }

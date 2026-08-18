@@ -393,6 +393,30 @@ function buildSpatialContext(
   ].join('; ');
 }
 
+// ── Composition discipline (Task 766) ────────────────────────────────────────
+//
+// Per-environment hard composition rules injected immediately after the
+// scenery constraint.  These translate the walkable safety mask into explicit
+// art-direction language: the walkable bed is clean traversable floor, all
+// blocking props live at scenery-zone boundaries, plus a hard negative naming
+// the object classes that keep leaking into the bed.
+
+const COMPOSITION_DISCIPLINE: Partial<Record<ChapterEnvironmentType, string>> = {
+  ACADEMIC_QUAD: [
+    'WALKABLE BED COMPOSITION: polished clinical-white or warm-grey floor, ' +
+    'embedded teal hex-grid lane markers, subtle circuit-trace inlays, ' +
+    'non-raised medical symbols — NO furniture, NO equipment, NO raised objects, ' +
+    'NO wall segments anywhere inside the walkable bed',
+    'CLEARING COMPOSITION: each clearing is an open training court or staging ' +
+    'area — completely clear of blocking props',
+    'SCENERY ZONE COMPOSITION: simulation bays, exam stations, supply alcoves, ' +
+    'observation booths, lab equipment clusters grouped tightly at zone ' +
+    'boundaries — never extending into the walkable bed',
+    'HARD NEGATIVE: do not place beds, tables, cabinets, machines, counters, ' +
+    'columns, or railings inside the hex tile walkable path network',
+  ].join('; '),
+};
+
 // ── AI prompt builder ─────────────────────────────────────────────────────────
 //
 // Push 6: bedPromptFragment is injected FIRST (after style anchor) as the
@@ -423,6 +447,9 @@ function buildAiPrompt(
     // Scenery constraint follows immediately after environment so the AI
     // cannot misplace architectural elements.
     sceneryConstraintFragment,
+    // Task 766: per-environment composition discipline (walkable bed floor
+    // language, clearing openness, scenery-zone grouping, hard negatives).
+    ...(COMPOSITION_DISCIPLINE[envType] ? [COMPOSITION_DISCIPLINE[envType] as string] : []),
     `spatial layout: ${spatialContext}`,
     `floor/ground layer: ${pathStyle} — visually obvious as the traversal space`,
     `open encounter spaces: ${clearStyle}`,

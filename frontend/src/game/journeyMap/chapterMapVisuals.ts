@@ -249,29 +249,33 @@ const CHAPTER_SHIFT_VISUALS: Partial<Record<number, Record<TimeOfDay, ChapterShi
 //   6439241b — hash produced by the Node.js / sucrase-node offline pipeline.
 //   01dd9c64 — hash produced by the Metro browser bundle (stale transform cache
 //              or different module-init order than Node); both point to the same
-//              v2 assets.  Remove 01dd9c64 entries once Metro and Node agree.
+//              v3 assets.  Remove 01dd9c64 entries once Metro and Node agree.
 //
-// v2 — Medical Simulation Theatre (indoor clinical facility, not a courtyard).
-//      Polished white tile, teal hex-grid floor indicators, sealed blast-door gate.
-const CH1_DAY_BG_BLUEPRINT_V2 = require(
-  '@/assets/ui/journey/map/map-platform-background-ch1-day-blueprint-v2.png',
+// v3 — Task 766: obstacle-safe composition regeneration.  Generated from the
+//      hardened composition-discipline prompts (FORBIDDEN ZONE / SCENERY ZONE
+//      paragraphs + hard negatives): clean traversable floor across the whole
+//      walkable bed, all blocking scenery (structures, gardens, columns,
+//      statues, water features) pushed to negative-space zone boundaries.
+//      Passed validateBackgroundComposition (geometry check).
+const CH1_DAY_BG_BLUEPRINT_V3 = require(
+  '@/assets/ui/journey/map/map-platform-background-ch1-day-blueprint-v3.png',
 ) as number;
-const CH1_EVENING_BG_BLUEPRINT_V2 = require(
-  '@/assets/ui/journey/map/map-platform-background-ch1-evening-blueprint-v2.png',
+const CH1_EVENING_BG_BLUEPRINT_V3 = require(
+  '@/assets/ui/journey/map/map-platform-background-ch1-evening-blueprint-v3.png',
 ) as number;
-const CH1_NIGHT_BG_BLUEPRINT_V2 = require(
-  '@/assets/ui/journey/map/map-platform-background-ch1-night-blueprint-v2.png',
+const CH1_NIGHT_BG_BLUEPRINT_V3 = require(
+  '@/assets/ui/journey/map/map-platform-background-ch1-night-blueprint-v3.png',
 ) as number;
 
 const BLUEPRINT_RASTER_REGISTRY: Record<string, number> = {
   // Node.js / offline-pipeline hash (clean build):
-  '1:day:6439241b':     CH1_DAY_BG_BLUEPRINT_V2,
-  '1:evening:6439241b': CH1_EVENING_BG_BLUEPRINT_V2,
-  '1:night:6439241b':   CH1_NIGHT_BG_BLUEPRINT_V2,
+  '1:day:6439241b':     CH1_DAY_BG_BLUEPRINT_V3,
+  '1:evening:6439241b': CH1_EVENING_BG_BLUEPRINT_V3,
+  '1:night:6439241b':   CH1_NIGHT_BG_BLUEPRINT_V3,
   // Metro browser-runtime hash (stale-cache build) — same assets:
-  '1:day:01dd9c64':     CH1_DAY_BG_BLUEPRINT_V2,
-  '1:evening:01dd9c64': CH1_EVENING_BG_BLUEPRINT_V2,
-  '1:night:01dd9c64':   CH1_NIGHT_BG_BLUEPRINT_V2,
+  '1:day:01dd9c64':     CH1_DAY_BG_BLUEPRINT_V3,
+  '1:evening:01dd9c64': CH1_EVENING_BG_BLUEPRINT_V3,
+  '1:night:01dd9c64':   CH1_NIGHT_BG_BLUEPRINT_V3,
 };
 
 // ── Chapter 1: "Atrium Approach" ─────────────────────────────────────────────

@@ -28,6 +28,11 @@
  */
 
 import { getChapterHexLayout } from './chapterHexLayout';
+import {
+  BLOCKING_SCENERY_TYPES,
+  NON_BLOCKING_SCENERY_TYPES,
+  sceneryTypeLabel,
+} from './sceneryClassification';
 import type { AxialCoord }     from './topology';
 import type {
   HexLaneLayout,
@@ -200,12 +205,34 @@ function findNearestZone(
 
 // ── AI Prompt fragments ────────────────────────────────────────────────────────
 
+// Target raster size for all generated chapter backgrounds (matches
+// chapterBackgroundSpec TARGET_WIDTH/HEIGHT — kept literal here to avoid a
+// circular import; chapterBackgroundSpec imports this module).
+const TARGET_IMAGE_PX = 1024;
+
+// The generated raster covers the walkable bed bounding box plus the 1-ring
+// safety mask and the ~4-tile scenery margin on each side (see
+// chapterSceneryLayout world-bounds rule) ≈ +10 tiles across each axis.
+const WORLD_MARGIN_TILES = 10;
+
+/**
+ * Rough per-hex radius in image pixels for a 1024×1024 raster covering the
+ * full world bounds.  Injected into the prompt so the generator understands
+ * the physical scale of one walkable cell.
+ */
+function estimateHexRadiusPx(allCells: AxialCoord[]): number {
+  const bbox = computeBBox(allCells);
+  const span = Math.max(bbox.wHex, bbox.hHex) + WORLD_MARGIN_TILES;
+  return Math.max(8, Math.round(TARGET_IMAGE_PX / span / 2));
+}
+
 function buildBedPromptFragment(
   zones: WalkableBedZone[],
   startZone:     WalkableBedZone | null,
   gateZone:      WalkableBedZone | null,
   startPosition: string,
   gatePosition:  string,
+  allCells:      AxialCoord[],
 ): string {
   const clearings     = zones.filter(z => z.role === 'clearing');
   const primaryLanes  = zones.filter(z => z.role === 'primaryLane');
@@ -295,6 +322,34 @@ function buildBedPromptFragment(
     'FRAMING SCENERY: all buildings, teaching wings, gardens, trees, pillars, ' +
     'planters, fountains, statues, and observation structures exist ONLY in the ' +
     'negative space BETWEEN bed regions above — they frame the floor, never obstruct it',
+  );
+
+  // ── Task 766: bed scale + continuous-surface note ──────────────────────────
+  const hexRadiusPx = estimateHexRadiusPx(allCells);
+  parts.push(
+    `BED SCALE: the walkable bed contains exactly ${allCells.length} hex cells; ` +
+    `at the ${TARGET_IMAGE_PX}×${TARGET_IMAGE_PX} target resolution each hex cell has an ` +
+    `approximate radius of ${hexRadiusPx} pixels; the floor inside the bed must remain ` +
+    `a single CONTINUOUS TRAVERSABLE SURFACE at all scale levels — no gaps, drops, ` +
+    `steps, or breaks anywhere within the bed`,
+  );
+
+  // ── Task 766: FORBIDDEN ZONE — blocking scenery types ──────────────────────
+  const blockingLabels = [...BLOCKING_SCENERY_TYPES].map(sceneryTypeLabel).join(', ');
+  parts.push(
+    `FORBIDDEN ZONE (hard constraint): the following blocking scenery types — ` +
+    `${blockingLabels} — are physical obstacles and must not appear inside or ` +
+    `touching the walkable bed; every one of them belongs strictly to the ` +
+    `negative space outside the bed regions listed above`,
+  );
+
+  // ── Task 766: SCENERY ZONE — negative-space-only environment types ─────────
+  const nonBlockingLabels = [...NON_BLOCKING_SCENERY_TYPES].map(sceneryTypeLabel).join(', ');
+  parts.push(
+    `SCENERY ZONE: all environment set pieces — the blocking types above plus small ` +
+    `decorative elements (${nonBlockingLabels}) — belong to negative-space scenery ` +
+    `zones ONLY, grouped tightly at zone boundaries between and around the bed regions; ` +
+    `no scenery element of any kind is drawn inside the walkable bed`,
   );
 
   return parts.join('; ');
@@ -399,7 +454,7 @@ function buildWalkableBed(layout: HexLaneLayout): WalkableBed {
   const gatePosition  = describeWorldPosition(layout.gateCell.q,  layout.gateCell.r,  allCells);
 
   // ── Build prompt fragments ────────────────────────────────────────────────
-  const bedPromptFragment       = buildBedPromptFragment(allZones, startZone, gateZone, startPosition, gatePosition);
+  const bedPromptFragment       = buildBedPromptFragment(allZones, startZone, gateZone, startPosition, gatePosition, allCells);
   const sceneryConstraintFragment = buildSceneryConstraintFragment();
 
   // ── Derived views ─────────────────────────────────────────────────────────
