@@ -245,7 +245,12 @@ const CHAPTER_SHIFT_VISUALS: Partial<Record<number, Record<TimeOfDay, ChapterShi
 //   4. Day / Evening / Night share the SAME blueprint hash (geometry is shift-invariant).
 //      Generated from Push 6 bed-aware prompts (walkableBedGenerator.ts).
 //
-// Ch1 — blueprint hash 6439241b (MAP_LAYOUT_VERSION v1):
+// Ch1 — blueprint hash (MAP_LAYOUT_VERSION v1):
+//   6439241b — hash produced by the Node.js / sucrase-node offline pipeline.
+//   01dd9c64 — hash produced by the Metro browser bundle (stale transform cache
+//              or different module-init order than Node); both point to the same
+//              v2 assets.  Remove 01dd9c64 entries once Metro and Node agree.
+//
 // v2 — Medical Simulation Theatre (indoor clinical facility, not a courtyard).
 //      Polished white tile, teal hex-grid floor indicators, sealed blast-door gate.
 const CH1_DAY_BG_BLUEPRINT_V2 = require(
@@ -259,9 +264,14 @@ const CH1_NIGHT_BG_BLUEPRINT_V2 = require(
 ) as number;
 
 const BLUEPRINT_RASTER_REGISTRY: Record<string, number> = {
+  // Node.js / offline-pipeline hash (clean build):
   '1:day:6439241b':     CH1_DAY_BG_BLUEPRINT_V2,
   '1:evening:6439241b': CH1_EVENING_BG_BLUEPRINT_V2,
   '1:night:6439241b':   CH1_NIGHT_BG_BLUEPRINT_V2,
+  // Metro browser-runtime hash (stale-cache build) — same assets:
+  '1:day:01dd9c64':     CH1_DAY_BG_BLUEPRINT_V2,
+  '1:evening:01dd9c64': CH1_EVENING_BG_BLUEPRINT_V2,
+  '1:night:01dd9c64':   CH1_NIGHT_BG_BLUEPRINT_V2,
 };
 
 // ── Chapter 1: "Atrium Approach" ─────────────────────────────────────────────

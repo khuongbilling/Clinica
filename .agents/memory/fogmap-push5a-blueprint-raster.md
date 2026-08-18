@@ -36,4 +36,14 @@ Day/Evening/Night share the SAME blueprint hash — geometry is shift-invariant.
 **Rule for future Ch1 regenerations:** user explicitly does NOT want an outdoor courtyard.
 Environment must be INDOOR clinical/simulation. Keep the bed geometry intact, change only lighting.
 
+## Hash discrepancy — dual registry entries (TO RESOLVE)
+Node.js / sucrase-node offline pipeline: `6439241b`
+Metro browser runtime: `01dd9c64`
+Both registered in BLUEPRINT_RASTER_REGISTRY pointing to the same v2 assets.
+Root cause unclear — same formula, MAP_LAYOUT_VERSION='v1' in both environments,
+same seed (`saga-1|book-1|1|map-layout-v1`), same 60 cells per sucrase-node.
+Likely cause: Metro transform cache served a pre-Push-6 build of backgroundAuthoringManifest.ts
+with different module-init order. Remove `01dd9c64` entries once both environments agree.
+**Do NOT add a third hash** if the diagnostic shows yet another value — investigate the cache first.
+
 Blueprint hash for Ch1 (MAP_LAYOUT_VERSION v1): **6439241b**
