@@ -78,6 +78,15 @@ interface Props {
 
   /** JourneyRun seed — deterministic organic lobe profiles. */
   runSeed?: string;
+
+  /**
+   * Atmospheric foundation colour override.
+   * Blueprint chapters supply BLUEPRINT_FOUNDATION_COLOR (dark navy, 64 % opacity)
+   * so the blueprint linework ghosts through the fog in unexplored areas.
+   * Non-blueprint chapters supply STANDARD_FOUNDATION_COLOR (warm blue-grey, 82 %).
+   * When absent the fog defaults to STANDARD_FOUNDATION_COLOR.
+   */
+  foundationColor?: string;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -101,6 +110,7 @@ function FogOfWarLayerWeb({
   tileCenters,
   effectiveFieldOfVision,
   runSeed,
+  foundationColor,
 }: Props): React.ReactElement {
   const containerRef = useRef<View>(null);
   const canvasRef    = useRef<HTMLCanvasElement | null>(null);
@@ -172,6 +182,7 @@ function FogOfWarLayerWeb({
       tileCenters,
       effectiveFieldOfVision,
       runSeed,
+      foundationColor,
     }).catch((err) => {
       console.warn('[FogOfWarLayer] drawFogOfWar failed:', err);
     });
@@ -184,6 +195,7 @@ function FogOfWarLayerWeb({
     tileCenters,
     effectiveFieldOfVision,
     runSeed,
+    foundationColor,
   ]);
 
   return (

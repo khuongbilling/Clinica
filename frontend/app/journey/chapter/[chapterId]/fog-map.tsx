@@ -1023,10 +1023,15 @@ export default function ChapterFogMapShell() {
   const mapShift: TimeOfDay | undefined = run?.shift;
   const chapterVisuals = mapShift != null
     ? getChapterMapVisuals(run!.chapterId, mapShift)
-    // Debug fixture mode: no real run → fall back to night visuals so HexMapLayer
-    // renders.  DEV_FALLBACK_VISUALS is the same as DEFAULT_SHIFT_VISUALS.night.
+    // Debug fixture mode: no real run → resolve visuals from the chapter number so
+    // blueprint-pipeline chapters (Ch1) activate the dual-layer reveal system.
+    // For non-blueprint chapters fall back to the generic night visuals as before.
     // This path is only reachable when __DEV__ && debugTiles !== null.
-    : (debugTiles !== null ? DEV_FALLBACK_VISUALS : null);
+    : (debugTiles !== null
+        ? (BLUEPRINT_PIPELINE_CHAPTERS.has(chNum)
+            ? getChapterMapVisuals(chNum, 'night')
+            : DEV_FALLBACK_VISUALS)
+        : null);
 
   // ── Push 5: blueprint scenery zone centroids for MAP BLUEPRINT overlay ───────
   // Pre-computed once per chapter (DEV only) so the HexMapLayer overlay can

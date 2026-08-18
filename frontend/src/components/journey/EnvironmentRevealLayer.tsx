@@ -6,14 +6,22 @@
  *
  * In unexplored areas the canvas is fully transparent, so BlueprintHexLayer
  * (z=0) shows through.  In explored / visible areas the environment painting
- * is revealed with organic feathered lobes that match the fog's erasure geometry.
+ * is revealed with organic feathered lobes that exceed the fog's erasure radius
+ * by a small margin — the environment surface always extends slightly beyond the
+ * cleared fog zone, preventing any dark-seam artefact at the reveal edge.
  *
  * ── Algorithm ─────────────────────────────────────────────────────────────────
  *
  *   1. Draw the environment image cover-style on the main canvas  (source-over).
  *   2. Build an OFFSCREEN "reveal mask" by drawing soft radial gradient circles
- *      at every explored / visible tile centre — same lobe geometry family as the
- *      fog's destination-out pass in fogOfWar.ts.
+ *      at every explored / visible tile centre.  Radii are chosen to be
+ *      SLIGHTLY LARGER than the fog's destination-out erasure radii:
+ *        fog erasure explored  = sz × 1.20
+ *        fog erasure visible   = sz × 1.45 × fovScale
+ *        reveal explored       = sz × 1.25   (+ 0.05 × sz margin)
+ *        reveal visible        = sz × 1.50 × fovScale  (+ 0.05 × sz margin)
+ *      This guarantees the environment painting always covers the fog-cleared
+ *      zone without any ring of exposed blueprint beneath cleared fog.
  *   3. Apply the mask with destination-in:
  *        result = environment × mask_alpha
  *      → unexplored: transparent   (blueprint shows through)
@@ -24,6 +32,18 @@
  *   everything, adding an atmospheric veil even in explored areas and a dark
  *   shroud in unexplored areas (through which the blueprint linework shows).
  *
+ * ── Materialization fade ──────────────────────────────────────────────────────
+ *
+ *   When new tiles enter the explored or visible sets (i.e. the player moves
+ *   into previously undiscovered territory), the canvas opacity animates from
+ *   0 → 1 over MATERIALIZE_MS milliseconds using a CSS ease-out transition.
+ *   This creates a smooth "discovery" materialisation effect rather than a
+ *   single-frame snap.
+ *
+ *   Moves that only REMOVE tiles from the visible set (player steps back, tiles
+ *   leave FOV) do NOT trigger the animation — the canvas stays at full opacity
+ *   so the memory-haze transition is instant.
+ *
  * ── Layer stack position ──────────────────────────────────────────────────────
  *
  *   BlueprintHexLayer  z = JOURNEY_Z.BACKGROUND (0)
@@ -32,7 +52,7 @@
  *   WorldContent       z = 3000–4900
  *   FogOfWarLayer      z = 5200
  *
- * Web-only — returns null on native.
+ * Web-only — returns null on native (HexMapLayer provides a native fallback).
  */
 
 import React, { useLayoutEffect, useRef } from 'react';
@@ -56,6 +76,26 @@ const EXPLORED_STRENGTH = 0.72;
  * softens the edge without dimming the active FOV.
  */
 const VISIBLE_STRENGTH = 0.96;
+
+/**
+ * Reveal lobe radius for EXPLORED (out-of-vision) tiles, as a multiple of sz.
+ *
+ * Fog erasure explored = sz × 1.20 (fogMask.ts exploredPrimaryR).
+ * This value is sz × 1.25 — 5 % larger than fog erasure — so the environment
+ * paint always covers the fully-cleared zone with no seam at the edge.
+ */
+const EXPLORED_RADIUS_FACTOR = 1.25;
+
+/**
+ * Reveal lobe radius for VISIBLE_NOW tiles, as a multiple of sz × fovScale.
+ *
+ * Fog erasure visible = sz × 1.45 × fovScale (fogMask.ts visiblePrimaryR).
+ * This value is sz × 1.50 × fovScale — 5 % larger than fog erasure.
+ */
+const VISIBLE_RADIUS_FACTOR = 1.50;
+
+/** Duration of the materialisation fade when new territory is discovered (ms). */
+const MATERIALIZE_MS = 350;
 
 // ── Image cache ───────────────────────────────────────────────────────────────
 
@@ -161,11 +201,15 @@ function EnvironmentRevealLayerWeb({
   effectiveFieldOfVision,
   runSeed,
 }: EnvironmentRevealLayerProps): React.ReactElement {
-  const containerRef  = useRef<View>(null);
-  const canvasRef     = useRef<HTMLCanvasElement | null>(null);
-  const cacheKeyRef   = useRef<string>('');
-  // Track the last source so a background image swap forces a full redraw.
-  const lastSourceRef = useRef<string>('');
+  const containerRef    = useRef<View>(null);
+  const canvasRef       = useRef<HTMLCanvasElement | null>(null);
+  const cacheKeyRef     = useRef<string>('');
+  const lastSourceRef   = useRef<string>('');
+
+  // Track explored + visible counts to detect when new territory is revealed.
+  // Only used for the materialisation fade decision — not for drawing.
+  const prevExploredCountRef = useRef<number>(0);
+  const prevVisibleCountRef  = useRef<number>(0);
 
   // ── Effect A: create canvas on mount (remount when world dims change) ──────
   useLayoutEffect(() => {
@@ -178,13 +222,16 @@ function EnvironmentRevealLayerWeb({
     canvas.style.cssText =
       `position:absolute;left:0;top:0;` +
       `width:${worldWidth}px;height:${worldHeight}px;` +
-      `pointer-events:none;`;
+      `pointer-events:none;opacity:1;`;
     canvas.width  = Math.ceil(worldWidth  * DPR);
     canvas.height = Math.ceil(worldHeight * DPR);
 
     container.appendChild(canvas);
     canvasRef.current   = canvas;
     cacheKeyRef.current = ''; // force redraw on attach
+    // Reset counts so the first reveal triggers a fade from nothing.
+    prevExploredCountRef.current = 0;
+    prevVisibleCountRef.current  = 0;
 
     return () => {
       canvas.remove();
@@ -202,8 +249,11 @@ function EnvironmentRevealLayerWeb({
     const exploredIds   = new Set(exploredTileIds ?? []);
 
     // Source-change check — use string representation as a fast compare.
-    const sourceKey = typeof source === 'number' ? String(source) : (source as { uri: string }).uri;
-    const nextKey   = sourceKey + '|' + buildFogMaskCacheKey({
+    const sourceKey = typeof source === 'number'
+      ? String(source)
+      : ((source as { uri?: string }).uri ?? JSON.stringify(source));
+
+    const nextKey = sourceKey + '|' + buildFogMaskCacheKey({
       runId:                  runSeed ?? 'fixture-default',
       worldWidth,
       worldHeight,
@@ -214,20 +264,52 @@ function EnvironmentRevealLayerWeb({
     });
 
     if (nextKey === cacheKeyRef.current && sourceKey === lastSourceRef.current) return;
-    cacheKeyRef.current  = nextKey;
+    cacheKeyRef.current   = nextKey;
     lastSourceRef.current = sourceKey;
 
-    void drawReveal(canvas, {
-      source,
-      worldWidth,
-      worldHeight,
-      sz,
-      tileCenters,
-      exploredTileIds,
-      visibleTileIds,
-      effectiveFieldOfVision,
-      runSeed,
-    });
+    // ── Materialisation fade decision ────────────────────────────────────────
+    // Only animate when the player has newly entered undiscovered territory
+    // (explored or visible counts grew).  Shrinks (tiles leaving FOV) don't
+    // animate — the canvas snaps to the new state so memory-haze is instant.
+    const prevExp = prevExploredCountRef.current;
+    const prevVis = prevVisibleCountRef.current;
+    const newExp  = exploredIds.size;
+    const newVis  = visibleNowIds.size;
+    const hasNewTiles = newExp > prevExp || newVis > prevVis;
+
+    prevExploredCountRef.current = newExp;
+    prevVisibleCountRef.current  = newVis;
+
+    if (hasNewTiles) {
+      // Hide canvas instantly before the async draw, then fade in after paint.
+      canvas.style.transition = 'none';
+      canvas.style.opacity    = '0';
+    }
+
+    void (async () => {
+      await drawReveal(canvas, {
+        source,
+        worldWidth,
+        worldHeight,
+        sz,
+        tileCenters,
+        exploredTileIds,
+        visibleTileIds,
+        effectiveFieldOfVision,
+        runSeed,
+      });
+
+      if (hasNewTiles) {
+        // Double rAF: first frame commits opacity:0, second triggers transition.
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            if (!canvasRef.current) return;
+            canvasRef.current.style.transition = `opacity ${MATERIALIZE_MS}ms ease-out`;
+            canvasRef.current.style.opacity    = '1';
+          });
+        });
+      }
+    })();
   }, [
     source, worldWidth, worldHeight, sz, tileCenters,
     exploredTileIds, visibleTileIds, effectiveFieldOfVision, runSeed,
@@ -321,8 +403,11 @@ async function drawReveal(
   offCtx.clearRect(0, 0, worldWidth, worldHeight);
   offCtx.globalCompositeOperation = 'source-over';
 
-  // Explored (out-of-vision) reveal lobes — moderate radius + strength
-  const explRadius = sz * 1.08;
+  // Explored (out-of-vision) reveal lobes.
+  // Radius = sz × EXPLORED_RADIUS_FACTOR (1.25).
+  // Fog erasure explored = sz × 1.20 → reveal exceeds erasure by 0.05 × sz
+  // so the environment surface always covers the cleared fog zone completely.
+  const explRadius = sz * EXPLORED_RADIUS_FACTOR;
   for (const id of exploredIds) {
     const c = tileCenters.get(id);
     if (!c) continue;
@@ -335,9 +420,12 @@ async function drawReveal(
     offCtx.fillRect(c.cx - explRadius, c.cy - explRadius, explRadius * 2, explRadius * 2);
   }
 
-  // Visible-now reveal lobes — wider radius + full strength
+  // Visible-now reveal lobes.
+  // Radius = sz × VISIBLE_RADIUS_FACTOR (1.50) × fovScale.
+  // Fog erasure visible = sz × 1.45 × fovScale → reveal exceeds erasure by
+  // 0.05 × sz × fovScale — same proportional margin as explored lobes.
   const fovScale  = 1 + ((effectiveFieldOfVision ?? 1) - 1) * 0.55;
-  const visRadius = sz * 1.38 * fovScale;
+  const visRadius = sz * VISIBLE_RADIUS_FACTOR * fovScale;
   for (const id of visibleNowIds) {
     const c = tileCenters.get(id);
     if (!c) continue;

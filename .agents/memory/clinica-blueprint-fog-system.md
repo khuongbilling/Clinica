@@ -15,6 +15,10 @@ Two new canvas components replace the plain background Image for `isBlueprintCha
 
 **Why:** Dark nav blueprint shows through semi-transparent fog in unexplored areas. Environment painting progressively appears via `destination-in` masking where tiles are explored/visible.
 
+## Fix pass (post-audit)
+
+Five gaps patched in one pass — see details below in each section.
+
 ## Activation gate
 
 `HexMapLayer` receives `isBlueprintChapter?: boolean` from fog-map.tsx:
@@ -27,12 +31,23 @@ isBlueprintChapter={chapterVisuals.isBlueprintBacked === true}
 
 ## Fog opacity change (fogOfWar.ts)
 
-`FOUNDATION_COLOR` changed: `rgba(55,72,86,0.82)` → `rgba(12,22,48,0.64)`
-- Darker navy (not warm grey) so blueprint linework shows through as dark architectural ghost
-- Reduced from 82 % → 64 % opacity: ~18 % of blueprint visible in unexplored areas
-- This is GLOBAL — affects all chapters. For non-blueprint chapters the environment painting shows through at ~36 %, which is acceptable.
+FOUNDATION_COLOR is no longer a single constant — it is now a per-chapter parameter threaded as:
+  `fogOfWar.ts` `FogOfWarParams.foundationColor` → `FogOfWarLayer.tsx` `Props.foundationColor` → `HexMapLayer.tsx` → passed as:
+  ```
+  foundationColor={isBlueprintChapter ? BLUEPRINT_FOUNDATION_COLOR : STANDARD_FOUNDATION_COLOR}
+  ```
 
-**How to apply:** If non-blueprint chapters look too washed out, raise FOUNDATION_COLOR alpha back toward 0.75–0.80. If blueprint chapters don't show enough linework, lower it further toward 0.55.
+Two exported constants in `fogOfWar.ts`:
+- `BLUEPRINT_FOUNDATION_COLOR = 'rgba(12, 22, 48, 0.64)'` — dark navy 64 % for blueprint chapters
+- `STANDARD_FOUNDATION_COLOR  = 'rgba(55, 72, 86, 0.82)'` — warm blue-grey 82 % for non-blueprint chapters
+
+**Why:** Global opacity reduction incorrectly let Ch2–Ch10 backgrounds show through unexplored fog.
+
+**How to apply:** New chapters always get STANDARD. Add a chapter to BLUEPRINT_PIPELINE_CHAPTERS + it automatically gets BLUEPRINT.
+
+## Debug/fixture support
+
+In `fog-map.tsx`, the debug path (`debugTiles !== null`) now calls `getChapterMapVisuals(chNum, 'night')` for any chapter in `BLUEPRINT_PIPELINE_CHAPTERS`, instead of `DEV_FALLBACK_VISUALS`. This activates the dual-layer system in `?debug=N` sessions without a real run. Non-blueprint chapters still get `DEV_FALLBACK_VISUALS`.
 
 ## EnvironmentRevealLayer
 

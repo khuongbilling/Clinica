@@ -195,6 +195,10 @@ import { FogWispLayer }     from './FogWispLayer';
 import { FogDevDiagnostic } from './FogDevDiagnostic';
 import { JOURNEY_Z }    from './journeyZ';
 import { FogOfWarLayer } from '@/src/game/journeyMap/fog/FogOfWarLayer';
+import {
+  BLUEPRINT_FOUNDATION_COLOR,
+  STANDARD_FOUNDATION_COLOR,
+} from '@/src/game/journeyMap/fog/fogOfWar';
 import { type HexMapTile, JOURNEY_MAP_FIXTURE } from '@/src/game/journeyMap/fixture';
 import { UI, SERIF } from '@/src/theme/ui';
 import {
@@ -2644,34 +2648,66 @@ export function HexMapLayer({
           * Not rendered during loading / error (environmentBackground absent).
           */}
         {isBlueprintChapter ? (
-          /* ── Blueprint path: linework base + environment reveal ──────── */
-          <>
-            {/* Blueprint layer — always visible, z=JOURNEY_Z.BACKGROUND (0) */}
-            <BlueprintHexLayer
-              tiles={tiles}
-              coords={coords}
-              worldWidth={worldW}
-              worldHeight={worldH}
-              startTileId={startTileId}
-              gateTileId={gateArt?.gateTileId}
-              runSeed={runSeed}
-            />
-
-            {/* Environment reveal — only shown where explored/visible, z=1 */}
-            {environmentBackground && (
-              <EnvironmentRevealLayer
-                source={environmentBackground.source}
+          /* ── Blueprint path ──────────────────────────────────────────────
+           *
+           * Web: two canvas layers (blueprint linework + reveal) plus
+           *      the full FogOfWarLayer at z=5200 with dark-navy foundation.
+           *
+           * Native / Expo Go: canvas API is unavailable.  Render a dark-navy
+           *   base View (matches #060D1A blueprint colour) and the blueprint
+           *   raster at 30 % opacity so unexplored areas read as atmospheric
+           *   dark architecture without requiring canvas compositing.
+           */
+          Platform.OS !== 'web' ? (
+            /* ── Native fallback — static dark atmospheric render ────── */
+            <>
+              {/* Dark navy base that matches the blueprint background colour */}
+              <View
+                pointerEvents="none"
+                style={[
+                  StyleSheet.absoluteFillObject,
+                  { backgroundColor: '#060D1A', zIndex: JOURNEY_Z.BACKGROUND },
+                ]}
+              />
+              {/* Blueprint raster at low opacity — environment art dimly visible */}
+              {environmentBackground && (
+                <Image
+                  source={environmentBackground.source}
+                  style={[StyleSheet.absoluteFillObject, { opacity: 0.30, zIndex: JOURNEY_Z.ENV_REVEAL }]}
+                  contentFit="cover"
+                />
+              )}
+            </>
+          ) : (
+            /* ── Web: full canvas dual-layer system ─────────────────── */
+            <>
+              {/* Blueprint layer — always visible, z=JOURNEY_Z.BACKGROUND (0) */}
+              <BlueprintHexLayer
+                tiles={tiles}
+                coords={coords}
                 worldWidth={worldW}
                 worldHeight={worldH}
-                sz={sz}
-                tileCenters={fogTileCenters}
-                exploredTileIds={fogExploredTileIds}
-                visibleTileIds={fogVisibleTileIds}
-                effectiveFieldOfVision={fogEffectiveFieldOfVision}
+                startTileId={startTileId}
+                gateTileId={gateArt?.gateTileId}
                 runSeed={runSeed}
               />
-            )}
-          </>
+
+              {/* Environment reveal — only shown where explored/visible, z=1 */}
+              {environmentBackground && (
+                <EnvironmentRevealLayer
+                  source={environmentBackground.source}
+                  worldWidth={worldW}
+                  worldHeight={worldH}
+                  sz={sz}
+                  tileCenters={fogTileCenters}
+                  exploredTileIds={fogExploredTileIds}
+                  visibleTileIds={fogVisibleTileIds}
+                  effectiveFieldOfVision={fogEffectiveFieldOfVision}
+                  runSeed={runSeed}
+                />
+              )}
+            </>
+          )
         ) : (
           /* ── Standard path: plain environment image (original) ─────────── */
           environmentBackground ? (
@@ -2937,6 +2973,9 @@ export function HexMapLayer({
           tileCenters={fogTileCenters}
           effectiveFieldOfVision={fogEffectiveFieldOfVision ?? getEffectiveVisionRadius(DEFAULT_PLAYER_VISION_STATS)}
           runSeed={runSeed ?? 'fixture-default'}
+          foundationColor={
+            isBlueprintChapter ? BLUEPRINT_FOUNDATION_COLOR : STANDARD_FOUNDATION_COLOR
+          }
         />
 
         {/* ── FogDevDiagnostic — __DEV__ only (z 19999) ───────────────────────

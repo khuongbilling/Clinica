@@ -31,23 +31,32 @@ const FOG_BASE_DAY_SOURCE = JOURNEY_ASSETS.fog.baseDay;
 // ── Tuning constants (easy to adjust for art direction) ───────────────────────
 
 /**
- * Atmospheric foundation colour — dark ink-navy at reduced opacity.
+ * Foundation colour for BLUEPRINT chapters (Ch1 and any future blueprint-pipeline
+ * chapters).  Dark ink-navy at 64 % opacity so BlueprintHexLayer (z=0) shows
+ * through the fog in unexplored areas as dark architectural linework.
  *
- * Blueprint Push: opacity reduced from 0.82 → 0.64 so that BlueprintHexLayer
- * (z=0) shows through the fog canvas in unexplored areas.  The dark navy hue
- * (rather than warm blue-grey) matches the blueprint aesthetic and makes the
- * architectural linework visible as a dark ghost through the fog mass.
- *
- * Visual effect per zone:
- *   Unexplored  → fog at ~64 % + texture ~18 % = ~82 % total; blueprint visible ~18 %
- *   Explored    → destination-out partial erase → environment painting + light fog haze
- *   Visible-now → destination-out strong erase  → environment painting at full richness
+ * Used when FogOfWarParams.foundationColor is not supplied but the caller is a
+ * blueprint chapter.  Exported so HexMapLayer can reference it without importing
+ * a raw colour string.
  */
-const FOUNDATION_COLOR = 'rgba(12, 22, 48, 0.64)';
+export const BLUEPRINT_FOUNDATION_COLOR = 'rgba(12, 22, 48, 0.64)';
+
+/**
+ * Foundation colour for STANDARD chapters (Ch2–Ch10 and all non-blueprint maps).
+ * Warm blue-grey at 82 % opacity — tight enough to fully conceal the environment
+ * painting beneath the fog in unexplored areas.
+ *
+ * Exported alongside BLUEPRINT_FOUNDATION_COLOR so callers can pick the right
+ * value from a single import.
+ */
+export const STANDARD_FOUNDATION_COLOR = 'rgba(55, 72, 86, 0.82)';
+
+/** @internal — fallback when FogOfWarParams.foundationColor is absent.
+ *  Matches STANDARD to preserve behaviour for all non-blueprint callers. */
+const FOUNDATION_COLOR_DEFAULT = STANDARD_FOUNDATION_COLOR;
 
 /** Opacity of the base texture drawn over the foundation.
- *  Range 0.40–0.50 — provides mist depth without obscuring the foundation tint.
- *  Blueprint Push: kept at 0.45 — texture weight unchanged; only foundation changed. */
+ *  Range 0.40–0.50 — provides mist depth without obscuring the foundation tint. */
 const TEXTURE_ALPHA = 0.45;
 
 // ── Push 4: reveal erasure strengths ─────────────────────────────────────────
@@ -175,6 +184,19 @@ export interface FogOfWarParams {
 
   /** JourneyRun seed — deterministic organic lobe profiles per tile. */
   runSeed?: string;
+
+  /**
+   * Atmospheric foundation colour override.
+   *
+   * Blueprint chapters pass BLUEPRINT_FOUNDATION_COLOR (dark navy, 64 % opacity)
+   * so the blueprint linework shows through the fog in unexplored areas.
+   *
+   * Non-blueprint chapters pass STANDARD_FOUNDATION_COLOR (warm blue-grey, 82 %)
+   * to keep unexplored areas fully hidden behind dense fog.
+   *
+   * When absent, STANDARD_FOUNDATION_COLOR is used as the safe default.
+   */
+  foundationColor?: string;
 }
 
 // ── Main draw function ────────────────────────────────────────────────────────
@@ -198,6 +220,7 @@ export async function drawFogOfWar(
     tileCenters,
     effectiveFieldOfVision,
     runSeed,
+    foundationColor,
   }: FogOfWarParams,
 ): Promise<void> {
   const ctx = canvas.getContext('2d');
@@ -218,7 +241,7 @@ export async function drawFogOfWar(
   // Guarantees continuous coverage — no gaps, no seams, no transparency leaks.
   ctx.globalCompositeOperation = 'source-over';
   ctx.globalAlpha = 1.0;
-  ctx.fillStyle = FOUNDATION_COLOR;
+  ctx.fillStyle = foundationColor ?? FOUNDATION_COLOR_DEFAULT;
   ctx.fillRect(0, 0, worldWidth, worldHeight);
 
   // ── 4. Base texture — ONE cover draw ─────────────────────────────────────
