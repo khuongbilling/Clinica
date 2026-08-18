@@ -246,20 +246,22 @@ const CHAPTER_SHIFT_VISUALS: Partial<Record<number, Record<TimeOfDay, ChapterShi
 //      Generated from Push 6 bed-aware prompts (walkableBedGenerator.ts).
 //
 // Ch1 — blueprint hash 6439241b (MAP_LAYOUT_VERSION v1):
-const CH1_DAY_BG_BLUEPRINT_V1 = require(
-  '@/assets/ui/journey/map/map-platform-background-ch1-day-blueprint-v1.png',
+// v2 — Medical Simulation Theatre (indoor clinical facility, not a courtyard).
+//      Polished white tile, teal hex-grid floor indicators, sealed blast-door gate.
+const CH1_DAY_BG_BLUEPRINT_V2 = require(
+  '@/assets/ui/journey/map/map-platform-background-ch1-day-blueprint-v2.png',
 ) as number;
-const CH1_EVENING_BG_BLUEPRINT_V1 = require(
-  '@/assets/ui/journey/map/map-platform-background-ch1-evening-blueprint-v1.png',
+const CH1_EVENING_BG_BLUEPRINT_V2 = require(
+  '@/assets/ui/journey/map/map-platform-background-ch1-evening-blueprint-v2.png',
 ) as number;
-const CH1_NIGHT_BG_BLUEPRINT_V1 = require(
-  '@/assets/ui/journey/map/map-platform-background-ch1-night-blueprint-v1.png',
+const CH1_NIGHT_BG_BLUEPRINT_V2 = require(
+  '@/assets/ui/journey/map/map-platform-background-ch1-night-blueprint-v2.png',
 ) as number;
 
 const BLUEPRINT_RASTER_REGISTRY: Record<string, number> = {
-  '1:day:6439241b':     CH1_DAY_BG_BLUEPRINT_V1,
-  '1:evening:6439241b': CH1_EVENING_BG_BLUEPRINT_V1,
-  '1:night:6439241b':   CH1_NIGHT_BG_BLUEPRINT_V1,
+  '1:day:6439241b':     CH1_DAY_BG_BLUEPRINT_V2,
+  '1:evening:6439241b': CH1_EVENING_BG_BLUEPRINT_V2,
+  '1:night:6439241b':   CH1_NIGHT_BG_BLUEPRINT_V2,
 };
 
 // ── Chapter 1: "Atrium Approach" ─────────────────────────────────────────────

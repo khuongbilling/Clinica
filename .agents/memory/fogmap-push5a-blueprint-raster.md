@@ -21,14 +21,19 @@ description: How blueprint-pipeline background art is registered, keyed, and ser
 
 **Rule:** Never put a constant that `backgroundAuthoringManifest.ts` needs inside any module that `backgroundAuthoringManifest.ts` is imported by. Use `journeyMapVersion.ts` as the canonical home.
 
-## Current registry state (Push 6 complete)
+## Current registry state (v2 — Medical Simulation Theatre)
 | Key | File | Status |
 |-----|------|--------|
-| 1:day:6439241b | map-platform-background-ch1-day-blueprint-v1.png | registered |
-| 1:evening:6439241b | map-platform-background-ch1-evening-blueprint-v1.png | registered |
-| 1:night:6439241b | map-platform-background-ch1-night-blueprint-v1.png | registered |
+| 1:day:6439241b | map-platform-background-ch1-day-blueprint-v2.png | registered |
+| 1:evening:6439241b | map-platform-background-ch1-evening-blueprint-v2.png | registered |
+| 1:night:6439241b | map-platform-background-ch1-night-blueprint-v2.png | registered |
 
-All three Ch1 shifts generated from Push 6 bed-aware prompts (walkableBedGenerator.ts).
+v1 (courtyard) retired — user rejected it. v2 = indoor clinical simulation theatre.
+Clinical white tile floor, teal hex-grid indicators, medical equipment in negative space only.
+Night shift: neon teal corridors, red sealed blast-door gate.
 Day/Evening/Night share the SAME blueprint hash — geometry is shift-invariant.
+
+**Rule for future Ch1 regenerations:** user explicitly does NOT want an outdoor courtyard.
+Environment must be INDOOR clinical/simulation. Keep the bed geometry intact, change only lighting.
 
 Blueprint hash for Ch1 (MAP_LAYOUT_VERSION v1): **6439241b**
