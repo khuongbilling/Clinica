@@ -420,7 +420,11 @@ const CH1_NIGHT_BG = require('@/assets/ui/journey/map/map-platform-background-ch
 
 CHAPTER_SHIFT_VISUALS[1] = {
   day: {
-    background:        CH1_DAY_BG,
+    // Push 5A fix: base.background is now the v4 blueprint raster, not the
+    // legacy corridor.  This ensures the blueprintBackgroundMissing=true path
+    // (hash not yet in BLUEPRINT_RASTER_REGISTRY) also reveals correct art,
+    // and old cached bundles that hit hash-miss no longer show the corridor.
+    background:        CH1_DAY_BG_BLUEPRINT_V4,
     backgroundScale:   1.60,
     backgroundOffsetX: -64,
     backgroundOffsetY: -112,
@@ -431,7 +435,9 @@ CHAPTER_SHIFT_VISUALS[1] = {
     terrainFrontier:   CH1_DAY_FRONTIER,
   },
   evening: {
-    background:        CH1_EVE_BG,
+    // Push 5A fix: v4 blueprint raster replaces legacy corridor for same
+    // reason as day shift above.
+    background:        CH1_EVENING_BG_BLUEPRINT_V4,
     // Evening fountain sits at ≈ 47 % image width (not 50 %) so offsetX
     // is −46 (rather than −64) to keep the courtyard centre on the grid.
     backgroundScale:   1.60,
@@ -453,7 +459,8 @@ CHAPTER_SHIFT_VISUALS[1] = {
     //   backgroundScale  = 1.60
     //   backgroundOffsetX = −64   (architectural centre ≈ 50 % image width)
     //   backgroundOffsetY = −112  (covers top-cap tiles at r = −3)
-    background:        CH1_NIGHT_BG,
+    // Push 5A fix: v4 blueprint raster replaces legacy corridor.
+    background:        CH1_NIGHT_BG_BLUEPRINT_V4,
     backgroundScale:   1.60,
     backgroundOffsetX: -64,
     backgroundOffsetY: -112,
@@ -553,14 +560,19 @@ export function getChapterMapVisuals(
           backgroundOffsetY: undefined,
         };
       } else {
-        // ✗ No raster registered for this chapter+shift at all.
-        // Keep base.background (legacy art) for a usable map, but flag the
-        // miss so DevDiagnostics displays "⚠ BLUEPRINT BACKGROUND MISSING".
+        // ✗ No raster registered for this chapter+shift yet (Stage 3 pending).
+        // Set isBlueprintBacked so the blueprint canvas layers activate (dark
+        // navy foundation + linework via BlueprintHexLayer).  The fog-map.tsx
+        // rendering suppresses EnvironmentRevealLayer when
+        // blueprintBackgroundMissing=true so base.background is not revealed.
+        // DevDiagnostics surfaces "⚠ STAGE 3 PENDING" with the missing hash
+        // and a reminder to generate art from bgManifest.aiPrompt and register
+        // it in BLUEPRINT_RASTER_REGISTRY.
         return {
           ...base,
-          blueprintHash:          manifest.mapBlueprintHash,
-          blueprintLayoutVersion: manifest.mapLayoutVersion,
-          isBlueprintBacked:      true,
+          blueprintHash:              manifest.mapBlueprintHash,
+          blueprintLayoutVersion:     manifest.mapLayoutVersion,
+          isBlueprintBacked:          true,
           blueprintBackgroundMissing: true,
         };
       }

@@ -69,8 +69,24 @@ export function getChapterTerrainCellCount(chapter: number): number {
  * ⚠ NEVER remove a chapter from this set once players have active runs on it.
  */
 export const BLUEPRINT_PIPELINE_CHAPTERS = new Set<number>([
-  // Production Bridge Push 1 — Ch1 canary (academic_quad, 60 cells)
-  1,
+  // Book 1 — all 10 chapters on the canonical three-stage blueprint pipeline.
+  // DNA → PathwayGraph → HexLayout → SceneryLayout for every chapter.
+  // Each chapter uses its own distinct topologyFamily; no circular blobs.
+  //
+  //   Ch 1–5:  60 cells  │  Ch 6–10: 70 cells
+  //
+  //   Ch 1  academic_quad           Ch 2  open_plaza
+  //   Ch 3  simulation_complex      Ch 4  hub_and_spoke
+  //   Ch 5  twin_hub                Ch 6  campus_promenade
+  //   Ch 7  braided_pathways        Ch 8  staggered_academic_blocks
+  //   Ch 9  serpentine_campus_walk  Ch10  multi_court_campus
+  //
+  // Stage 1 (structure blueprint) and Stage 2 (validated hex path) are live
+  // for all chapters.  Stage 3 (finished illustrated background) ships per-
+  // chapter as art is generated from bgManifest.aiPrompt and registered in
+  // BLUEPRINT_RASTER_REGISTRY.  Until a chapter's Stage 3 art is registered,
+  // the blueprint foundation (dark navy + linework) shows safely.
+  1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
 ]);
 
 /** Alias exported for callers that use the old name — see chapterTileCount. */

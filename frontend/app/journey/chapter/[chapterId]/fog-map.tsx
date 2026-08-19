@@ -418,6 +418,31 @@ function DevDiagnostics({
     return { lane, clearing, transition, unlabelled };
   }, [pipelineArtifact, run.tiles]);
 
+  // ── Three-stage pipeline derived values (computed before return, no hooks) ──
+  // Stage 2: does the active run's geometry hash match the current pipeline?
+  const stage2HashMatch = pipelineArtifact == null
+    || run.mapBlueprintHash === ''
+    || run.mapBlueprintHash === pipelineArtifact.blueprintHash;
+
+  // Stage 3: is a registered finished-background raster aligned to this hash?
+  const stage3AllGood = bgManifests != null
+    && bgManifests.every(m => m.assetStatus === 'validated')
+    && !blueprintBackgroundMissing;
+  const stage3AnyBad  = bgManifests != null
+    && bgManifests.some(m =>
+        m.assetStatus === 'invalid_overlap' || m.assetStatus === 'failed');
+  const stage3Color = bgManifests == null ? '#94a3b8'
+    : stage3AllGood ? '#4ade80' : stage3AnyBad ? '#f87171' : '#facc15';
+  const stage3Label = bgManifests == null
+    ? '— NOT LOADED'
+    : stage3AllGood
+    ? '✓ ALIGNED'
+    : stage3AnyBad
+    ? '✗ ALIGNMENT FAIL'
+    : blueprintBackgroundMissing
+    ? '⚠ HASH NOT IN REGISTRY — BLUEPRINT FOUNDATION SHOWN'
+    : '⚠ PENDING — NO FINISHED ART YET';
+
   return (
     <View style={sDev.panel}>
       <Text style={sDev.heading}>🛠 DEV DIAGNOSTICS</Text>
@@ -468,140 +493,157 @@ function DevDiagnostics({
         <Text style={sDev.val}>{run.createdAt.slice(0, 19).replace('T', ' ')}</Text>
       </Text>
 
-      {/* ── Blueprint pipeline section (Ch1 canary and future pipeline chapters) */}
+      {/* ── Three-stage blueprint pipeline diagnostics ──────────────────────── */}
       {pipelineArtifact != null && (
         <>
           <View style={sDev.divider} />
-          <Text style={sDev.subhead}>🗺 MAP PIPELINE: BLUEPRINT</Text>
+          <Text style={sDev.subhead}>
+            {'🗺 MAP PIPELINE — Ch'}
+            {chapterNum}
+            {' · '}
+            {pipelineArtifact.dna.topologyFamily.replace(/_/g, ' ')}
+          </Text>
 
-          <Text style={sDev.row}>
-            <Text style={sDev.key}>Chapter   </Text>
-            <Text style={sDev.val}>{chapterNum}</Text>
+          {/* ── STAGE 1: STRUCTURE BLUEPRINT ──────────────────────────────── */}
+          <View style={sDev.divider} />
+          <Text style={sDev.subhead}>STAGE 1 — STRUCTURE BLUEPRINT</Text>
+          <Text style={[sDev.val, { color: '#4ade80', fontWeight: '700' }]}>
+            {'✓ GEOMETRY LOCKED'}
           </Text>
           <Text style={sDev.row}>
-            <Text style={sDev.key}>Topology  </Text>
-            <Text style={sDev.val}>{pipelineArtifact.dna.topologyFamily.replace(/_/g, ' ')}</Text>
+            <Text style={sDev.key}>Blueprint </Text>
+            <Text style={sDev.val}>{pipelineArtifact.blueprintHash} · {pipelineArtifact.mapLayoutVersion}</Text>
           </Text>
           <Text style={sDev.row}>
-            <Text style={sDev.key}>Tiles     </Text>
-            <Text style={sDev.val}>{pipelineArtifact.tileCount} / {pipelineArtifact.tileCount} ✓</Text>
-          </Text>
-          {zoneCounts != null && (
-            <>
-              <Text style={sDev.row}>
-                <Text style={sDev.key}>Lane cells</Text>
-                <Text style={sDev.val}>{zoneCounts.lane}</Text>
-              </Text>
-              <Text style={sDev.row}>
-                <Text style={sDev.key}>Clearing  </Text>
-                <Text style={sDev.val}>{zoneCounts.clearing}</Text>
-              </Text>
-              <Text style={sDev.row}>
-                <Text style={sDev.key}>Transition</Text>
-                <Text style={sDev.val}>{zoneCounts.transition}</Text>
-              </Text>
-            </>
-          )}
-          <Text style={sDev.row}>
-            <Text style={sDev.key}>Clearings </Text>
-            <Text style={sDev.val}>{pipelineArtifact.clearingCount}</Text>
+            <Text style={sDev.key}>Cells     </Text>
+            <Text style={sDev.val}>
+              {pipelineArtifact.tileCount} total — 1 start + {pipelineArtifact.tileCount - 2} encounter + 1 gate
+            </Text>
           </Text>
           <Text style={sDev.row}>
-            <Text style={sDev.key}>Loops     </Text>
-            <Text style={sDev.val}>{pipelineArtifact.loopCount}</Text>
+            <Text style={sDev.key}>Structure </Text>
+            <Text style={sDev.val}>
+              {pipelineArtifact.clearingCount} clearings · {pipelineArtifact.loopCount} loops
+            </Text>
           </Text>
           <Text style={sDev.row}>
-            <Text style={sDev.key}>Start     </Text>
-            <Text style={sDev.val}>{pipelineArtifact.asTopology.startTileId}</Text>
-          </Text>
-          <Text style={sDev.row}>
-            <Text style={sDev.key}>Gate      </Text>
-            <Text style={sDev.val}>{pipelineArtifact.asTopology.gateAnchorId}</Text>
-          </Text>
-          <Text style={sDev.row}>
-            <Text style={sDev.key}>Hash      </Text>
-            <Text style={sDev.val}>{pipelineArtifact.blueprintHash}</Text>
-          </Text>
-          <Text style={sDev.row}>
-            <Text style={sDev.key}>Version   </Text>
-            <Text style={sDev.val}>{pipelineArtifact.mapLayoutVersion}</Text>
-          </Text>
-          {/* Push 5: background / blueprint hash mismatch warning.
-            * Fires when the run was created for a different blueprint hash
-            * than the current pipeline (stale run that slipped past Push 2
-            * abandonment detection, or a dev fixture with an old hash).
-            * Non-empty run hash is required — legacy runs use '' as hash.   */}
-          {run.mapBlueprintHash !== '' &&
-           run.mapBlueprintHash !== pipelineArtifact.blueprintHash && (
-            <View style={sDev.mismatchBanner}>
-              <Text style={sDev.mismatchText}>
-                {'⚠ BACKGROUND / BLUEPRINT MISMATCH\n'}
-                {'run: '}{run.mapBlueprintHash.slice(0, 10)}{'…\n'}
-                {'art: '}{pipelineArtifact.blueprintHash.slice(0, 10)}{'…'}
-              </Text>
-            </View>
-          )}
-          <Text style={sDev.row}>
-            <Text style={sDev.key}>Scenery   </Text>
-            <Text style={[
-              sDev.val,
-              { color: pipelineArtifact.scenerySafetyPass ? '#4ade80' : '#f87171' },
-            ]}>
-              {pipelineArtifact.scenerySafetyPass ? 'PASS ✓' : 'FAIL ✗'}
+            <Text style={sDev.key}>Obstacles </Text>
+            <Text style={[sDev.val, {
+              color: pipelineArtifact.scenerySafetyPass ? '#4ade80' : '#f87171',
+            }]}>
+              {pipelineArtifact.scenerySafetyPass
+                ? '✓ ALL ZONES OUTSIDE WALKABLE BED'
+                : '✗ BLOCKING ZONES OVERLAP WALKABLE TILES'}
             </Text>
           </Text>
 
-          {/* Push 5A: blueprint background missing warning ─────────────────
-            * Fires when this chapter IS blueprint-backed but BLUEPRINT_RASTER_REGISTRY
-            * has no entry for the current hash.  The legacy courtyard is showing.
-            * Fix: generate art from getBackgroundAuthoringManifest(N,shift).aiPrompt
-            * and register it in BLUEPRINT_RASTER_REGISTRY in chapterMapVisuals.ts.  */}
-          {blueprintBackgroundMissing && pipelineArtifact && (
+          {/* ── STAGE 2: WALKABLE HEX PATH VALIDATED ─────────────────────── */}
+          <View style={sDev.divider} />
+          <Text style={sDev.subhead}>STAGE 2 — WALKABLE HEX PATH</Text>
+          <Text style={[sDev.val, {
+            color: stage2HashMatch ? '#4ade80' : '#f87171',
+            fontWeight: '700',
+          }]}>
+            {stage2HashMatch ? '✓ VALIDATED' : '✗ RUN GEOMETRY MISMATCH'}
+          </Text>
+          <Text style={sDev.row}>
+            <Text style={sDev.key}>Playable  </Text>
+            <Text style={sDev.val}>{run.tileCount} tiles (gate excluded from count)</Text>
+          </Text>
+          {zoneCounts != null && (
+            <Text style={sDev.row}>
+              <Text style={sDev.key}>Zones     </Text>
+              <Text style={sDev.val}>
+                {zoneCounts.lane} lane · {zoneCounts.clearing} clearing · {zoneCounts.transition} transition
+              </Text>
+            </Text>
+          )}
+          <Text style={sDev.row}>
+            <Text style={sDev.key}>Connected </Text>
+            <Text style={[sDev.val, { color: '#4ade80' }]}>
+              {'✓ start='}
+              {pipelineArtifact.asTopology.startTileId}
+              {'  gate='}
+              {pipelineArtifact.asTopology.gateAnchorId}
+            </Text>
+          </Text>
+          <Text style={sDev.row}>
+            <Text style={sDev.key}>Obstacle  </Text>
+            <Text style={[sDev.val, {
+              color: pipelineArtifact.scenerySafetyPass ? '#4ade80' : '#f87171',
+            }]}>
+              {pipelineArtifact.scenerySafetyPass
+                ? '✓ NO HEX-OBSTACLE INTERSECTIONS'
+                : '✗ INTERSECTIONS DETECTED'}
+            </Text>
+          </Text>
+          <Text style={sDev.row}>
+            <Text style={sDev.key}>Geo hash  </Text>
+            <Text style={[sDev.val, { color: stage2HashMatch ? '#A5D6A7' : '#f87171' }]}>
+              {'run: '}
+              {run.mapBlueprintHash === '' ? '(legacy pre-blueprint)' : run.mapBlueprintHash}
+              {'\nart: '}
+              {pipelineArtifact.blueprintHash}
+            </Text>
+          </Text>
+          {!stage2HashMatch && run.mapBlueprintHash !== '' && (
             <View style={sDev.mismatchBanner}>
               <Text style={sDev.mismatchText}>
-                {'⚠ BLUEPRINT BACKGROUND MISSING\n'}
-                {'Chapter: '}{chapterNum}{'\n'}
-                {'Blueprint hash: '}{pipelineArtifact.blueprintHash}{'\n'}
-                {'Background asset hash: MISSING\n'}
-                {'Fallback: LEGACY COURTYARD'}
+                {'⚠ RUN / PIPELINE MISMATCH\n'}
+                {'run:  '}{run.mapBlueprintHash.slice(0, 10)}{'…\n'}
+                {'art:  '}{pipelineArtifact.blueprintHash.slice(0, 10)}{'…\n'}
+                {'→ Run will be abandoned on next load.'}
               </Text>
             </View>
           )}
 
-          {/* ── Background manifest section — Push 4 / Task 766 ───────────── */}
+          {/* ── STAGE 3: FINISHED BACKGROUND ALIGNED ─────────────────────── */}
+          <View style={sDev.divider} />
+          <Text style={sDev.subhead}>STAGE 3 — FINISHED BACKGROUND</Text>
+          <Text style={[sDev.val, { color: stage3Color, fontWeight: '700' }]}>
+            {stage3Label}
+          </Text>
           {bgManifests != null && (
             <>
-              <View style={sDev.divider} />
-              <Text style={sDev.subhead}>🖼 BACKGROUND MANIFESTS</Text>
-              {/* Task 766: BACKGROUND VALIDATED badge — geometry-level scenery
-                * check passed (no blocking scenery inside the walkable bed).
-                * validationResult is shared by all three shift manifests.   */}
               {bgManifests[0] != null && (
-                <Text style={[
-                  sDev.row,
-                  { color: bgManifests[0].validationResult.pass ? '#4ade80' : '#f87171' },
-                ]}>
+                <Text style={[sDev.row, {
+                  color: bgManifests[0].validationResult.pass ? '#4ade80' : '#f87171',
+                }]}>
                   {bgManifests[0].validationResult.pass
-                    ? '✓ BACKGROUND VALIDATED'
-                    : `✗ BACKGROUND INVALID — ${bgManifests[0].validationResult.violations.length} overlap(s)`}
+                    ? '✓ GEOMETRY VALID — no obstacle overlaps in art spec'
+                    : `✗ GEOMETRY INVALID — ${bgManifests[0].validationResult.violations.length} overlap(s) in art spec`}
                 </Text>
               )}
               {bgManifests.map(m => {
-                // Task 766 status colours:
-                //   validated                → green ✓
-                //   invalid_overlap / failed → red ✗
-                //   everything else          → yellow ⚠
-                const good = m.assetStatus === 'validated';
-                const bad  = m.assetStatus === 'invalid_overlap' || m.assetStatus === 'failed';
+                const good  = m.assetStatus === 'validated';
+                const bad   = m.assetStatus === 'invalid_overlap' || m.assetStatus === 'failed';
                 const color = good ? '#4ade80' : bad ? '#f87171' : '#facc15';
                 return (
                   <Text key={m.shift} style={[sDev.row, { color }]}>
-                    {good ? '✓' : bad ? '✗' : '⚠'}{' '}
-                    {m.shift}: {m.assetStatus.toUpperCase()} · {m.assetVersion}
+                    {good ? '✓' : bad ? '✗' : '⚠'}
+                    {' '}
+                    {m.shift}: {m.assetStatus.toUpperCase()}
+                    {!good && blueprintBackgroundMissing ? ' · HASH NOT REGISTERED' : ''}
                   </Text>
                 );
               })}
+              {blueprintBackgroundMissing && (
+                <View style={sDev.mismatchBanner}>
+                  <Text style={sDev.mismatchText}>
+                    {'⚠ NO REGISTERED RASTER FOR HASH\n'}
+                    {'Ch '}{chapterNum}{'  hash: '}{pipelineArtifact.blueprintHash}{'\n'}
+                    {'Display: BLUEPRINT FOUNDATION ONLY\n'}
+                    {'Fix: generate art from bgManifest.aiPrompt,\n'}
+                    {'     register in BLUEPRINT_RASTER_REGISTRY'}
+                  </Text>
+                </View>
+              )}
             </>
+          )}
+          {bgManifests == null && (
+            <Text style={[sDev.val, { color: '#facc15' }]}>
+              {'⚠ MANIFEST UNAVAILABLE'}
+            </Text>
           )}
         </>
       )}
@@ -1627,12 +1669,22 @@ export default function ChapterFogMapShell() {
             playerFacing={playerFacing}
             isMoving={isMoving}
             dustTileId={dustTileId}
-            environmentBackground={{
-              source:  chapterVisuals.background,
-              scale:   chapterVisuals.backgroundScale,
-              offsetX: chapterVisuals.backgroundOffsetX,
-              offsetY: chapterVisuals.backgroundOffsetY,
-            }}
+            environmentBackground={
+              // Push 5A / all-chapters pipeline: suppress environment reveal
+              // when no finished-background raster is registered for this
+              // chapter's blueprint hash.  BlueprintHexLayer + FogOfWarLayer
+              // provide the visible foundation; EnvironmentRevealLayer activates
+              // only once a validated raster is registered in
+              // BLUEPRINT_RASTER_REGISTRY (Stage 3 complete).
+              chapterVisuals.blueprintBackgroundMissing
+                ? undefined
+                : {
+                    source:  chapterVisuals.background,
+                    scale:   chapterVisuals.backgroundScale,
+                    offsetX: chapterVisuals.backgroundOffsetX,
+                    offsetY: chapterVisuals.backgroundOffsetY,
+                  }
+            }
             isBlueprintChapter={chapterVisuals.isBlueprintBacked === true}
             runSeed={run?.seed}
             fogExploredTileIds={fogExploredTileIds}
