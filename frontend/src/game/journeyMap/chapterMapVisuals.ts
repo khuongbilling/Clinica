@@ -155,14 +155,28 @@ export interface ChapterShiftVisuals {
    * current blueprintHash.
    *
    * When true:
-   *   • background falls back to the legacy static PNG (base.background).
+   *   • the blueprint foundation remains visible and the environment reveal
+   *     is suppressed.
    *   • DevDiagnostics shows "⚠ BLUEPRINT BACKGROUND MISSING" with hash info.
-   *   • Never silently labels legacy art as "BLUEPRINT BACKED".
+   *   • Never silently labels an unaligned or legacy asset as "BLUEPRINT
+   *     BACKED".
    *
    * Fix: generate a new raster from getBackgroundAuthoringManifest(chapter,
    * shift).aiPrompt and register it in BLUEPRINT_RASTER_REGISTRY.
    */
   blueprintBackgroundMissing?: boolean;
+
+  /** Exact Stage 3 raster path selected by the runtime registry. */
+  stage3AssetPath?: string;
+
+  /** Exact chapter:shift:blueprintHash key checked by the runtime registry. */
+  stage3RegistryKey?: string;
+
+  /** True only when the exact registry entry also matches manifest.rasterAsset. */
+  stage3RegistryMatch?: boolean;
+
+  /** Manifest-declared Stage 3 raster path, shown beside the selected path. */
+  stage3ManifestAssetPath?: string;
 }
 
 // ── Shared asset references (module-level statics required by Metro) ──────────
@@ -231,73 +245,6 @@ const DEFAULT_SHIFT_VISUALS: Record<TimeOfDay, ChapterShiftVisuals> = {
 
 const CHAPTER_SHIFT_VISUALS: Partial<Record<number, Record<TimeOfDay, ChapterShiftVisuals>>> = {};
 
-// ── Push 5A / Push 6: Blueprint-matched raster registry ──────────────────────
-//
-// Maps `chapter:shift:blueprintHash` → Metro asset number (static require).
-//
-// RULES:
-//   1. Only register a raster here AFTER the PNG exists at its require() path.
-//   2. Key must include the exact blueprintHash from the current pipeline;
-//      a geometry change will produce a new hash → this entry becomes stale
-//      → DevDiagnostics surfaces "BLUEPRINT BACKGROUND MISSING" automatically.
-//   3. Versioned filename convention: map-platform-background-ch{N}-{shift}-blueprint-v{N}.png
-//      This preserves the old static PNG as a rollback target.
-//   4. Day / Evening / Night share the SAME blueprint hash (geometry is shift-invariant).
-//      Generated from Push 6 bed-aware prompts (walkableBedGenerator.ts).
-//
-// Ch1 — blueprint hash (MAP_LAYOUT_VERSION v1):
-//   6439241b — hash produced by the Node.js / sucrase-node offline pipeline.
-//   01dd9c64 — hash produced by the Metro browser bundle (stale transform cache
-//              or different module-init order than Node); both point to the same
-//              v3 assets.  Remove 01dd9c64 entries once Metro and Node agree.
-//
-// v3 — Task 766: obstacle-safe composition regeneration.  Generated from the
-//      hardened composition-discipline prompts (FORBIDDEN ZONE / SCENERY ZONE
-//      paragraphs + hard negatives): clean traversable floor across the whole
-//      walkable bed, all blocking scenery (structures, gardens, columns,
-//      statues, water features) pushed to negative-space zone boundaries.
-//      Passed validateBackgroundComposition (geometry check).
-const CH1_DAY_BG_BLUEPRINT_V3 = require(
-  '@/assets/ui/journey/map/map-platform-background-ch1-day-blueprint-v3.png',
-) as number;
-const CH1_EVENING_BG_BLUEPRINT_V3 = require(
-  '@/assets/ui/journey/map/map-platform-background-ch1-evening-blueprint-v3.png',
-) as number;
-const CH1_NIGHT_BG_BLUEPRINT_V3 = require(
-  '@/assets/ui/journey/map/map-platform-background-ch1-night-blueprint-v3.png',
-) as number;
-
-// v4 — Architecture separation: collision-critical scenery removed from the
-//      base raster (spec: "SEPARATE COLLISION-CRITICAL SCENERY FROM THE RASTER
-//      BACKGROUND").  The background now shows ONLY floor, embedded inlays,
-//      lighting, and permanent perimeter architecture.  All freestanding
-//      blocking props (beds, consoles, tables, carts, machines, planters, etc.)
-//      are placed as a runtime SceneryPropLayer above the clean floor art.
-//      Prompts used: open-floor university simulation hall with NO freestanding
-//      furniture on traversable area; teal hex-grid inlays; simulation bays
-//      only in far-edge alcoves.  All three shifts share identical geometry;
-//      only lighting/atmosphere differs.
-const CH1_DAY_BG_BLUEPRINT_V4 = require(
-  '@/assets/ui/journey/map/map-platform-background-ch1-day-blueprint-v4.png',
-) as number;
-const CH1_EVENING_BG_BLUEPRINT_V4 = require(
-  '@/assets/ui/journey/map/map-platform-background-ch1-evening-blueprint-v4.png',
-) as number;
-const CH1_NIGHT_BG_BLUEPRINT_V4 = require(
-  '@/assets/ui/journey/map/map-platform-background-ch1-night-blueprint-v4.png',
-) as number;
-
-const BLUEPRINT_RASTER_REGISTRY: Record<string, number> = {
-  // Node.js / offline-pipeline hash (clean build):
-  '1:day:6439241b':     CH1_DAY_BG_BLUEPRINT_V4,
-  '1:evening:6439241b': CH1_EVENING_BG_BLUEPRINT_V4,
-  '1:night:6439241b':   CH1_NIGHT_BG_BLUEPRINT_V4,
-  // Metro browser-runtime hash (stale-cache build) — same assets:
-  '1:day:01dd9c64':     CH1_DAY_BG_BLUEPRINT_V4,
-  '1:evening:01dd9c64': CH1_EVENING_BG_BLUEPRINT_V4,
-  '1:night:01dd9c64':   CH1_NIGHT_BG_BLUEPRINT_V4,
-};
-
 // ── Chapter 1: "Atrium Approach" ─────────────────────────────────────────────
 //
 // DAY — Push 9 dedicated raster set:
@@ -342,6 +289,48 @@ const CH1_EVE_CURRENT  = require('@/assets/ui/journey/tiles/hex-current-evening.
 //               amber window glow, same geometry as day/evening.
 //               Generated from the Push 4 BackgroundAuthoringManifest spec.
 const CH1_NIGHT_BG = require('@/assets/ui/journey/map/map-platform-background-ch1-night.png') as number;
+
+// ── Stage 3: exact blueprint-hash → approved finished-environment registry ───
+//
+// A registry entry is valid only when its source path is exactly the raster
+// declared by BackgroundAuthoringManifest for that chapter and shift. Keeping
+// both values here makes that contract enforceable at runtime and inspectable in
+// DevDiagnostics. Do not add a chapter/shift-only fallback: a new geometry hash
+// must show the blueprint foundation until aligned art is approved and registered.
+interface BlueprintRasterRegistration {
+  readonly source: number;
+  readonly assetPath: string;
+}
+
+const CH1_STAGE3_ASSET_PATHS = {
+  day:     'assets/ui/journey/map/map-platform-background-ch1-day.png',
+  evening: 'assets/ui/journey/map/map-platform-background-ch1-evening.png',
+  night:   'assets/ui/journey/map/map-platform-background-ch1-night.png',
+} as const satisfies Record<TimeOfDay, string>;
+
+const BLUEPRINT_RASTER_REGISTRY: Record<string, BlueprintRasterRegistration> = {
+  // Clean/offline pipeline hash:
+  '1:day:6439241b': {
+    source: CH1_DAY_BG, assetPath: CH1_STAGE3_ASSET_PATHS.day,
+  },
+  '1:evening:6439241b': {
+    source: CH1_EVE_BG, assetPath: CH1_STAGE3_ASSET_PATHS.evening,
+  },
+  '1:night:6439241b': {
+    source: CH1_NIGHT_BG, assetPath: CH1_STAGE3_ASSET_PATHS.night,
+  },
+  // Existing Metro browser-runtime hash. This is an explicit compatibility
+  // registration for the same approved assets, not a hash-agnostic fallback.
+  '1:day:01dd9c64': {
+    source: CH1_DAY_BG, assetPath: CH1_STAGE3_ASSET_PATHS.day,
+  },
+  '1:evening:01dd9c64': {
+    source: CH1_EVE_BG, assetPath: CH1_STAGE3_ASSET_PATHS.evening,
+  },
+  '1:night:01dd9c64': {
+    source: CH1_NIGHT_BG, assetPath: CH1_STAGE3_ASSET_PATHS.night,
+  },
+};
 
 // ── Push 12: Chapter 1 painting alignment — all three shifts ─────────────────
 //
@@ -420,11 +409,9 @@ const CH1_NIGHT_BG = require('@/assets/ui/journey/map/map-platform-background-ch
 
 CHAPTER_SHIFT_VISUALS[1] = {
   day: {
-    // Push 5A fix: base.background is now the v4 blueprint raster, not the
-    // legacy corridor.  This ensures the blueprintBackgroundMissing=true path
-    // (hash not yet in BLUEPRINT_RASTER_REGISTRY) also reveals correct art,
-    // and old cached bundles that hit hash-miss no longer show the corridor.
-    background:        CH1_DAY_BG_BLUEPRINT_V4,
+    // Manifest-error fallback: use the same approved painterly Stage 3 asset
+    // as the exact-hash registry, never the retired bright sci-fi v4 corridor.
+    background:        CH1_DAY_BG,
     backgroundScale:   1.60,
     backgroundOffsetX: -64,
     backgroundOffsetY: -112,
@@ -435,9 +422,8 @@ CHAPTER_SHIFT_VISUALS[1] = {
     terrainFrontier:   CH1_DAY_FRONTIER,
   },
   evening: {
-    // Push 5A fix: v4 blueprint raster replaces legacy corridor for same
-    // reason as day shift above.
-    background:        CH1_EVENING_BG_BLUEPRINT_V4,
+    // Same manifest-aligned fallback rule as day.
+    background:        CH1_EVE_BG,
     // Evening fountain sits at ≈ 47 % image width (not 50 %) so offsetX
     // is −46 (rather than −64) to keep the courtyard centre on the grid.
     backgroundScale:   1.60,
@@ -459,8 +445,8 @@ CHAPTER_SHIFT_VISUALS[1] = {
     //   backgroundScale  = 1.60
     //   backgroundOffsetX = −64   (architectural centre ≈ 50 % image width)
     //   backgroundOffsetY = −112  (covers top-cap tiles at r = −3)
-    // Push 5A fix: v4 blueprint raster replaces legacy corridor.
-    background:        CH1_NIGHT_BG_BLUEPRINT_V4,
+    // Same manifest-aligned fallback rule as day/evening.
+    background:        CH1_NIGHT_BG,
     backgroundScale:   1.60,
     backgroundOffsetX: -64,
     backgroundOffsetY: -112,
@@ -501,66 +487,41 @@ export function getChapterMapVisuals(
 ): ChapterShiftVisuals {
   const base = CHAPTER_SHIFT_VISUALS[chapter]?.[timeOfDay] ?? DEFAULT_SHIFT_VISUALS[timeOfDay];
 
-  // Push 5A — blueprint-pipeline chapters:
-  //   1. Look up the versioned raster in BLUEPRINT_RASTER_REGISTRY by
-  //      chapter:shift:blueprintHash.  If found → use it as the background,
-  //      strip old alignment offsets.
-  //   2. If NOT found → set blueprintBackgroundMissing:true so DevDiagnostics
-  //      can surface "⚠ BLUEPRINT BACKGROUND MISSING" instead of silently
-  //      rendering the legacy courtyard as a blueprint-backed background.
+  // Blueprint-pipeline chapters require an exact chapter:shift:blueprintHash
+  // registration that also agrees with the manifest's declared raster path.
+  // No chapter/shift-only fallback is permitted: when geometry changes, the
+  // blueprint foundation stays visible until the newly aligned Stage 3 art has
+  // been approved and registered.
   if (BLUEPRINT_PIPELINE_CHAPTERS.has(chapter)) {
     try {
       const manifest = getBackgroundAuthoringManifest(chapter, timeOfDay);
 
-      // ── Primary lookup: exact chapter:shift:hash match ────────────────────
-      const registryKey   = `${chapter}:${timeOfDay}:${manifest.mapBlueprintHash}`;
-      const exactRaster   = BLUEPRINT_RASTER_REGISTRY[registryKey];
+      const registryKey = `${chapter}:${timeOfDay}:${manifest.mapBlueprintHash}`;
+      const registration = BLUEPRINT_RASTER_REGISTRY[registryKey];
+      const registryMatchesManifest =
+        registration?.assetPath === manifest.rasterAsset;
 
-      // ── Hash-agnostic fallback ─────────────────────────────────────────────
-      // If the exact hash isn't registered (the layout pipeline was regenerated
-      // since the raster was produced and the new hash hasn't been added to the
-      // registry yet), scan for ANY registered raster for this chapter+shift.
-      //
-      // For Ch1 all registered hashes point to the same v4 art, so the fallback
-      // raster is visually correct even on a hash miss.  A dev warning is emitted
-      // so the author knows to add the new hash to BLUEPRINT_RASTER_REGISTRY.
-      //
-      // This prevents the hash mismatch from silently falling back to the legacy
-      // corridor art (via base.background) and making the map look unchanged.
-      const prefixKey     = `${chapter}:${timeOfDay}:`;
-      const fallbackEntry = exactRaster == null
-        ? (Object.entries(BLUEPRINT_RASTER_REGISTRY)
-            .find(([k]) => k.startsWith(prefixKey)) ?? null)
-        : null;
-      const resolvedRaster = exactRaster ?? fallbackEntry?.[1];
-
-      if (__DEV__ && fallbackEntry != null) {
-        // eslint-disable-next-line no-console
-        console.warn(
-          `[chapterMapVisuals] Blueprint hash mismatch for Ch${chapter}/${timeOfDay}. ` +
-          `Runtime hash: ${manifest.mapBlueprintHash}. ` +
-          `Add key '${chapter}:${timeOfDay}:${manifest.mapBlueprintHash}' ` +
-          `to BLUEPRINT_RASTER_REGISTRY pointing to the same asset as '${fallbackEntry[0]}'.`,
-        );
-      }
-
-      if (resolvedRaster != null) {
-        // ✓ Blueprint raster found (exact or fallback) — use it.
+      if (registration != null && registryMatchesManifest) {
+        // ✓ Exact, manifest-aligned Stage 3 raster found.
         // Strip old manual alignment: the generated art fills worldW × worldH
         // via contentFit="cover" without compensation.
         return {
           ...base,
-          background:             resolvedRaster,
+          background:             registration.source,
           blueprintHash:          manifest.mapBlueprintHash,
           blueprintLayoutVersion: manifest.mapLayoutVersion,
           isBlueprintBacked:      true,
           blueprintBackgroundMissing: false,
+          stage3AssetPath:        registration.assetPath,
+          stage3RegistryKey:      registryKey,
+          stage3RegistryMatch:    true,
+          stage3ManifestAssetPath: manifest.rasterAsset,
           backgroundScale:   undefined,
           backgroundOffsetX: undefined,
           backgroundOffsetY: undefined,
         };
       } else {
-        // ✗ No raster registered for this chapter+shift yet (Stage 3 pending).
+        // ✗ No exact manifest-aligned raster for this chapter+shift+hash.
         // Set isBlueprintBacked so the blueprint canvas layers activate (dark
         // navy foundation + linework via BlueprintHexLayer).  The fog-map.tsx
         // rendering suppresses EnvironmentRevealLayer when
@@ -574,12 +535,22 @@ export function getChapterMapVisuals(
           blueprintLayoutVersion:     manifest.mapLayoutVersion,
           isBlueprintBacked:          true,
           blueprintBackgroundMissing: true,
+          stage3AssetPath:            registration?.assetPath,
+          stage3RegistryKey:          registryKey,
+          stage3RegistryMatch:        registryMatchesManifest === true,
+          stage3ManifestAssetPath:    manifest.rasterAsset,
         };
       }
     } catch {
-      // Manifest lookup failed (unregistered chapter, env error, etc.).
-      // Return the static entry unchanged — better than a blank map.
-      return base;
+      // Manifest lookup failed. Keep the app usable with its approved
+      // per-shift base raster, but never claim that it completed Stage 3.
+      return {
+        ...base,
+        isBlueprintBacked: true,
+        blueprintBackgroundMissing: true,
+        stage3AssetPath: undefined,
+        stage3RegistryMatch: false,
+      };
     }
   }
 

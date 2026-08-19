@@ -378,6 +378,10 @@ function DevDiagnostics({
   chapterKeysCollected,
   chapterNum,
   blueprintBackgroundMissing,
+  stage3AssetPath,
+  stage3ManifestAssetPath,
+  stage3RegistryKey,
+  stage3RegistryMatch,
 }: {
   run: JourneyRun;
   chapterKeysCollected: number;
@@ -388,6 +392,14 @@ function DevDiagnostics({
    * is showing as a fallback.  DevDiagnostics must surface this visibly.
    */
   blueprintBackgroundMissing?: boolean;
+  /** Exact runtime Stage 3 raster path selected by the visual registry. */
+  stage3AssetPath?: string;
+  /** Raster path declared by the current ChapterBackgroundAuthoringManifest. */
+  stage3ManifestAssetPath?: string;
+  /** Exact chapter:shift:blueprintHash key checked by the visual registry. */
+  stage3RegistryKey?: string;
+  /** True only when that exact registry entry points to the manifest raster. */
+  stage3RegistryMatch?: boolean;
 }) {
   const { counts, tiers } = useMemo(() => countEncounters(run.tiles), [run.tiles]);
   const exploredPct = run.tileCount > 0
@@ -427,7 +439,8 @@ function DevDiagnostics({
   // Stage 3: is a registered finished-background raster aligned to this hash?
   const stage3AllGood = bgManifests != null
     && bgManifests.every(m => m.assetStatus === 'validated')
-    && !blueprintBackgroundMissing;
+    && !blueprintBackgroundMissing
+    && stage3RegistryMatch === true;
   const stage3AnyBad  = bgManifests != null
     && bgManifests.some(m =>
         m.assetStatus === 'invalid_overlap' || m.assetStatus === 'failed');
@@ -439,8 +452,12 @@ function DevDiagnostics({
     ? '✓ ALIGNED'
     : stage3AnyBad
     ? '✗ ALIGNMENT FAIL'
-    : blueprintBackgroundMissing
+    : blueprintBackgroundMissing && stage3AssetPath == null
     ? '⚠ HASH NOT IN REGISTRY — BLUEPRINT FOUNDATION SHOWN'
+    : stage3RegistryMatch === false
+    ? '⚠ REGISTRY / MANIFEST MISMATCH — BLUEPRINT FOUNDATION SHOWN'
+    : blueprintBackgroundMissing
+    ? '⚠ STAGE 3 PENDING — BLUEPRINT FOUNDATION SHOWN'
     : '⚠ PENDING — NO FINISHED ART YET';
 
   return (
@@ -602,6 +619,35 @@ function DevDiagnostics({
           <Text style={sDev.subhead}>STAGE 3 — FINISHED BACKGROUND</Text>
           <Text style={[sDev.val, { color: stage3Color, fontWeight: '700' }]}>
             {stage3Label}
+          </Text>
+          <Text style={sDev.row}>
+            <Text style={sDev.key}>Selected  </Text>
+            <Text style={[sDev.val, {
+              color: stage3AssetPath != null ? '#A5D6A7' : '#facc15',
+            }]}>
+              {stage3AssetPath ?? '(none — environment reveal suppressed)'}
+            </Text>
+          </Text>
+          <Text style={sDev.row}>
+            <Text style={sDev.key}>Manifest  </Text>
+            <Text style={sDev.val}>
+              {stage3ManifestAssetPath ?? '(manifest unavailable)'}
+            </Text>
+          </Text>
+          <Text style={sDev.row}>
+            <Text style={sDev.key}>Registry  </Text>
+            <Text style={[sDev.val, {
+              color: stage3RegistryMatch === true ? '#4ade80'
+                : stage3RegistryMatch === false ? '#f87171' : '#94a3b8',
+            }]}>
+              {stage3RegistryKey ?? '(no exact hash key checked)'}
+              {'\n'}
+              {stage3RegistryMatch === true
+                ? '✓ exact entry matches manifest'
+                : stage3RegistryMatch === false
+                ? '✗ no exact manifest-aligned entry'
+                : '— not evaluated'}
+            </Text>
           </Text>
           {bgManifests != null && (
             <>
@@ -1792,6 +1838,10 @@ export default function ChapterFogMapShell() {
             chapterKeysCollected={keysCollected}
             chapterNum={chNum}
             blueprintBackgroundMissing={chapterVisuals?.blueprintBackgroundMissing}
+            stage3AssetPath={chapterVisuals?.stage3AssetPath}
+            stage3ManifestAssetPath={chapterVisuals?.stage3ManifestAssetPath}
+            stage3RegistryKey={chapterVisuals?.stage3RegistryKey}
+            stage3RegistryMatch={chapterVisuals?.stage3RegistryMatch}
           />
         )}
 
