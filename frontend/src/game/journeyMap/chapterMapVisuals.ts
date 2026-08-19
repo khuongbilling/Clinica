@@ -504,16 +504,46 @@ export function getChapterMapVisuals(
   if (BLUEPRINT_PIPELINE_CHAPTERS.has(chapter)) {
     try {
       const manifest = getBackgroundAuthoringManifest(chapter, timeOfDay);
-      const registryKey = `${chapter}:${timeOfDay}:${manifest.mapBlueprintHash}`;
-      const blueprintRaster = BLUEPRINT_RASTER_REGISTRY[registryKey];
 
-      if (blueprintRaster != null) {
-        // ✓ Blueprint-matched raster found — use it.
+      // ── Primary lookup: exact chapter:shift:hash match ────────────────────
+      const registryKey   = `${chapter}:${timeOfDay}:${manifest.mapBlueprintHash}`;
+      const exactRaster   = BLUEPRINT_RASTER_REGISTRY[registryKey];
+
+      // ── Hash-agnostic fallback ─────────────────────────────────────────────
+      // If the exact hash isn't registered (the layout pipeline was regenerated
+      // since the raster was produced and the new hash hasn't been added to the
+      // registry yet), scan for ANY registered raster for this chapter+shift.
+      //
+      // For Ch1 all registered hashes point to the same v4 art, so the fallback
+      // raster is visually correct even on a hash miss.  A dev warning is emitted
+      // so the author knows to add the new hash to BLUEPRINT_RASTER_REGISTRY.
+      //
+      // This prevents the hash mismatch from silently falling back to the legacy
+      // corridor art (via base.background) and making the map look unchanged.
+      const prefixKey     = `${chapter}:${timeOfDay}:`;
+      const fallbackEntry = exactRaster == null
+        ? (Object.entries(BLUEPRINT_RASTER_REGISTRY)
+            .find(([k]) => k.startsWith(prefixKey)) ?? null)
+        : null;
+      const resolvedRaster = exactRaster ?? fallbackEntry?.[1];
+
+      if (__DEV__ && fallbackEntry != null) {
+        // eslint-disable-next-line no-console
+        console.warn(
+          `[chapterMapVisuals] Blueprint hash mismatch for Ch${chapter}/${timeOfDay}. ` +
+          `Runtime hash: ${manifest.mapBlueprintHash}. ` +
+          `Add key '${chapter}:${timeOfDay}:${manifest.mapBlueprintHash}' ` +
+          `to BLUEPRINT_RASTER_REGISTRY pointing to the same asset as '${fallbackEntry[0]}'.`,
+        );
+      }
+
+      if (resolvedRaster != null) {
+        // ✓ Blueprint raster found (exact or fallback) — use it.
         // Strip old manual alignment: the generated art fills worldW × worldH
         // via contentFit="cover" without compensation.
         return {
           ...base,
-          background:             blueprintRaster,
+          background:             resolvedRaster,
           blueprintHash:          manifest.mapBlueprintHash,
           blueprintLayoutVersion: manifest.mapLayoutVersion,
           isBlueprintBacked:      true,
@@ -523,10 +553,9 @@ export function getChapterMapVisuals(
           backgroundOffsetY: undefined,
         };
       } else {
-        // ✗ Blueprint chapter but no matched raster registered for this hash.
+        // ✗ No raster registered for this chapter+shift at all.
         // Keep base.background (legacy art) for a usable map, but flag the
         // miss so DevDiagnostics displays "⚠ BLUEPRINT BACKGROUND MISSING".
-        // Do NOT label this path as fully "BLUEPRINT BACKED".
         return {
           ...base,
           blueprintHash:          manifest.mapBlueprintHash,

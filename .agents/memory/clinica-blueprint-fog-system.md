@@ -15,9 +15,28 @@ Two new canvas components replace the plain background Image for `isBlueprintCha
 
 **Why:** Dark nav blueprint shows through semi-transparent fog in unexplored areas. Environment painting progressively appears via `destination-in` masking where tiles are explored/visible.
 
-## Fix pass (post-audit)
+## Fix pass (post-audit) + hash-agnostic registry fix
 
-Five gaps patched in one pass — see details below in each section.
+Six gaps patched across two fix passes — see details below in each section.
+
+### Hash-agnostic registry fallback (critical — applied after audit)
+
+**Root cause of "corridor background" on mobile web:**
+`BLUEPRINT_RASTER_REGISTRY` uses exact `chapter:shift:hash` keys. When the runtime
+blueprint hash is not one of the pre-registered values (`6439241b` or `01dd9c64`),
+`blueprintRaster` is `null`. The `blueprintBackgroundMissing: true` branch then spreads
+`...base` which keeps `background = CH1_NIGHT_BG` (legacy corridor art) as the
+`environmentBackground.source`. `EnvironmentRevealLayer` then reveals corridor art in
+all explored/visible tiles — user describes as "old generic corridor background".
+
+**Fix in `getChapterMapVisuals` (`chapterMapVisuals.ts`):**
+After the exact hash lookup fails, scan for any `chapter:shift:*` entry in the registry
+as a fallback. Log a `console.warn` in `__DEV__` naming the unregistered hash so it can
+be added. Only the truly-no-raster case (no entry at all for that chapter+shift) sets
+`blueprintBackgroundMissing: true`.
+
+**Why this is safe:** All Ch1 registered hashes point to the same v4 asset, so a
+hash-agnostic fallback is visually identical to an exact match.
 
 ## Activation gate
 
