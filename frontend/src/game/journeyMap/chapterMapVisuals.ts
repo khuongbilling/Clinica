@@ -307,6 +307,18 @@ const CH2_DAY_BG = require('@/assets/ui/journey/map/map-platform-background-ch2-
 const CH2_EVE_BG = require('@/assets/ui/journey/map/map-platform-background-ch2-evening-v2.png') as number;
 const CH2_NIGHT_BG = require('@/assets/ui/journey/map/map-platform-background-ch2-night-v2.png') as number;
 
+// Chapters 3–5 — authored daytime masters plus composition-locked lighting
+// variants. Static requires keep all Stage 3 raster paths Metro-safe.
+const CH3_DAY_BG = require('@/assets/ui/journey/map/map-platform-background-ch3-day.png') as number;
+const CH3_EVE_BG = require('@/assets/ui/journey/map/map-platform-background-ch3-evening.png') as number;
+const CH3_NIGHT_BG = require('@/assets/ui/journey/map/map-platform-background-ch3-night.png') as number;
+const CH4_DAY_BG = require('@/assets/ui/journey/map/map-platform-background-ch4-day.png') as number;
+const CH4_EVE_BG = require('@/assets/ui/journey/map/map-platform-background-ch4-evening.png') as number;
+const CH4_NIGHT_BG = require('@/assets/ui/journey/map/map-platform-background-ch4-night.png') as number;
+const CH5_DAY_BG = require('@/assets/ui/journey/map/map-platform-background-ch5-day.png') as number;
+const CH5_EVE_BG = require('@/assets/ui/journey/map/map-platform-background-ch5-evening.png') as number;
+const CH5_NIGHT_BG = require('@/assets/ui/journey/map/map-platform-background-ch5-night.png') as number;
+
 // ── Stage 3: exact blueprint-hash → approved finished-environment registry ───
 //
 // A registry entry is valid only when its source path is exactly the raster
@@ -324,6 +336,24 @@ const CH2_STAGE3_ASSET_PATHS = {
   day:     'assets/ui/journey/map/map-platform-background-ch2-day.png',
   evening: 'assets/ui/journey/map/map-platform-background-ch2-evening-v2.png',
   night:   'assets/ui/journey/map/map-platform-background-ch2-night-v2.png',
+} as const satisfies Record<TimeOfDay, string>;
+
+const CH3_STAGE3_ASSET_PATHS = {
+  day:     'assets/ui/journey/map/map-platform-background-ch3-day.png',
+  evening: 'assets/ui/journey/map/map-platform-background-ch3-evening.png',
+  night:   'assets/ui/journey/map/map-platform-background-ch3-night.png',
+} as const satisfies Record<TimeOfDay, string>;
+
+const CH4_STAGE3_ASSET_PATHS = {
+  day:     'assets/ui/journey/map/map-platform-background-ch4-day.png',
+  evening: 'assets/ui/journey/map/map-platform-background-ch4-evening.png',
+  night:   'assets/ui/journey/map/map-platform-background-ch4-night.png',
+} as const satisfies Record<TimeOfDay, string>;
+
+const CH5_STAGE3_ASSET_PATHS = {
+  day:     'assets/ui/journey/map/map-platform-background-ch5-day.png',
+  evening: 'assets/ui/journey/map/map-platform-background-ch5-evening.png',
+  night:   'assets/ui/journey/map/map-platform-background-ch5-night.png',
 } as const satisfies Record<TimeOfDay, string>;
 
 const BLUEPRINT_RASTER_REGISTRY: Record<string, BlueprintRasterRegistration> = {
@@ -348,6 +378,36 @@ const BLUEPRINT_RASTER_REGISTRY: Record<string, BlueprintRasterRegistration> = {
   },
   '2:night:1ee625ac:3d713b24': {
     source: CH2_NIGHT_BG, assetPath: CH2_STAGE3_ASSET_PATHS.night,
+  },
+  // Ch3 Procedure Hall: wide horizontal skills-lab composition.
+  '3:day:1624823e:637da792': {
+    source: CH3_DAY_BG, assetPath: CH3_STAGE3_ASSET_PATHS.day,
+  },
+  '3:evening:1624823e:637da792': {
+    source: CH3_EVE_BG, assetPath: CH3_STAGE3_ASSET_PATHS.evening,
+  },
+  '3:night:1624823e:637da792': {
+    source: CH3_NIGHT_BG, assetPath: CH3_STAGE3_ASSET_PATHS.night,
+  },
+  // Ch4 Emergency Simulation: vertical radial triage hub.
+  '4:day:c99b6936:e326cb2d': {
+    source: CH4_DAY_BG, assetPath: CH4_STAGE3_ASSET_PATHS.day,
+  },
+  '4:evening:c99b6936:e326cb2d': {
+    source: CH4_EVE_BG, assetPath: CH4_STAGE3_ASSET_PATHS.evening,
+  },
+  '4:night:c99b6936:e326cb2d': {
+    source: CH4_NIGHT_BG, assetPath: CH4_STAGE3_ASSET_PATHS.night,
+  },
+  // Ch5 Sanctuary Courtyard: asymmetric upper-right to lower-left sweep.
+  '5:day:df7e58f6:25e02f93': {
+    source: CH5_DAY_BG, assetPath: CH5_STAGE3_ASSET_PATHS.day,
+  },
+  '5:evening:df7e58f6:25e02f93': {
+    source: CH5_EVE_BG, assetPath: CH5_STAGE3_ASSET_PATHS.evening,
+  },
+  '5:night:df7e58f6:25e02f93': {
+    source: CH5_NIGHT_BG, assetPath: CH5_STAGE3_ASSET_PATHS.night,
   },
 };
 

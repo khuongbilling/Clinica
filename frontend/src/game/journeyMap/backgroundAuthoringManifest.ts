@@ -238,6 +238,21 @@ const ASSET_REGISTRY: Partial<Record<number, Record<TimeOfDay, ManifestAssetStat
     evening: 'validated',
     night:   'validated',
   },
+  3: {
+    day:     'validated',
+    evening: 'validated',
+    night:   'validated',
+  },
+  4: {
+    day:     'validated',
+    evening: 'validated',
+    night:   'validated',
+  },
+  5: {
+    day:     'validated',
+    evening: 'validated',
+    night:   'validated',
+  },
 };
 
 // ── Coordinate helpers ────────────────────────────────────────────────────────
