@@ -50,6 +50,7 @@ import {
   resolveChapterBossWin,
   deriveEnemyId,
   getAreaBossEnemyId,
+  resolveJourneyAreaBossEnemyId,
   getChapterBossEnemyId,
   TREASURE_REWARDS,
 } from '../src/game/journeyMap/encounterResolution';
@@ -261,6 +262,12 @@ function makeRun(overrides: Partial<JourneyRun> = {}, tileOverrides: Partial<Jou
   );
   check('26d. pre-Chapter-9 battle pools exclude the Dehydration Specter',
     !preGateBattleIds.includes('dehydration_specter'));
+  check('26e. a stale Ch1 area-boss URL is repaired to the Fluid Phantom',
+    resolveJourneyAreaBossEnemyId('dehydration_specter', '1', true) === 'fluid_phantom');
+  check('26f. Chapter 9 keeps the Dehydration Specter as its area boss',
+    resolveJourneyAreaBossEnemyId('fluid_phantom', '9', true) === 'dehydration_specter');
+  check('26g. non-journey battles keep their requested enemy',
+    resolveJourneyAreaBossEnemyId('dehydration_specter', '1', false) === 'dehydration_specter');
 
   const bosId = getChapterBossEnemyId(1);
   check('27. getChapterBossEnemyId returns non-empty string', bosId.length > 0);

@@ -317,13 +317,13 @@ const CH1_STAGE3_ASSET_PATHS = {
 const BLUEPRINT_RASTER_REGISTRY: Record<string, BlueprintRasterRegistration> = {
   // Ch1 campus-expedition Stage 3 rasters. These are the only Ch1 registrations:
   // prior corridor-era art must never resolve against the new map identity.
-  '1:day:22b4fc2d:088b5fe5': {
+  '1:day:3407b85a:fd70e9af': {
     source: CH1_DAY_BG, assetPath: CH1_STAGE3_ASSET_PATHS.day,
   },
-  '1:evening:22b4fc2d:088b5fe5': {
+  '1:evening:3407b85a:fd70e9af': {
     source: CH1_EVE_BG, assetPath: CH1_STAGE3_ASSET_PATHS.evening,
   },
-  '1:night:22b4fc2d:088b5fe5': {
+  '1:night:3407b85a:fd70e9af': {
     source: CH1_NIGHT_BG, assetPath: CH1_STAGE3_ASSET_PATHS.night,
   },
 };

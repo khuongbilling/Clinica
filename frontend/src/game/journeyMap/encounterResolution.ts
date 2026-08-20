@@ -134,6 +134,23 @@ export function getAreaBossEnemyId(chapterId: number): string {
   return CHAPTER_AREA_BOSS[chapterId] ?? DEFAULT_AREA_BOSS;
 }
 
+/**
+ * Area-boss battles are chapter-owned, not URL-owned. A saved route or an
+ * out-of-date client may still carry an old `enemyId`, so only a valid journey
+ * chapter is allowed to choose the enemy for an area-boss return path.
+ */
+export function resolveJourneyAreaBossEnemyId(
+  requestedEnemyId: string | undefined,
+  journeyChapterId: string | number | undefined,
+  isAreaBoss: boolean,
+): string | undefined {
+  const chapterId = Number(journeyChapterId);
+  if (!isAreaBoss || !Number.isInteger(chapterId) || chapterId < 1) {
+    return requestedEnemyId;
+  }
+  return getAreaBossEnemyId(chapterId);
+}
+
 /** Return the fixed chapter-boss (gate encounter) enemy for a chapter. */
 export function getChapterBossEnemyId(chapterId: number): string {
   return CHAPTER_BOSS[chapterId] ?? DEFAULT_CHAPTER_BOSS;

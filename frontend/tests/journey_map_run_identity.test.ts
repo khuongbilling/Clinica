@@ -156,6 +156,17 @@ test('Ch1 different seed → same topologyFamily', () => {
     `topologyFamily changed between seeds: ${ch1ResultA.topologyFamily} vs ${ch1ResultB.topologyFamily}`);
 });
 
+test('Ch1 generated runs have no dead-end hexes', () => {
+  const tileIds = new Set(ch1ResultA.topology.tiles.map(tile => `${tile.q},${tile.r}`));
+  const directions = [[1, 0], [-1, 0], [0, 1], [0, -1], [1, -1], [-1, 1]];
+  for (const tile of ch1ResultA.topology.tiles) {
+    const degree = directions.filter(([dq, dr]) =>
+      tileIds.has(`${tile.q + dq},${tile.r + dr}`),
+    ).length;
+    ok(degree >= 2, `Ch1 tile ${tile.q},${tile.r} is a dead end (degree ${degree})`);
+  }
+});
+
 // ── generateRunData — authored chapter (Ch2) ──────────────────────────────────
 
 let ch2ResultA: GenerateRunDataResult;
@@ -282,6 +293,11 @@ test('current-version run passes identity check for Ch1', () => {
 test('run with wrong layout version fails identity check for Ch1', () => {
   const passes = passesIdentityCheck(CH1, 'v0', artifact.blueprintHash);
   ok(!passes, 'Wrong version should fail, but passed');
+});
+
+test('pre-fix v4 campus runs fail identity checks and regenerate', () => {
+  const passes = passesIdentityCheck(CH1, 'v4-campus-obstacle-routes', artifact.blueprintHash);
+  ok(!passes, 'v4 campus run should fail after the no-dead-end v5 update, but passed');
 });
 
 test('run with wrong hash fails identity check for Ch1', () => {

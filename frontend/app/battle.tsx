@@ -39,6 +39,7 @@ import { getHeroVisuals } from "@/src/components/getHeroVisuals";
 import { applySkillUpgradesToTeam } from "@/src/game/heroSkillAcademy";
 import { getBattleAssistRule } from "@/src/features/battle/battleAssist";
 import { getAssistConfigForEncounter } from "@/src/features/battle/battleAssistConfigs";
+import { resolveJourneyAreaBossEnemyId } from "@/src/game/journeyMap/encounterResolution";
 import { usePlayer } from "@/src/game/store";
 import { useTutorial } from "@/src/game/tutorialStore";
 import { COLORS, ELEMENT_COLORS, RADIUS, SPACING } from "@/src/theme/colors";
@@ -84,12 +85,20 @@ function BattleInner({ enemyId, training, prologue, replay, journeyReturn, journ
   // is granted or recorded, and no onboarding flag is ever written.
   const isReplay = replay === "1";
 
+  const resolvedEnemyId = useMemo(
+    () => resolveJourneyAreaBossEnemyId(
+      enemyId,
+      journeyChapterId,
+      journeyIsAreaBoss === '1',
+    ),
+    [enemyId, journeyChapterId, journeyIsAreaBoss],
+  );
   const enemy = useMemo(() => {
-    if (!enemyId) return ENEMIES[0];
-    if (enemyId === BOSS_LORD_IMBALANCE.id) return BOSS_LORD_IMBALANCE;
-    if (enemyId === BOSS_SILENT_INFARCT.id) return BOSS_SILENT_INFARCT;
-    return ENEMIES.find((e) => e.id === enemyId) || ENEMIES[0];
-  }, [enemyId]);
+    if (!resolvedEnemyId) return ENEMIES[0];
+    if (resolvedEnemyId === BOSS_LORD_IMBALANCE.id) return BOSS_LORD_IMBALANCE;
+    if (resolvedEnemyId === BOSS_SILENT_INFARCT.id) return BOSS_SILENT_INFARCT;
+    return ENEMIES.find((e) => e.id === resolvedEnemyId) || ENEMIES[0];
+  }, [resolvedEnemyId]);
 
   const isPrologueBoss = prologue === "boss" && !!enemy.scriptedLoss;
   // Shared boss check for reward tiering: the scripted prologue boss OR any

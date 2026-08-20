@@ -25,8 +25,8 @@ const RAW_SOURCE: Record<number, CanonicalStage1Source> = {"1":{"blueprintHash":
  * while the old entry remains available only as provenance for prior runs.
  */
 const CHAPTER_ONE_CAMPUS_SOURCE: CanonicalStage1Source = {
-  blueprintHash: '22b4fc2d',
-  structureHash: '088b5fe5',
+  blueprintHash: '3407b85a',
+  structureHash: 'fd70e9af',
   startKey: '0,7',
   gateKey: '0,-7',
   obstacleCellKeys: [
