@@ -1,3 +1,5 @@
+import { CHAPTER_ONE_CAMPUS_OBSTACLE_CELL_KEYS } from './chapterOneCampusLandmarks';
+
 /**
  * Checked-in Stage 1 authority. This module intentionally has no generator
  * imports: changing a live Stage 2 layout cannot rewrite its approval identity.
@@ -25,18 +27,11 @@ const RAW_SOURCE: Record<number, CanonicalStage1Source> = {"1":{"blueprintHash":
  * while the old entry remains available only as provenance for prior runs.
  */
 const CHAPTER_ONE_CAMPUS_SOURCE: CanonicalStage1Source = {
-  blueprintHash: '3407b85a',
-  structureHash: 'fd70e9af',
+  blueprintHash: '55552867',
+  structureHash: '8917a91d',
   startKey: '0,7',
   gateKey: '0,-7',
-  obstacleCellKeys: [
-    // Central fountain basin and its stone rim.
-    '-1,0', '-1,1', '0,-1', '0,0', '0,1', '1,-1', '1,0',
-    // Planted beds beside the upper quad's open promenade.
-    '-2,-2', '-1,-3', '1,-4', '2,-4',
-    // Lower processional planter and cypress bed.
-    '-1,3', '0,3', '1,2',
-  ],
+  obstacleCellKeys: CHAPTER_ONE_CAMPUS_OBSTACLE_CELL_KEYS,
   requiredRegionCellKeys: [
     '-1,-1','-1,-2','-1,-5','-1,-6','-1,-7','-1,-8','-1,2','-1,4','-1,5','-1,6','-1,7','-1,8','-1,9',
     '-2,-1','-2,-4','-2,-5','-2,-6','-2,-7','-2,0','-2,1','-2,2','-2,3','-2,4','-2,5','-2,7','-2,8','-2,9',

@@ -20,5 +20,5 @@ export const MAP_LAYOUT_VERSION = 'v1';
  * other chapter's approved Stage 3 raster.
  */
 export function getChapterMapLayoutVersion(chapter: number): string {
-  return chapter === 1 ? 'v5-campus-obstacle-routes' : MAP_LAYOUT_VERSION;
+  return chapter === 1 ? 'v6-runtime-campus-landmarks' : MAP_LAYOUT_VERSION;
 }

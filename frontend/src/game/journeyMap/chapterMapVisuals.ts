@@ -274,7 +274,7 @@ const CHAPTER_SHIFT_VISUALS: Partial<Record<number, Record<TimeOfDay, ChapterShi
 // NIGHT — canonical dark environment — assigned explicitly, not a catch-all.
 
 // Campus-expedition rasters (PNG — Metro requires static require calls).
-const CH1_DAY_BG       = require('@/assets/ui/journey/map/map-campus-background-ch1-day.png')  as number;
+const CH1_DAY_BG       = require('@/assets/ui/journey/map/map-campus-background-ch1-day-clean.png')  as number;
 const CH1_DAY_REVEALED = require('@/assets/ui/journey/tiles/hex-revealed-day.png')                as number;
 const CH1_DAY_FRONTIER = require('@/assets/ui/journey/tiles/hex-frontier-day.png')                as number;
 const CH1_DAY_CURRENT  = require('@/assets/ui/journey/tiles/hex-current-day.png')                 as number;
@@ -289,7 +289,7 @@ const CH1_DAY_CURRENT  = require('@/assets/ui/journey/tiles/hex-current-day.png'
 //               jade-teal border glow more prominent in dimming light.
 //   terrainCurrent  hex-current-evening.png — jade-gold mandala, green fire
 //               at border, dramatically vibrant against evening stone.
-const CH1_EVE_BG       = require('@/assets/ui/journey/map/map-campus-background-ch1-evening-locked.png') as number;
+const CH1_EVE_BG       = require('@/assets/ui/journey/map/map-campus-background-ch1-evening-clean.png') as number;
 const CH1_EVE_REVEALED = require('@/assets/ui/journey/tiles/hex-revealed-evening.png')               as number;
 const CH1_EVE_FRONTIER = require('@/assets/ui/journey/tiles/hex-frontier-evening.png')               as number;
 const CH1_EVE_CURRENT  = require('@/assets/ui/journey/tiles/hex-current-evening.png')                as number;
@@ -299,7 +299,7 @@ const CH1_EVE_CURRENT  = require('@/assets/ui/journey/tiles/hex-current-evening.
 //               teal bioluminescent lanterns, deep navy, floor rune circuits,
 //               amber window glow, same geometry as day/evening.
 //               Generated from the Push 4 BackgroundAuthoringManifest spec.
-const CH1_NIGHT_BG = require('@/assets/ui/journey/map/map-campus-background-ch1-night-locked.png') as number;
+const CH1_NIGHT_BG = require('@/assets/ui/journey/map/map-campus-background-ch1-night-clean-v4.png') as number;
 
 // ── Stage 3: exact blueprint-hash → approved finished-environment registry ───
 //
@@ -309,21 +309,21 @@ const CH1_NIGHT_BG = require('@/assets/ui/journey/map/map-campus-background-ch1-
 // DevDiagnostics. Do not add a chapter/shift-only fallback: a new geometry hash
 // must show the blueprint foundation until aligned art is approved and registered.
 const CH1_STAGE3_ASSET_PATHS = {
-  day:     'assets/ui/journey/map/map-campus-background-ch1-day.png',
-  evening: 'assets/ui/journey/map/map-campus-background-ch1-evening-locked.png',
-  night:   'assets/ui/journey/map/map-campus-background-ch1-night-locked.png',
+  day:     'assets/ui/journey/map/map-campus-background-ch1-day-clean.png',
+  evening: 'assets/ui/journey/map/map-campus-background-ch1-evening-clean.png',
+  night:   'assets/ui/journey/map/map-campus-background-ch1-night-clean-v4.png',
 } as const satisfies Record<TimeOfDay, string>;
 
 const BLUEPRINT_RASTER_REGISTRY: Record<string, BlueprintRasterRegistration> = {
   // Ch1 campus-expedition Stage 3 rasters. These are the only Ch1 registrations:
   // prior corridor-era art must never resolve against the new map identity.
-  '1:day:3407b85a:fd70e9af': {
+  '1:day:55552867:8917a91d': {
     source: CH1_DAY_BG, assetPath: CH1_STAGE3_ASSET_PATHS.day,
   },
-  '1:evening:3407b85a:fd70e9af': {
+  '1:evening:55552867:8917a91d': {
     source: CH1_EVE_BG, assetPath: CH1_STAGE3_ASSET_PATHS.evening,
   },
-  '1:night:3407b85a:fd70e9af': {
+  '1:night:55552867:8917a91d': {
     source: CH1_NIGHT_BG, assetPath: CH1_STAGE3_ASSET_PATHS.night,
   },
 };

@@ -315,16 +315,16 @@ const STYLE_ANCHOR =
 
 function targetAssetPath(chapter: number, shift: TimeOfDay): string {
   if (chapter === 1) {
-    const suffix = shift === 'day' ? '' : '-locked';
-    return `assets/ui/journey/map/map-campus-background-ch1-${shift}${suffix}.png`;
+    const revision = shift === 'night' ? '-v4' : '';
+    return `assets/ui/journey/map/map-campus-background-ch1-${shift}-clean${revision}.png`;
   }
   return `assets/ui/journey/map/map-platform-background-ch${chapter}-${shift}.png`;
 }
 
 function metroRequirePath(chapter: number, shift: TimeOfDay): string {
   if (chapter === 1) {
-    const suffix = shift === 'day' ? '' : '-locked';
-    return `@/assets/ui/journey/map/map-campus-background-ch1-${shift}${suffix}.png`;
+    const revision = shift === 'night' ? '-v4' : '';
+    return `@/assets/ui/journey/map/map-campus-background-ch1-${shift}-clean${revision}.png`;
   }
   return `@/assets/ui/journey/map/map-platform-background-ch${chapter}-${shift}.png`;
 }

@@ -18,10 +18,10 @@ const { PNG } = require('pngjs') as {
 };
 
 const MAP_DIR = path.join(process.cwd(), 'assets/ui/journey/map');
-const MASTER = 'map-campus-background-ch1-day.png';
+const MASTER = 'map-campus-background-ch1-day-clean.png';
 const VARIANTS = [
-  'map-campus-background-ch1-evening-locked.png',
-  'map-campus-background-ch1-night-locked.png',
+  'map-campus-background-ch1-evening-clean.png',
+  'map-campus-background-ch1-night-clean-v4.png',
 ] as const;
 const GRID = 64;
 const MIN_STRUCTURE_CORRELATION = 0.70;

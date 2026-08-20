@@ -91,6 +91,7 @@ import { isBlockingSceneryZone }                      from '@/src/game/journeyMa
 import { computeHexWorldCoords }                      from '@/src/components/journey/hexWorldCoords';
 import { computeSceneryProps }                        from '@/src/game/journeyMap/sceneryPropPlacer';
 import { SceneryPropLayerView }                       from '@/src/components/journey/SceneryPropLayerView';
+import { CampusLandmarkLayer }                        from '@/src/components/journey/CampusLandmarkLayer';
 
 // ── Journey raster assets ────────────────────────────────────────────────────
 // Map backgrounds and terrain tiles are now resolved through getChapterMapVisuals()
@@ -1858,11 +1859,16 @@ export default function ChapterFogMapShell() {
             blueprintSceneryZones={__DEV__ ? blueprintSceneryZones : undefined}
             footprintOverlay={__DEV__ ? footprintOverlay : undefined}
             worldSceneryChildren={
-              placedSceneryProps.length > 0 ? (
-                <SceneryPropLayerView
-                  props={placedSceneryProps}
-                  sz={AUTHORED_MAP_TILE_SZ}
-                />
+              sceneryCoords != null ? (
+                <>
+                  <CampusLandmarkLayer chapterId={chNum} coords={sceneryCoords} />
+                  {placedSceneryProps.length > 0 && (
+                    <SceneryPropLayerView
+                      props={placedSceneryProps}
+                      sz={AUTHORED_MAP_TILE_SZ}
+                    />
+                  )}
+                </>
               ) : undefined
             }
           />

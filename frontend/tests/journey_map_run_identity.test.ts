@@ -295,9 +295,9 @@ test('run with wrong layout version fails identity check for Ch1', () => {
   ok(!passes, 'Wrong version should fail, but passed');
 });
 
-test('pre-fix v4 campus runs fail identity checks and regenerate', () => {
-  const passes = passesIdentityCheck(CH1, 'v4-campus-obstacle-routes', artifact.blueprintHash);
-  ok(!passes, 'v4 campus run should fail after the no-dead-end v5 update, but passed');
+test('pre-runtime-landmark v5 campus runs fail identity checks and regenerate', () => {
+  const passes = passesIdentityCheck(CH1, 'v5-campus-obstacle-routes', artifact.blueprintHash);
+  ok(!passes, 'v5 campus run should fail after the runtime-landmark v6 update, but passed');
 });
 
 test('run with wrong hash fails identity check for Ch1', () => {

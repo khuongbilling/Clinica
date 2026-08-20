@@ -69,8 +69,8 @@ const SHIFTS = ['day', 'evening', 'night'] as const;
 
 function expectedAssetPath(chapter: number, shift: typeof SHIFTS[number]): string {
   if (chapter === 1) {
-    const suffix = shift === 'day' ? '' : '-locked';
-    return `assets/ui/journey/map/map-campus-background-ch1-${shift}${suffix}.png`;
+    const revision = shift === 'night' ? '-v4' : '';
+    return `assets/ui/journey/map/map-campus-background-ch1-${shift}-clean${revision}.png`;
   }
   return `assets/ui/journey/map/map-platform-background-ch${chapter}-${shift}.png`;
 }
@@ -274,14 +274,14 @@ test('[paths] metro require paths follow canonical convention', () => {
 test('[paths] Ch1 day path matches existing chapterMapVisuals.ts convention', () => {
   const spec = getChapterBackgroundSpec(1);
   eq(spec.shifts.day.targetAssetPath,
-    'assets/ui/journey/map/map-campus-background-ch1-day.png',
+    'assets/ui/journey/map/map-campus-background-ch1-day-clean.png',
     'Ch1 day path');
 });
 
 test('[paths] Ch1 evening path matches existing chapterMapVisuals.ts convention', () => {
   const spec = getChapterBackgroundSpec(1);
   eq(spec.shifts.evening.targetAssetPath,
-    'assets/ui/journey/map/map-campus-background-ch1-evening-locked.png',
+    'assets/ui/journey/map/map-campus-background-ch1-evening-clean.png',
     'Ch1 evening path');
 });
 

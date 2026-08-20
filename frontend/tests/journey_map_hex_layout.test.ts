@@ -20,6 +20,7 @@ import { getChapterHexLayout, getChapterHexLayoutRange, hexLine, hexDist } from 
 import { getChapterTerrainCellCount } from '../src/game/journeyMap/config';
 import { getChapterPathwayGraph } from '../src/game/journeyMap/chapterPathwayGraph';
 import { getCanonicalStage1Source } from '../src/game/journeyMap/canonicalStage1Source';
+import { CHAPTER_ONE_CAMPUS_LANDMARKS } from '../src/game/journeyMap/chapterOneCampusLandmarks';
 import type { HexLaneLayout, ClearingZone, LaneSegment } from '../src/game/journeyMap/chapterMapTemplate.types';
 
 // ── Test harness ──────────────────────────────────────────────────────────────
@@ -158,6 +159,16 @@ test('[Ch1 campus] locked fountain and planted-scene cells are never playable', 
   for (const key of ['0,0', '-1,0', '-1,1', '0,-1', '0,1', '1,-1', '1,0']) {
     ok(!playable.has(key), `Ch1 fountain cell '${key}' is playable`);
   }
+
+  const landmarkCells = CHAPTER_ONE_CAMPUS_LANDMARKS.flatMap(
+    landmark => landmark.blockedCellKeys,
+  ).sort();
+  eq(
+    landmarkCells.join('|'),
+    [...lockedObstacles].sort().join('|'),
+    'Ch1 runtime 2.5D landmarks must own every collision exclusion',
+  );
+  ok(playable.has('0,7'), 'Ch1 start must stay on the cleared arrival paving');
 });
 
 test('[Ch2] full layout validation', () => {

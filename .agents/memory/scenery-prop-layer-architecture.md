@@ -34,6 +34,13 @@ Blueprint → Walkable Bed → CLEAN BACKGROUND RASTER → Hex Terrain → Scene
 ## Props are shift-invariant
 `computeSceneryProps` is seeded from `"ch{N}|scenery-props|{SCENERY_PROP_LAYOUT_VERSION}"` — no shift, no player, no attempt number. Same positions day/evening/night.
 
+## Authored landmark collision authority
+For an authored map with fixed landmark placement, define the landmark's rendered anchor and its blocked hex keys in one catalog, then derive the map's obstacle exclusions from that catalog.
+
+**Why:** A separately maintained collision list can drift from the 2.5D object and leave a player standing inside a visible fountain, planter, or other landmark.
+
+**How to apply:** Keep decorative flat inlays in the clean raster, but render freestanding landmarks through the camera-transformed prop layer. Regression-test that every landmark key is excluded from the playable set and that fixed start/gate tiles are not landmark keys.
+
 ## Clearing perimeter rule
 `isClearing` detected by `zone.walkableContactCount > 3`. For clearing zones, only cells beyond `CLEARING_PERIMETER_RATIO (0.55)` × zone radius are used as candidates. Keeps clearing interiors open for encounters.
 
