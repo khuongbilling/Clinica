@@ -301,6 +301,12 @@ const CH1_EVE_CURRENT  = require('@/assets/ui/journey/tiles/hex-current-evening.
 //               Generated from the Push 4 BackgroundAuthoringManifest spec.
 const CH1_NIGHT_BG = require('@/assets/ui/journey/map/map-campus-background-ch1-night-clean-v4.png') as number;
 
+// Chapter 2 Academic Training Quad — one approved open-plaza composition,
+// with evening and night derived from the daytime master for exact geometry.
+const CH2_DAY_BG = require('@/assets/ui/journey/map/map-platform-background-ch2-day.png') as number;
+const CH2_EVE_BG = require('@/assets/ui/journey/map/map-platform-background-ch2-evening-v2.png') as number;
+const CH2_NIGHT_BG = require('@/assets/ui/journey/map/map-platform-background-ch2-night-v2.png') as number;
+
 // ── Stage 3: exact blueprint-hash → approved finished-environment registry ───
 //
 // A registry entry is valid only when its source path is exactly the raster
@@ -314,6 +320,12 @@ const CH1_STAGE3_ASSET_PATHS = {
   night:   'assets/ui/journey/map/map-campus-background-ch1-night-clean-v4.png',
 } as const satisfies Record<TimeOfDay, string>;
 
+const CH2_STAGE3_ASSET_PATHS = {
+  day:     'assets/ui/journey/map/map-platform-background-ch2-day.png',
+  evening: 'assets/ui/journey/map/map-platform-background-ch2-evening-v2.png',
+  night:   'assets/ui/journey/map/map-platform-background-ch2-night-v2.png',
+} as const satisfies Record<TimeOfDay, string>;
+
 const BLUEPRINT_RASTER_REGISTRY: Record<string, BlueprintRasterRegistration> = {
   // Ch1 campus-expedition Stage 3 rasters. These are the only Ch1 registrations:
   // prior corridor-era art must never resolve against the new map identity.
@@ -325,6 +337,17 @@ const BLUEPRINT_RASTER_REGISTRY: Record<string, BlueprintRasterRegistration> = {
   },
   '1:night:55552867:8917a91d': {
     source: CH1_NIGHT_BG, assetPath: CH1_STAGE3_ASSET_PATHS.night,
+  },
+  // Ch2 Academic Training Quad Stage 3 rasters. The composition is an open
+  // training floor; all shift variants share the same court and gate positions.
+  '2:day:1ee625ac:3d713b24': {
+    source: CH2_DAY_BG, assetPath: CH2_STAGE3_ASSET_PATHS.day,
+  },
+  '2:evening:1ee625ac:3d713b24': {
+    source: CH2_EVE_BG, assetPath: CH2_STAGE3_ASSET_PATHS.evening,
+  },
+  '2:night:1ee625ac:3d713b24': {
+    source: CH2_NIGHT_BG, assetPath: CH2_STAGE3_ASSET_PATHS.night,
   },
 };
 

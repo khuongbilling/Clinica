@@ -72,7 +72,8 @@ function expectedAssetPath(chapter: number, shift: typeof SHIFTS[number]): strin
     const revision = shift === 'night' ? '-v4' : '';
     return `assets/ui/journey/map/map-campus-background-ch1-${shift}-clean${revision}.png`;
   }
-  return `assets/ui/journey/map/map-platform-background-ch${chapter}-${shift}.png`;
+  const revision = chapter === 2 && shift !== 'day' ? '-v2' : '';
+  return `assets/ui/journey/map/map-platform-background-ch${chapter}-${shift}${revision}.png`;
 }
 
 function expectedMetroPath(chapter: number, shift: typeof SHIFTS[number]): string {

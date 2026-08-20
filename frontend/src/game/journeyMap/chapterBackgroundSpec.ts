@@ -318,7 +318,8 @@ function targetAssetPath(chapter: number, shift: TimeOfDay): string {
     const revision = shift === 'night' ? '-v4' : '';
     return `assets/ui/journey/map/map-campus-background-ch1-${shift}-clean${revision}.png`;
   }
-  return `assets/ui/journey/map/map-platform-background-ch${chapter}-${shift}.png`;
+  const revision = chapter === 2 && shift !== 'day' ? '-v2' : '';
+  return `assets/ui/journey/map/map-platform-background-ch${chapter}-${shift}${revision}.png`;
 }
 
 function metroRequirePath(chapter: number, shift: TimeOfDay): string {
@@ -326,7 +327,8 @@ function metroRequirePath(chapter: number, shift: TimeOfDay): string {
     const revision = shift === 'night' ? '-v4' : '';
     return `@/assets/ui/journey/map/map-campus-background-ch1-${shift}-clean${revision}.png`;
   }
-  return `@/assets/ui/journey/map/map-platform-background-ch${chapter}-${shift}.png`;
+  const revision = chapter === 2 && shift !== 'day' ? '-v2' : '';
+  return `@/assets/ui/journey/map/map-platform-background-ch${chapter}-${shift}${revision}.png`;
 }
 
 // ── Spatial context builder ───────────────────────────────────────────────────

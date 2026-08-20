@@ -1,5 +1,5 @@
 /**
- * Ensures Chapter 1's Stage 3 shift rasters share one fixed campus composition.
+ * Ensures approved Stage 3 shift rasters share one fixed campus composition.
  * The lighting-tolerant edge-correlation check catches a regenerated shift that
  * moves courts, paths, buildings, or landmarks while still carrying valid hashes.
  */
@@ -18,10 +18,23 @@ const { PNG } = require('pngjs') as {
 };
 
 const MAP_DIR = path.join(process.cwd(), 'assets/ui/journey/map');
-const MASTER = 'map-campus-background-ch1-day-clean.png';
-const VARIANTS = [
-  'map-campus-background-ch1-evening-clean.png',
-  'map-campus-background-ch1-night-clean-v4.png',
+const CHAPTER_SHIFT_SETS = [
+  {
+    label: 'Chapter 1',
+    master: 'map-campus-background-ch1-day-clean.png',
+    variants: [
+      'map-campus-background-ch1-evening-clean.png',
+      'map-campus-background-ch1-night-clean-v4.png',
+    ],
+  },
+  {
+    label: 'Chapter 2',
+    master: 'map-platform-background-ch2-day.png',
+    variants: [
+      'map-platform-background-ch2-evening-v2.png',
+      'map-platform-background-ch2-night-v2.png',
+    ],
+  },
 ] as const;
 const GRID = 64;
 const MIN_STRUCTURE_CORRELATION = 0.70;
@@ -71,13 +84,15 @@ function correlation(a: number[], b: number[]): number {
   return numerator / Math.sqrt(magnitudeA * magnitudeB);
 }
 
-const masterSignature = edgeSignature(MASTER);
-for (const variant of VARIANTS) {
-  const score = correlation(masterSignature, edgeSignature(variant));
-  assert.ok(
-    score >= MIN_STRUCTURE_CORRELATION,
-    `${variant} structural correlation ${score.toFixed(3)} is below ` +
-      `${MIN_STRUCTURE_CORRELATION}; regenerate it from the locked day composition.`,
-  );
-  console.log(`✓ ${variant} shares the locked campus composition (${score.toFixed(3)})`);
+for (const shiftSet of CHAPTER_SHIFT_SETS) {
+  const masterSignature = edgeSignature(shiftSet.master);
+  for (const variant of shiftSet.variants) {
+    const score = correlation(masterSignature, edgeSignature(variant));
+    assert.ok(
+      score >= MIN_STRUCTURE_CORRELATION,
+      `${shiftSet.label} ${variant} structural correlation ${score.toFixed(3)} is below ` +
+        `${MIN_STRUCTURE_CORRELATION}; regenerate it from the locked day composition.`,
+    );
+    console.log(`✓ ${shiftSet.label} ${variant} shares the locked composition (${score.toFixed(3)})`);
+  }
 }
