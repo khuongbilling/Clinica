@@ -289,7 +289,7 @@ const CH1_DAY_CURRENT  = require('@/assets/ui/journey/tiles/hex-current-day.png'
 //               jade-teal border glow more prominent in dimming light.
 //   terrainCurrent  hex-current-evening.png — jade-gold mandala, green fire
 //               at border, dramatically vibrant against evening stone.
-const CH1_EVE_BG       = require('@/assets/ui/journey/map/map-campus-background-ch1-evening-clean.png') as number;
+const CH1_EVE_BG       = require('@/assets/ui/journey/map/map-campus-background-ch1-evening-clean-v2.png') as number;
 const CH1_EVE_REVEALED = require('@/assets/ui/journey/tiles/hex-revealed-evening.png')               as number;
 const CH1_EVE_FRONTIER = require('@/assets/ui/journey/tiles/hex-frontier-evening.png')               as number;
 const CH1_EVE_CURRENT  = require('@/assets/ui/journey/tiles/hex-current-evening.png')                as number;
@@ -304,20 +304,20 @@ const CH1_NIGHT_BG = require('@/assets/ui/journey/map/map-campus-background-ch1-
 // Chapter 2 Academic Training Quad — one approved open-plaza composition,
 // with evening and night derived from the daytime master for exact geometry.
 const CH2_DAY_BG = require('@/assets/ui/journey/map/map-platform-background-ch2-day.png') as number;
-const CH2_EVE_BG = require('@/assets/ui/journey/map/map-platform-background-ch2-evening-v2.png') as number;
+const CH2_EVE_BG = require('@/assets/ui/journey/map/map-platform-background-ch2-evening-v3.png') as number;
 const CH2_NIGHT_BG = require('@/assets/ui/journey/map/map-platform-background-ch2-night-v2.png') as number;
 
 // Chapters 3–5 — authored daytime masters plus composition-locked lighting
 // variants. Static requires keep all Stage 3 raster paths Metro-safe.
 const CH3_DAY_BG = require('@/assets/ui/journey/map/map-platform-background-ch3-day.png') as number;
-const CH3_EVE_BG = require('@/assets/ui/journey/map/map-platform-background-ch3-evening.png') as number;
-const CH3_NIGHT_BG = require('@/assets/ui/journey/map/map-platform-background-ch3-night.png') as number;
+const CH3_EVE_BG = require('@/assets/ui/journey/map/map-platform-background-ch3-evening-v2.png') as number;
+const CH3_NIGHT_BG = require('@/assets/ui/journey/map/map-platform-background-ch3-night-v2.png') as number;
 const CH4_DAY_BG = require('@/assets/ui/journey/map/map-platform-background-ch4-day.png') as number;
 const CH4_EVE_BG = require('@/assets/ui/journey/map/map-platform-background-ch4-evening.png') as number;
 const CH4_NIGHT_BG = require('@/assets/ui/journey/map/map-platform-background-ch4-night.png') as number;
 const CH5_DAY_BG = require('@/assets/ui/journey/map/map-platform-background-ch5-day.png') as number;
-const CH5_EVE_BG = require('@/assets/ui/journey/map/map-platform-background-ch5-evening.png') as number;
-const CH5_NIGHT_BG = require('@/assets/ui/journey/map/map-platform-background-ch5-night.png') as number;
+const CH5_EVE_BG = require('@/assets/ui/journey/map/map-platform-background-ch5-evening-v2.png') as number;
+const CH5_NIGHT_BG = require('@/assets/ui/journey/map/map-platform-background-ch5-night-v2.png') as number;
 
 // ── Stage 3: exact blueprint-hash → approved finished-environment registry ───
 //
@@ -328,20 +328,20 @@ const CH5_NIGHT_BG = require('@/assets/ui/journey/map/map-platform-background-ch
 // must show the blueprint foundation until aligned art is approved and registered.
 const CH1_STAGE3_ASSET_PATHS = {
   day:     'assets/ui/journey/map/map-campus-background-ch1-day-clean.png',
-  evening: 'assets/ui/journey/map/map-campus-background-ch1-evening-clean.png',
+  evening: 'assets/ui/journey/map/map-campus-background-ch1-evening-clean-v2.png',
   night:   'assets/ui/journey/map/map-campus-background-ch1-night-clean-v4.png',
 } as const satisfies Record<TimeOfDay, string>;
 
 const CH2_STAGE3_ASSET_PATHS = {
   day:     'assets/ui/journey/map/map-platform-background-ch2-day.png',
-  evening: 'assets/ui/journey/map/map-platform-background-ch2-evening-v2.png',
+  evening: 'assets/ui/journey/map/map-platform-background-ch2-evening-v3.png',
   night:   'assets/ui/journey/map/map-platform-background-ch2-night-v2.png',
 } as const satisfies Record<TimeOfDay, string>;
 
 const CH3_STAGE3_ASSET_PATHS = {
   day:     'assets/ui/journey/map/map-platform-background-ch3-day.png',
-  evening: 'assets/ui/journey/map/map-platform-background-ch3-evening.png',
-  night:   'assets/ui/journey/map/map-platform-background-ch3-night.png',
+  evening: 'assets/ui/journey/map/map-platform-background-ch3-evening-v2.png',
+  night:   'assets/ui/journey/map/map-platform-background-ch3-night-v2.png',
 } as const satisfies Record<TimeOfDay, string>;
 
 const CH4_STAGE3_ASSET_PATHS = {
@@ -352,8 +352,8 @@ const CH4_STAGE3_ASSET_PATHS = {
 
 const CH5_STAGE3_ASSET_PATHS = {
   day:     'assets/ui/journey/map/map-platform-background-ch5-day.png',
-  evening: 'assets/ui/journey/map/map-platform-background-ch5-evening.png',
-  night:   'assets/ui/journey/map/map-platform-background-ch5-night.png',
+  evening: 'assets/ui/journey/map/map-platform-background-ch5-evening-v2.png',
+  night:   'assets/ui/journey/map/map-platform-background-ch5-night-v2.png',
 } as const satisfies Record<TimeOfDay, string>;
 
 const BLUEPRINT_RASTER_REGISTRY: Record<string, BlueprintRasterRegistration> = {

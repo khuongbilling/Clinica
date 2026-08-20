@@ -23,7 +23,7 @@ const CHAPTER_SHIFT_SETS = [
     label: 'Chapter 1',
     master: 'map-campus-background-ch1-day-clean.png',
     variants: [
-      'map-campus-background-ch1-evening-clean.png',
+      'map-campus-background-ch1-evening-clean-v2.png',
       'map-campus-background-ch1-night-clean-v4.png',
     ],
   },
@@ -31,7 +31,7 @@ const CHAPTER_SHIFT_SETS = [
     label: 'Chapter 2',
     master: 'map-platform-background-ch2-day.png',
     variants: [
-      'map-platform-background-ch2-evening-v2.png',
+      'map-platform-background-ch2-evening-v3.png',
       'map-platform-background-ch2-night-v2.png',
     ],
   },
@@ -39,8 +39,8 @@ const CHAPTER_SHIFT_SETS = [
     label: 'Chapter 3',
     master: 'map-platform-background-ch3-day.png',
     variants: [
-      'map-platform-background-ch3-evening.png',
-      'map-platform-background-ch3-night.png',
+      'map-platform-background-ch3-evening-v2.png',
+      'map-platform-background-ch3-night-v2.png',
     ],
   },
   {
@@ -55,13 +55,13 @@ const CHAPTER_SHIFT_SETS = [
     label: 'Chapter 5',
     master: 'map-platform-background-ch5-day.png',
     variants: [
-      'map-platform-background-ch5-evening.png',
-      'map-platform-background-ch5-night.png',
+      'map-platform-background-ch5-evening-v2.png',
+      'map-platform-background-ch5-night-v2.png',
     ],
   },
 ] as const;
 const GRID = 64;
-const MIN_STRUCTURE_CORRELATION = 0.70;
+const MIN_STRUCTURE_CORRELATION = 0.85;
 
 function edgeSignature(fileName: string): number[] {
   const png = PNG.sync.read(fs.readFileSync(path.join(MAP_DIR, fileName)));

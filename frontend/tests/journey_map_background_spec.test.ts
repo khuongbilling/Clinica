@@ -69,10 +69,15 @@ const SHIFTS = ['day', 'evening', 'night'] as const;
 
 function expectedAssetPath(chapter: number, shift: typeof SHIFTS[number]): string {
   if (chapter === 1) {
-    const revision = shift === 'night' ? '-v4' : '';
+    const revision = shift === 'night' ? '-v4' : shift === 'evening' ? '-v2' : '';
     return `assets/ui/journey/map/map-campus-background-ch1-${shift}-clean${revision}.png`;
   }
-  const revision = chapter === 2 && shift !== 'day' ? '-v2' : '';
+  const revision =
+    chapter === 2 && shift === 'evening' ? '-v3'
+      : chapter === 2 && shift === 'night' ? '-v2'
+        : chapter === 3 && shift !== 'day' ? '-v2'
+          : chapter === 5 && shift !== 'day' ? '-v2'
+            : '';
   return `assets/ui/journey/map/map-platform-background-ch${chapter}-${shift}${revision}.png`;
 }
 
@@ -282,7 +287,7 @@ test('[paths] Ch1 day path matches existing chapterMapVisuals.ts convention', ()
 test('[paths] Ch1 evening path matches existing chapterMapVisuals.ts convention', () => {
   const spec = getChapterBackgroundSpec(1);
   eq(spec.shifts.evening.targetAssetPath,
-    'assets/ui/journey/map/map-campus-background-ch1-evening-clean.png',
+    'assets/ui/journey/map/map-campus-background-ch1-evening-clean-v2.png',
     'Ch1 evening path');
 });
 

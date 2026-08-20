@@ -315,19 +315,29 @@ const STYLE_ANCHOR =
 
 function targetAssetPath(chapter: number, shift: TimeOfDay): string {
   if (chapter === 1) {
-    const revision = shift === 'night' ? '-v4' : '';
+    const revision = shift === 'night' ? '-v4' : shift === 'evening' ? '-v2' : '';
     return `assets/ui/journey/map/map-campus-background-ch1-${shift}-clean${revision}.png`;
   }
-  const revision = chapter === 2 && shift !== 'day' ? '-v2' : '';
+  const revision =
+    chapter === 2 && shift === 'evening' ? '-v3'
+      : chapter === 2 && shift === 'night' ? '-v2'
+        : chapter === 3 && shift !== 'day' ? '-v2'
+          : chapter === 5 && shift !== 'day' ? '-v2'
+            : '';
   return `assets/ui/journey/map/map-platform-background-ch${chapter}-${shift}${revision}.png`;
 }
 
 function metroRequirePath(chapter: number, shift: TimeOfDay): string {
   if (chapter === 1) {
-    const revision = shift === 'night' ? '-v4' : '';
+    const revision = shift === 'night' ? '-v4' : shift === 'evening' ? '-v2' : '';
     return `@/assets/ui/journey/map/map-campus-background-ch1-${shift}-clean${revision}.png`;
   }
-  const revision = chapter === 2 && shift !== 'day' ? '-v2' : '';
+  const revision =
+    chapter === 2 && shift === 'evening' ? '-v3'
+      : chapter === 2 && shift === 'night' ? '-v2'
+        : chapter === 3 && shift !== 'day' ? '-v2'
+          : chapter === 5 && shift !== 'day' ? '-v2'
+            : '';
   return `@/assets/ui/journey/map/map-platform-background-ch${chapter}-${shift}${revision}.png`;
 }
 
