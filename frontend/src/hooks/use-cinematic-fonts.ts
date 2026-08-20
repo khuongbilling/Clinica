@@ -21,18 +21,29 @@
  */
 
 import { useFonts } from "expo-font";
-import type { TextStyle } from "react-native";
+import { Platform, type TextStyle } from "react-native";
 
 export const FONT_DISPLAY          = "Cinzel-SemiBold";
 export const FONT_NARRATION        = "CormorantGaramond-Medium";
 export const FONT_NARRATION_ITALIC = "CormorantGaramond-MediumItalic";
 
+/**
+ * The Expo web font loader uses FontFaceObserver with a hard 6-second
+ * timeout. That is too aggressive for mobile web over a slow connection and
+ * can surface an unhandled rejection before the router finishes mounting.
+ * Web already has safe system-font fallbacks, so do not start that optional
+ * load there. Native keeps the bundled cinematic faces.
+ */
 export const useCinematicFonts = (): readonly [boolean, Error | null] =>
-  useFonts({
-    [FONT_DISPLAY]:          require("../../assets/fonts/Cinzel_600SemiBold.ttf"),
-    [FONT_NARRATION]:        require("../../assets/fonts/CormorantGaramond_500Medium.ttf"),
-    [FONT_NARRATION_ITALIC]: require("../../assets/fonts/CormorantGaramond_500Medium_Italic.ttf"),
-  });
+  useFonts(
+    Platform.OS === "web"
+      ? {}
+      : {
+          [FONT_DISPLAY]:          require("../../assets/fonts/Cinzel_600SemiBold.ttf"),
+          [FONT_NARRATION]:        require("../../assets/fonts/CormorantGaramond_500Medium.ttf"),
+          [FONT_NARRATION_ITALIC]: require("../../assets/fonts/CormorantGaramond_500Medium_Italic.ttf"),
+        },
+  );
 
 export interface CinematicFontStyles {
   display:         TextStyle | null;

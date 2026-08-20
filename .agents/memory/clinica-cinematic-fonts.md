@@ -13,9 +13,10 @@ Rules:
 - Font .ttf files live in `frontend/assets/fonts/` (project assets), **never node_modules** — Metro under Expo Go resolves node_modules .ttf unreliably on Android (same reason use-icon-fonts uses a CDN).
 - Apply families only through `cinematicFontStyles(loaded)` — it returns nulls while loading (graceful system-font fallback) and resets `fontWeight`/`fontStyle` to normal when a family IS applied, otherwise Android/web synthesize fake bold/oblique on top of the styled face.
 - Fonts are warmed non-blockingly in the root layout; screens never gate render on them.
+- Do not load these custom faces on Expo web: use the immediate system-font fallback there. Keep bundled loading for native only.
 - Cormorant has a small x-height — sizes there are tuned ~2pt larger than system equivalents.
 
-**Why:** first attempt at mixing `fontWeight:"800"` with a custom family double-bolded on web; and Expo Go's node_modules asset quirk is a known trap in this repo.
+**Why:** first attempt at mixing `fontWeight:"800"` with a custom family double-bolded on web; Expo Go's node_modules asset quirk is a known trap in this repo; and Expo web's FontFaceObserver can reject after 6 seconds on a slow mobile connection, causing the development error screen.
 
 **How to apply:** any new prologue/story scene wanting the cinematic look should import the same hook + style helper, not hand-roll `fontFamily` strings.
 
