@@ -26,10 +26,10 @@
 import assert      from 'assert';
 import {
   getCanonicalChapterMapArtifact,
-  MAP_LAYOUT_VERSION,
 }                  from '../src/game/journeyMap/canonicalMapArtifact';
 import { getChapterTerrainCellCount } from '../src/game/journeyMap/config';
 import { getChapterMapDNA }           from '../src/game/journeyMap/chapterMapDNA';
+import { getChapterMapLayoutVersion } from '../src/game/journeyMap/journeyMapVersion';
 
 // ── Test harness ──────────────────────────────────────────────────────────────
 
@@ -254,8 +254,8 @@ test('blueprintHash is 8 hex characters', () => {
 
 // ── 12. Map layout version ────────────────────────────────────────────────────
 test('mapLayoutVersion is v1', () => {
-  eq(artifact.mapLayoutVersion, MAP_LAYOUT_VERSION,
-    `mapLayoutVersion '${artifact.mapLayoutVersion}' !== '${MAP_LAYOUT_VERSION}'`);
+  eq(artifact.mapLayoutVersion, getChapterMapLayoutVersion(CH1),
+    `mapLayoutVersion '${artifact.mapLayoutVersion}' does not match the chapter-scoped identity`);
 });
 
 // ── 13. Cache determinism ─────────────────────────────────────────────────────

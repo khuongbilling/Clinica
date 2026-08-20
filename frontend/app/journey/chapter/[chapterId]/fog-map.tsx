@@ -82,7 +82,10 @@ import { MAP_SPRITE }                        from '@/src/game/illustratedAssets'
 import { getChapterMapVisuals, DEV_FALLBACK_VISUALS } from '@/src/game/journeyMap/chapterMapVisuals';
 import { getChapterTerrainCellCount, BLUEPRINT_PIPELINE_CHAPTERS } from '@/src/game/journeyMap/config';
 import { getChapterMapTemplate }                      from '@/src/game/journeyMap/chapterMapTemplates';
-import { getCanonicalChapterMapArtifact }             from '@/src/game/journeyMap/canonicalMapArtifact';
+import {
+  compareRunGeometryToCanonicalArtifact,
+  getCanonicalChapterMapArtifact,
+}                                                     from '@/src/game/journeyMap/canonicalMapArtifact';
 import { getBackgroundAuthoringManifests }           from '@/src/game/journeyMap/backgroundAuthoringManifest';
 import { isBlockingSceneryZone }                      from '@/src/game/journeyMap/sceneryClassification';
 import { computeHexWorldCoords }                      from '@/src/components/journey/hexWorldCoords';
@@ -437,10 +440,20 @@ function DevDiagnostics({
   }, [pipelineArtifact, run.tiles]);
 
   // ── Three-stage pipeline derived values (computed before return, no hooks) ──
-  // Stage 2: does the active run's geometry hash match the current pipeline?
-  const stage2HashMatch = pipelineArtifact == null
-    || run.mapBlueprintHash === ''
-    || run.mapBlueprintHash === pipelineArtifact.blueprintHash;
+  // Stage 2 requires both the immutable artifact proof and the exact persisted
+  // coordinate footprint / anchors. A claimed hash alone cannot approve a
+  // partially migrated or corrupted run.
+  const runGeometry = useMemo(() => {
+    if (!pipelineArtifact) return null;
+    return compareRunGeometryToCanonicalArtifact(run, pipelineArtifact);
+  }, [pipelineArtifact, run]);
+  const stage2IdentityMatch = pipelineArtifact == null || (
+    run.mapBlueprintHash === pipelineArtifact.blueprintHash &&
+    run.mapLayoutVersion === pipelineArtifact.mapLayoutVersion
+  );
+  const stage2Pass = (pipelineArtifact?.stage2Validation.pass ?? true) &&
+    stage2IdentityMatch &&
+    (runGeometry?.matches ?? true);
 
   // Stage 3: is a registered finished-background raster aligned to this hash?
   const stage3AllGood = stage3Status === 'APPROVED'
@@ -577,10 +590,10 @@ function DevDiagnostics({
           <View style={sDev.divider} />
           <Text style={sDev.subhead}>STAGE 2 — WALKABLE HEX PATH</Text>
           <Text style={[sDev.val, {
-            color: stage2HashMatch && pipelineArtifact.stage2Validation.pass ? '#4ade80' : '#f87171',
+            color: stage2Pass ? '#4ade80' : '#f87171',
             fontWeight: '700',
           }]}>
-            {stage2HashMatch && pipelineArtifact.stage2Validation.pass ? '✓ VALIDATED' : '✗ VALIDATION FAILED'}
+            {stage2Pass ? '✓ VALIDATED' : '✗ VALIDATION FAILED'}
           </Text>
           <Text style={sDev.row}>
             <Text style={sDev.key}>Evidence  </Text>
@@ -603,7 +616,7 @@ function DevDiagnostics({
           )}
           <Text style={sDev.row}>
             <Text style={sDev.key}>Connected </Text>
-            <Text style={[sDev.val, { color: '#4ade80' }]}>
+            <Text style={[sDev.val, { color: stage2Pass ? '#4ade80' : '#f87171' }]}>
               {pipelineArtifact.stage2Validation.startToGateConnected &&
                 pipelineArtifact.stage2Validation.requiredRegionsConnected
                 ? '✓' : '✗'}
@@ -616,6 +629,16 @@ function DevDiagnostics({
               {pipelineArtifact.stage2Validation.actualTileCount} reachable
             </Text>
           </Text>
+          {runGeometry != null && (
+            <Text style={sDev.row}>
+              <Text style={sDev.key}>Run bed   </Text>
+              <Text style={[sDev.val, { color: runGeometry.matches ? '#4ade80' : '#f87171' }]}>
+                {runGeometry.matches
+                  ? '✓ EXACT COORDINATES + ANCHORS'
+                  : '✗ STALE / CORRUPTED COORDINATES'}
+              </Text>
+            </Text>
+          )}
           <Text style={sDev.row}>
             <Text style={sDev.key}>Obstacle  </Text>
             <Text style={[sDev.val, {
@@ -638,14 +661,34 @@ function DevDiagnostics({
           </Text>
           <Text style={sDev.row}>
             <Text style={sDev.key}>Geo hash  </Text>
-            <Text style={[sDev.val, { color: stage2HashMatch ? '#A5D6A7' : '#f87171' }]}>
+            <Text style={[sDev.val, { color: stage2IdentityMatch ? '#A5D6A7' : '#f87171' }]}>
               {'run: '}
               {run.mapBlueprintHash === '' ? '(legacy pre-blueprint)' : run.mapBlueprintHash}
               {'\nart: '}
               {pipelineArtifact.blueprintHash}
             </Text>
           </Text>
-          {!stage2HashMatch && run.mapBlueprintHash !== '' && (
+          {runGeometry != null && !runGeometry.matches && (
+            <View style={sDev.mismatchBanner}>
+              <Text style={sDev.mismatchText}>
+                {'⚠ RUN FOOTPRINT / PIPELINE MISMATCH\n'}
+                {'missing: '}{runGeometry.missingTileIds.length
+                  ? runGeometry.missingTileIds.join(', ')
+                  : '(none)'}{'\n'}
+                {'extra:   '}{runGeometry.extraTileIds.length
+                  ? runGeometry.extraTileIds.join(', ')
+                  : '(none)'}{'\n'}
+                {!runGeometry.startMatches
+                  ? `start: ${run.startTileId} → ${runGeometry.expectedStartTileId}\n`
+                  : ''}
+                {!runGeometry.gateMatches
+                  ? `gate: ${run.gateAnchorTileId ?? '—'} → ${runGeometry.expectedGateAnchorTileId}\n`
+                  : ''}
+                {'→ Run will be abandoned and recovered on next load.'}
+              </Text>
+            </View>
+          )}
+          {!stage2IdentityMatch && run.mapBlueprintHash !== '' && (
             <View style={sDev.mismatchBanner}>
               <Text style={sDev.mismatchText}>
                 {'⚠ RUN / PIPELINE MISMATCH\n'}
@@ -1168,11 +1211,18 @@ export default function ChapterFogMapShell() {
     const visualChapter = run?.chapterId ?? (debugTiles !== null ? chNum : undefined);
     if (visualChapter == null || !BLUEPRINT_PIPELINE_CHAPTERS.has(visualChapter)) return true;
     try {
-      return getCanonicalChapterMapArtifact(visualChapter).stage2Validation.pass;
+      const artifact = getCanonicalChapterMapArtifact(visualChapter);
+      if (!artifact.stage2Validation.pass) return false;
+      if (!run) return true;
+      return (
+        run.mapBlueprintHash === artifact.blueprintHash &&
+        run.mapLayoutVersion === artifact.mapLayoutVersion &&
+        compareRunGeometryToCanonicalArtifact(run, artifact).matches
+      );
     } catch {
       return false;
     }
-  }, [chNum, debugTiles, run?.chapterId]);
+  }, [chNum, debugTiles, run]);
   const chapterVisuals = mapShift != null
     ? getChapterMapVisuals(run!.chapterId, mapShift, stage2Pass)
     // Debug fixture mode: no real run → resolve visuals from the chapter number so

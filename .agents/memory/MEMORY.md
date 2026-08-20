@@ -124,3 +124,4 @@
 - [chapterMapTemplate.types.ts TS hygiene](clinica-types-ts-hygiene.md) — TimeOfDay must be imported from ./types; avoid default fallback branches on exhaustive switch enums (cast as string); duplicate export{} after export function causes TS2323.
 - [Scenery prop layer architecture](scenery-prop-layer-architecture.md) — blocking props NEVER baked into raster; runtime SceneryPropLayer above clean floor background; shift-invariant; safety-mask gated placement.
 - [All-chapters blueprint pipeline](clinica-all-chapters-pipeline.md) — Ch1-10 use the pipeline; Stage 3 must exact-match the manifest’s approved raster path by chapter+shift+hash, or show the blueprint foundation.
+- [Journey run geometry identity](journey-run-geometry-identity.md) — version/hash markers alone cannot prove persisted tiles; compare coordinate set plus start/gate and recover stale runs through abandon→rechallenge.

@@ -35,7 +35,10 @@ import type { JourneyRun, TimeOfDay }   from './types';
 import { resolveRunShift }              from './chapterShiftRules';
 import { computeFogAfterMove, REVEAL_RADIUS } from './fogCalculator';
 import { getChapterTerrainCellCount, BLUEPRINT_PIPELINE_CHAPTERS } from './config';
-import { getCanonicalChapterMapArtifact } from './canonicalMapArtifact';
+import {
+  compareRunGeometryToCanonicalArtifact,
+  getCanonicalChapterMapArtifact,
+} from './canonicalMapArtifact';
 
 // ── HTTP helpers ──────────────────────────────────────────────────────────────
 
@@ -330,11 +333,16 @@ export class JourneyRunRepository implements IJourneyRunRepository {
       const artifact = getCanonicalChapterMapArtifact(chapterId);
       const hashOk    = run.mapBlueprintHash === artifact.blueprintHash;
       const versionOk = run.mapLayoutVersion  === artifact.mapLayoutVersion;
-      if (!hashOk || !versionOk) {
+      const geometry = compareRunGeometryToCanonicalArtifact(run, artifact);
+      if (!hashOk || !versionOk || !geometry.matches) {
         console.warn(
-          `[journeyRunRepository] ch${chapterId}: stale blueprint identity — ` +
+          `[journeyRunRepository] ch${chapterId}: stale/corrupted blueprint run — ` +
           `stored ${run.mapLayoutVersion}/${run.mapBlueprintHash} ` +
           `expected ${artifact.mapLayoutVersion}/${artifact.blueprintHash}; ` +
+          `missing=[${geometry.missingTileIds.join(',')}] ` +
+          `extra=[${geometry.extraTileIds.join(',')}] ` +
+          `start=${run.startTileId}/${geometry.expectedStartTileId} ` +
+          `gate=${run.gateAnchorTileId ?? '—'}/${geometry.expectedGateAnchorTileId}; ` +
           `abandoning run ${run.id}`,
         );
         try {

@@ -3,7 +3,7 @@
  * manifest. Keeping this leaf module independent prevents either side from
  * silently hashing a different interpretation of the authored geometry.
  */
-import { MAP_LAYOUT_VERSION } from './journeyMapVersion';
+import { getChapterMapLayoutVersion } from './journeyMapVersion';
 import { fnv1a32 } from './prng';
 import type { HexLaneLayout, SceneryLayout } from './chapterMapTemplate.types';
 import { getCanonicalStage1Source } from './canonicalStage1Source';
@@ -30,6 +30,7 @@ export function createLiveStage1CandidateSnapshot(
   layout: HexLaneLayout,
   scenery: SceneryLayout,
 ): CanonicalStage1Snapshot {
+  const layoutVersion = getChapterMapLayoutVersion(layout.chapterId);
   const footprintCellKeys = sortedUniqueKeys(layout.cells);
   const requiredRegionCellKeys = sortedUniqueKeys(
     layout.clearingZones.flatMap(zone => zone.cells),
@@ -38,7 +39,7 @@ export function createLiveStage1CandidateSnapshot(
     scenery.sceneryZones.flatMap(zone => zone.cells),
   );
   const blueprintHash = fnv1a32(
-    `${layout.seed}:${MAP_LAYOUT_VERSION}:${footprintCellKeys.join('|')}`,
+    `${layout.seed}:${layoutVersion}:${footprintCellKeys.join('|')}`,
   ).toString(16).padStart(8, '0');
   const scenerySignature = scenery.sceneryZones
     .map(zone => {
@@ -57,7 +58,7 @@ export function createLiveStage1CandidateSnapshot(
   const startKey = cellKey(layout.startCell.q, layout.startCell.r);
   const gateKey = cellKey(layout.gateCell.q, layout.gateCell.r);
   const structureHash = fnv1a32(
-    `${layout.seed}:${MAP_LAYOUT_VERSION}:${blueprintHash}:start=${startKey}:gate=${gateKey}:` +
+    `${layout.seed}:${layoutVersion}:${blueprintHash}:start=${startKey}:gate=${gateKey}:` +
     `clearings=${clearingSignature}:scenery=${scenerySignature}`,
   ).toString(16).padStart(8, '0');
 

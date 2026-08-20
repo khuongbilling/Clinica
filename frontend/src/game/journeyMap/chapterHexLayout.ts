@@ -75,6 +75,82 @@ function targetClearingCount(tileCount: number): number {
   return Math.max(5, Math.min(12, Math.round(tileCount / 10)));
 }
 
+/**
+ * Chapter 1's university quad is intentionally plaza-first rather than a web of
+ * one-hex corridors. Three overlapping courtyard discs keep all 60 progression
+ * cells inside a compact, open campus footprint with many natural route loops.
+ */
+function buildChapterOneOpenCourtyardLayout(
+  dna: ChapterMapDNA,
+  targetCount: number,
+): HexLaneLayout {
+  const addCells = new Map<string, AxialCoord>();
+  const add = (cells: readonly AxialCoord[]) => {
+    for (const cell of cells) addCells.set(hexKey(cell.q, cell.r), cell);
+  };
+
+  const entryPlaza = hexDisc({ q: 1, r: 0 }, 2);
+  const grandQuad = hexDisc({ q: 5, r: 0 }, 3);
+  const gateCourt = hexDisc({ q: 10, r: 0 }, 1);
+  add(entryPlaza);
+  add(grandQuad);
+  add(gateCourt);
+  // A south garden step makes the 59-cell triple-courtyard composition exactly
+  // match the stable 60-cell progression budget without narrowing any route.
+  add([{ q: 5, r: 4 }]);
+
+  const cells = [...addCells.values()].sort((a, b) => a.q - b.q || a.r - b.r);
+  if (cells.length !== targetCount) {
+    throw new Error(
+      `Chapter 1 open courtyard must contain exactly ${targetCount} cells; got ${cells.length}.`,
+    );
+  }
+
+  const includes = (cell: AxialCoord) => addCells.has(hexKey(cell.q, cell.r));
+  const zone = (
+    id: string,
+    nodeId: string,
+    type: ClearingType,
+    shape: ClearingShape,
+    center: AxialCoord,
+    size: 'small' | 'normal' | 'major',
+    sourceCells: readonly AxialCoord[],
+    exitCount: number,
+  ): ClearingZone => ({
+    id,
+    nodeId,
+    type,
+    shape,
+    center,
+    size,
+    cells: sourceCells.filter(includes),
+    exitCount,
+  });
+
+  return {
+    chapterId: 1,
+    seed: dna.seed,
+    cells,
+    startCell: { q: 0, r: 0 },
+    gateCell: { q: 11, r: 0 },
+    clearingZones: [
+      zone('entry-plaza', 'start', 'SIDE_CLEARING', 'court', { q: 1, r: 0 }, 'major', entryPlaza, 4),
+      zone('grand-quad', 'j1', 'JUNCTION_CLEARING', 'widened_intersection', { q: 5, r: 0 }, 'major', grandQuad, 6),
+      zone('gate-court', 'fa', 'FINAL_CLEARING', 'court', { q: 10, r: 0 }, 'normal', gateCourt, 4),
+      zone('north-colonnade', 'j2', 'JUNCTION_CLEARING', 'oval', { q: 5, r: -2 }, 'normal',
+        [{ q: 4, r: -2 }, { q: 5, r: -3 }, { q: 5, r: -2 }, { q: 6, r: -3 }], 3),
+      zone('south-garden', 'c1', 'GENERAL_CLEARING', 'irregular_bay', { q: 5, r: 3 }, 'normal',
+        [{ q: 4, r: 3 }, { q: 5, r: 3 }, { q: 5, r: 4 }, { q: 6, r: 2 }, { q: 6, r: 3 }], 3),
+    ],
+    // Intersections are plazas, not corridor bottlenecks. Empty lane segments
+    // intentionally classify all cells as open clearings/transition spaces.
+    laneSegments: [],
+    targetTileCount: targetCount,
+    actualTileCount: cells.length,
+    budgetFractions: { lane: 0, clearing: 1 },
+  };
+}
+
 /** Node types that generate a ClearingZone (all except GATE and TRANSITION). */
 const NODE_TO_CLEARING_TYPE: Partial<Record<string, ClearingType>> = {
   START:         'SIDE_CLEARING',
@@ -762,7 +838,9 @@ export function getChapterHexLayout(chapter: number): HexLaneLayout {
   const seedStr     = `${dna.seed}:hex-layout-v1`;
   const rng         = mulberry32(fnv1a32(seedStr));
 
-  const layout = buildHexLayout(graph, dna, targetCount, rng);
+  const layout = chapter === 1
+    ? buildChapterOneOpenCourtyardLayout(dna, targetCount)
+    : buildHexLayout(graph, dna, targetCount, rng);
   layoutCache.set(chapter, layout);
   return layout;
 }

@@ -40,7 +40,7 @@ import { getChapterBackgroundSpec } from './chapterBackgroundSpec';
 import { getWalkableBed }          from './walkableBedGenerator';
 import { validateBackgroundComposition } from './backgroundValidator';
 import type { BackgroundValidationResult } from './backgroundValidator';
-import { MAP_LAYOUT_VERSION }      from './journeyMapVersion';    // leaf import — no cycle
+import { getChapterMapLayoutVersion } from './journeyMapVersion'; // leaf import — no cycle
 import { getCanonicalStage1Snapshot } from './canonicalStageIdentity';
 import type { CanonicalStage1Snapshot } from './canonicalStageIdentity';
 import type { CanonicalStageStatus } from './canonicalStageContract';
@@ -229,14 +229,12 @@ export interface BackgroundAuthoringManifest {
 
 const ASSET_REGISTRY: Partial<Record<number, Record<TimeOfDay, ManifestAssetStatus>>> = {
   1: {
-    // v4 raster: architecture separation — collision-critical scenery removed from
-    // base raster; background shows clean floor + embedded inlays only.
-    // Blocking props (beds, consoles, tables, carts) placed by SceneryPropLayer
-    // at runtime.  Geometry validation still passes (all blocking zones remain
-    // outside the walkable safety mask per computeSceneryProps constraints).
-    day:     'validated',
-    evening: 'validated',
-    night:   'validated',
+    // The previous raster was approved for the corridor-era Ch1 footprint.
+    // Ch1's v2 open courtyard must remain blueprint-only until its own art has
+    // been authored and validated against the new exact hash.
+    day:     'pending',
+    evening: 'pending',
+    night:   'pending',
   },
 };
 
@@ -279,6 +277,7 @@ function buildManifest(
   bed:           WalkableBed,
   validation:    BackgroundValidationResult,
 ): BackgroundAuthoringManifest {
+  const layoutVersion = getChapterMapLayoutVersion(chapter);
   const registry = ASSET_REGISTRY[chapter];
   const declaredStatus: ManifestAssetStatus = registry?.[shift] ?? 'pending';
 
@@ -294,7 +293,7 @@ function buildManifest(
     : declaredStatus;
 
   const assetVersion = hasRaster
-    ? `${MAP_LAYOUT_VERSION}:${stage1.blueprintHash}:${stage1.structureHash}`
+    ? `${layoutVersion}:${stage1.blueprintHash}:${stage1.structureHash}`
     : 'BACKGROUND_ASSET_REQUIRED';
   const stage3Status: CanonicalStageStatus =
     assetStatus === 'validated' ? 'APPROVED'
@@ -329,7 +328,7 @@ function buildManifest(
     shift,
     mapBlueprintHash: stage1.blueprintHash,
     mapStructureHash: stage1.structureHash,
-    mapLayoutVersion: MAP_LAYOUT_VERSION,
+    mapLayoutVersion: layoutVersion,
     topologyFamily:   layout.seed.includes(':')
       ? layout.seed.split(':')[1] ?? bgSpec.environmentName
       : bgSpec.environmentType,
@@ -418,7 +417,7 @@ export function isChapterBackgroundSynced(chapter: number): boolean {
   const scenery   = getChapterSceneryLayout(chapter);
   const stage1    = getCanonicalStage1Snapshot(chapter);
   const currentVer =
-    `${MAP_LAYOUT_VERSION}:${stage1.blueprintHash}:${stage1.structureHash}`;
+    `${getChapterMapLayoutVersion(chapter)}:${stage1.blueprintHash}:${stage1.structureHash}`;
   return getBackgroundAuthoringManifests(chapter).every(
     m => m.assetStatus === 'validated' && m.assetVersion === currentVer,
   );

@@ -71,8 +71,80 @@ import type { BackgroundAuthoringManifest }        from './backgroundAuthoringMa
 // Imported from the leaf-level constants module to avoid a circular require
 // with backgroundAuthoringManifest.ts.  Re-exported here so any consumer that
 // imports MAP_LAYOUT_VERSION from canonicalMapArtifact continues to work.
-import { MAP_LAYOUT_VERSION } from './journeyMapVersion';
+import { MAP_LAYOUT_VERSION, getChapterMapLayoutVersion } from './journeyMapVersion';
 export { MAP_LAYOUT_VERSION };
+
+/**
+ * Result of comparing a persisted run's actual coordinates to the canonical
+ * Stage 2 footprint. Identity strings are useful diagnostics, but cannot prove
+ * that a run's JSON tiles were not partially migrated or otherwise corrupted.
+ */
+export interface CanonicalRunGeometryComparison {
+  readonly matches: boolean;
+  readonly missingTileIds: readonly string[];
+  readonly extraTileIds: readonly string[];
+  readonly duplicateTileIds: readonly string[];
+  readonly malformedTileIds: readonly string[];
+  readonly startMatches: boolean;
+  readonly gateMatches: boolean;
+  readonly expectedStartTileId: string;
+  readonly expectedGateAnchorTileId: string;
+}
+
+type RunGeometryCandidate = {
+  readonly tiles: readonly { readonly id: string; readonly q: number; readonly r: number }[];
+  readonly startTileId: string;
+  readonly gateAnchorTileId?: string;
+};
+
+/**
+ * Verifies the persisted coordinate set and route anchors, not only its claimed
+ * version/hash. This is deliberately reusable by run recovery and Stage 2 UI
+ * gating so both make the same fail-closed decision.
+ */
+export function compareRunGeometryToCanonicalArtifact(
+  run: RunGeometryCandidate,
+  artifact: Pick<CanonicalChapterMapArtifact, 'walkableCells' | 'asTopology'>,
+): CanonicalRunGeometryComparison {
+  const expected = new Set(artifact.walkableCells.map(cell => cellKey(cell.q, cell.r)));
+  const actual = new Set<string>();
+  const duplicateTileIds: string[] = [];
+  const malformedTileIds: string[] = [];
+
+  for (const tile of run.tiles) {
+    const coordinateId = cellKey(tile.q, tile.r);
+    if (!Number.isInteger(tile.q) || !Number.isInteger(tile.r) || tile.id !== coordinateId) {
+      malformedTileIds.push(tile.id);
+    }
+    if (actual.has(coordinateId)) duplicateTileIds.push(coordinateId);
+    actual.add(coordinateId);
+  }
+
+  const missingTileIds = [...expected].filter(id => !actual.has(id)).sort();
+  const extraTileIds = [...actual].filter(id => !expected.has(id)).sort();
+  const expectedStartTileId = artifact.asTopology.startTileId;
+  const expectedGateAnchorTileId = artifact.asTopology.gateAnchorId;
+  const startMatches = run.startTileId === expectedStartTileId;
+  const gateMatches = run.gateAnchorTileId === expectedGateAnchorTileId;
+
+  return {
+    matches:
+      missingTileIds.length === 0 &&
+      extraTileIds.length === 0 &&
+      duplicateTileIds.length === 0 &&
+      malformedTileIds.length === 0 &&
+      startMatches &&
+      gateMatches,
+    missingTileIds,
+    extraTileIds,
+    duplicateTileIds: [...new Set(duplicateTileIds)].sort(),
+    malformedTileIds: [...new Set(malformedTileIds)].sort(),
+    startMatches,
+    gateMatches,
+    expectedStartTileId,
+    expectedGateAnchorTileId,
+  };
+}
 
 // ── Internal hex geometry (self-contained, no topology.ts import needed) ────
 
@@ -472,7 +544,7 @@ function buildArtifact(chapter: number): CanonicalChapterMapArtifact {
     loopCount:      pathwayGraph.loopCount,
     zoneMeta,
     blueprintHash,
-    mapLayoutVersion: MAP_LAYOUT_VERSION,
+    mapLayoutVersion: getChapterMapLayoutVersion(chapter),
     stage1Blueprint,
     stage2Validation,
     scenerySafetyPass,

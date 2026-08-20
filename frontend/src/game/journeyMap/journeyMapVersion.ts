@@ -13,3 +13,12 @@
  * way that invalidates existing blueprint hashes and cached run geometry.
  */
 export const MAP_LAYOUT_VERSION = 'v1';
+
+/**
+ * Geometry identity is chapter-scoped so an authored correction can invalidate
+ * exactly one chapter's runs and background approval without blanking every
+ * other chapter's approved Stage 3 raster.
+ */
+export function getChapterMapLayoutVersion(chapter: number): string {
+  return chapter === 1 ? 'v2-open-courtyard' : MAP_LAYOUT_VERSION;
+}

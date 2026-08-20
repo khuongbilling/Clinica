@@ -8,8 +8,7 @@
  *   • Ch1 returns topologyFamily='academic_quad'
  *   • Different seed, same chapter → SAME mapBlueprintHash (geometry is immutable)
  *   • Different shift, same chapter → SAME mapBlueprintHash (shift-invariant)
- *   • Ch2 (authored, not blueprint) returns mapLayoutVersion='authored'
- *   • Ch2 authored hash is stable: same chapter, same template → same hash
+ *   • Ch2 remains on the shared blueprint pipeline and has a stable identity
  *
  *   buildInitialJourneyRun identity threading:
  *   • Built run carries mapLayoutVersion / mapBlueprintHash / topologyFamily
@@ -18,7 +17,7 @@
  *   • Legacy run (hash='', version='legacy') fails identity check vs artifact
  *   • Current-version run passes identity check
  *   • Run with wrong version string fails
- *   • Ch2 (authored, not in blueprint set) skips the blueprint identity check
+ *   • A non-pipeline chapter skips the blueprint identity check
  *
  *   Rechallenge geometry invariant:
  *   • Two calls with different seeds for the same blueprint chapter yield
@@ -33,7 +32,10 @@ import {
   type BuildRunOptions,
   type RunEncounterInput,
 } from '../src/game/journeyMap/journeyRunLifecycle';
-import { getCanonicalChapterMapArtifact } from '../src/game/journeyMap/canonicalMapArtifact';
+import {
+  compareRunGeometryToCanonicalArtifact,
+  getCanonicalChapterMapArtifact,
+} from '../src/game/journeyMap/canonicalMapArtifact';
 import { BLUEPRINT_PIPELINE_CHAPTERS }    from '../src/game/journeyMap/config';
 import type { JourneyRun }                from '../src/game/journeyMap/types';
 
@@ -91,7 +93,8 @@ function passesIdentityCheck(
 // ── Constants ─────────────────────────────────────────────────────────────────
 
 const CH1 = 1;  // blueprint pipeline
-const CH2 = 2;  // authored, NOT blueprint
+const CH2 = 2;  // shared blueprint pipeline
+const NON_PIPELINE_CHAPTER = 11;
 
 const SEED_A = 'seed-alpha-001';
 const SEED_B = 'seed-beta-002';
@@ -113,9 +116,9 @@ test('generateRunData(1) does not throw', () => {
   ch1ResultEvening = generateRunData(CH1, SEED_A, 'evening');
 });
 
-test('Ch1 mapLayoutVersion is v1', () => {
-  eq(ch1ResultA.mapLayoutVersion, 'v1',
-    `expected 'v1', got '${ch1ResultA.mapLayoutVersion}'`);
+test('Ch1 mapLayoutVersion carries its open-courtyard identity', () => {
+  eq(ch1ResultA.mapLayoutVersion, artifact.mapLayoutVersion,
+    `expected '${artifact.mapLayoutVersion}', got '${ch1ResultA.mapLayoutVersion}'`);
 });
 
 test('Ch1 mapBlueprintHash matches canonical artifact', () => {
@@ -163,9 +166,9 @@ test('generateRunData(2) does not throw', () => {
   ch2ResultB = generateRunData(CH2, SEED_A, 'night');
 });
 
-test('Ch2 mapLayoutVersion is authored', () => {
-  eq(ch2ResultA.mapLayoutVersion, 'authored',
-    `expected 'authored', got '${ch2ResultA.mapLayoutVersion}'`);
+test('Ch2 mapLayoutVersion is stable across shifts', () => {
+  eq(ch2ResultA.mapLayoutVersion, ch2ResultB.mapLayoutVersion,
+    `map layout version changed between shifts`);
 });
 
 test('Ch2 mapBlueprintHash is 8 hex chars', () => {
@@ -178,9 +181,9 @@ test('Ch2 authored hash is stable across shifts (same template)', () => {
     `authored hash should not change with shift:\n  day=${ch2ResultA.mapBlueprintHash}\n  night=${ch2ResultB.mapBlueprintHash}`);
 });
 
-test('Ch2 topologyFamily is undefined (authored, not blueprint)', () => {
-  ok(ch2ResultA.topologyFamily === undefined,
-    `Ch2 topologyFamily should be undefined, got '${ch2ResultA.topologyFamily}'`);
+test('Ch2 retains its blueprint topology family', () => {
+  eq(ch2ResultA.topologyFamily, 'open_plaza',
+    `Ch2 topology family should be open_plaza, got '${ch2ResultA.topologyFamily}'`);
 });
 
 // ── buildInitialJourneyRun — identity field threading ────────────────────────
@@ -219,6 +222,24 @@ test('built run.topologyFamily matches generateRunData result', () => {
     `run.topologyFamily mismatch`);
 });
 
+test('exact persisted coordinate set and anchors pass the canonical geometry check', () => {
+  const comparison = compareRunGeometryToCanonicalArtifact(builtRun, artifact);
+  ok(comparison.matches, `expected exact geometry match; missing=${comparison.missingTileIds}`);
+});
+
+test('same-count hybrid footprint fails even when it claims the current identity', () => {
+  const hybrid = {
+    ...builtRun,
+  tiles: builtRun.tiles.map(tile => tile.id === '5,4'
+      ? { ...tile, id: '12,0', q: 12, r: 0 }
+      : tile),
+  };
+  const comparison = compareRunGeometryToCanonicalArtifact(hybrid, artifact);
+  ok(!comparison.matches, 'hybrid coordinate footprint should fail');
+  ok(comparison.missingTileIds.includes('5,4'), 'missing canonical tile should be reported');
+  ok(comparison.extraTileIds.includes('12,0'), 'extra legacy tile should be reported');
+});
+
 // ── Identity check (mirrors getActiveRun staleness logic) ────────────────────
 
 test('legacy run (hash="", version="legacy") fails identity check for Ch1', () => {
@@ -245,11 +266,11 @@ test('run with wrong hash fails identity check for Ch1', () => {
   ok(!passes, 'Wrong hash should fail, but passed');
 });
 
-test('Ch2 (not in BLUEPRINT_PIPELINE_CHAPTERS) always passes identity check', () => {
-  ok(!BLUEPRINT_PIPELINE_CHAPTERS.has(CH2),
-    'Ch2 should not be in BLUEPRINT_PIPELINE_CHAPTERS for this test to be valid');
-  const passes = passesIdentityCheck(CH2, 'legacy', '');
-  ok(passes, 'Ch2 (authored, not blueprint) should skip the identity check and pass');
+test('a non-pipeline chapter skips the blueprint identity check', () => {
+  ok(!BLUEPRINT_PIPELINE_CHAPTERS.has(NON_PIPELINE_CHAPTER),
+    'test chapter should not use the blueprint pipeline');
+  const passes = passesIdentityCheck(NON_PIPELINE_CHAPTER, 'legacy', '');
+  ok(passes, 'non-pipeline chapter should skip the identity check and pass');
 });
 
 // ── Rechallenge geometry invariant ───────────────────────────────────────────
