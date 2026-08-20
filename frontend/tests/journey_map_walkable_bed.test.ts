@@ -134,6 +134,10 @@ test('clearings + lanes = all zones', () => {
 
 test('primary lane zones are present', () => {
   const expectedPrimary = layout1.laneSegments.filter(s => s.width === 'primary').length;
+  if (expectedPrimary === 0) {
+    eq(bed1.primaryLanes.length, 0, 'Lane-free courtyard layout should not invent primary lanes');
+    return;
+  }
   ok(bed1.primaryLanes.length > 0, 'No primary lane zones found');
   eq(
     bed1.primaryLanes.length,
@@ -144,6 +148,10 @@ test('primary lane zones are present', () => {
 
 test('secondary lane zones are present', () => {
   const expectedSecondary = layout1.laneSegments.filter(s => s.width === 'secondary').length;
+  if (expectedSecondary === 0) {
+    eq(bed1.secondaryLanes.length, 0, 'Lane-free courtyard layout should not invent secondary lanes');
+    return;
+  }
   ok(bed1.secondaryLanes.length > 0, 'No secondary lane zones found');
   eq(
     bed1.secondaryLanes.length,
@@ -254,8 +262,9 @@ test('bedPromptFragment contains clearing mention', () => {
   contains(bed1.bedPromptFragment, 'OPEN COURTS', `bedPromptFragment missing clearing section`);
 });
 
-test('bedPromptFragment contains PRIMARY CORRIDORS section', () => {
-  contains(bed1.bedPromptFragment, 'PRIMARY CORRIDORS');
+test('bedPromptFragment describes either corridors or a lane-free courtyard network', () => {
+  const hasLanes = layout1.laneSegments.length > 0;
+  contains(bed1.bedPromptFragment, hasLanes ? 'PRIMARY CORRIDORS' : 'COURTYARD NETWORK');
 });
 
 test('bedPromptFragment contains ENTRANCE and GATE', () => {

@@ -28,8 +28,8 @@
  * 20.  All tile ids within a run are unique
  * 21.  All-hidden run variant (zero-areaBoss) still validates cleanly
  * 22.  Push 4 acceptance — Ch1 fixed terrain with seed-driven encounters
- *        AC1  Ch1 attempt 1 and 2 → identical 30 terrain tile IDs
- *        AC2  Ch1 Day / Evening / Night → identical 30 terrain tile IDs
+ *        AC1  Ch1 attempt 1 and 2 → identical 120 terrain tile IDs
+ *        AC2  Ch1 Day / Evening / Night → identical 120 terrain tile IDs
  *        AC3  Ch1 start and gate tile IDs are invariant across attempts
  *        AC4  Ch1 encounter assignments differ between attempt 1 and attempt 2
  *        AC5  Unauth'd chapter (Ch5) still produces distinct terrain per attempt
@@ -345,12 +345,12 @@ console.log('\n── Edge: ch1 attempt 1 ──');
   const run    = makeRun({ chapterId: 1, attemptNumber: 1 });
   const errors = validateRun(run);
   check('ch1/attempt1 validateRun passes', errors.length === 0, errors.join(' | '));
-  // getChapterTerrainCellCount(1) = 30 total (gate included).
-  // tileCount = 29 (30 playable excl. gate); tiles.length = 30.
-  check('ch1/attempt1 has 29 playable tiles (30 total − 1 gate)', run.tileCount === 29,
+  // Chapter 1's campus has 120 total cells (gate included).
+  // tileCount = 119 playable cells; tiles.length = 120.
+  check('ch1/attempt1 has 119 playable tiles (120 total − 1 gate)', run.tileCount === 119,
     `tileCount=${run.tileCount}`);
-  check('ch1/attempt1 tiles array has 30 entries (29 playable + 1 gate)',
-    run.tiles.length === 30, `tiles.length=${run.tiles.length}`);
+  check('ch1/attempt1 tiles array has 120 entries (119 playable + 1 gate)',
+    run.tiles.length === 120, `tiles.length=${run.tiles.length}`);
 }
 
 // ── 19. chestTier ↔ treasure ──────────────────────────────────────────────────
@@ -456,12 +456,12 @@ console.log('\n── Push 4: Ch1 fixed terrain + seed-driven encounters ──'
     const a5 = makeRun({ chapterId: 1, attemptNumber: 5 });
 
     const t1 = terrainOf(a1);
-    check('[push4 AC1] ch1 attempt1 vs attempt2 → same 30 tile IDs',
+    check('[push4 AC1] ch1 attempt1 vs attempt2 → same 120 tile IDs',
       t1 === terrainOf(a2));
-    check('[push4 AC1] ch1 attempt1 vs attempt5 → same 30 tile IDs',
+    check('[push4 AC1] ch1 attempt1 vs attempt5 → same 120 tile IDs',
       t1 === terrainOf(a5));
-    check('[push4 AC1] ch1 tile count fixed at 30 across all attempts',
-      a1.tiles.length === 30 && a2.tiles.length === 30 && a5.tiles.length === 30);
+    check('[push4 AC1] ch1 tile count fixed at 120 across all attempts',
+      a1.tiles.length === 120 && a2.tiles.length === 120 && a5.tiles.length === 120);
   }
 
   // ── AC2: Terrain identical across time-of-day shifts ──────────────────────
@@ -487,13 +487,11 @@ console.log('\n── Push 4: Ch1 fixed terrain + seed-driven encounters ──'
       a1.gateAnchorTileId === a2.gateAnchorTileId &&
       a1.gateAnchorTileId === a3.gateAnchorTileId);
 
-    // Cross-check against the canonical Push 3 coordinates.
-    const startId = `tile_${'-1'.replace('-','n')}`;        // tile IDs use q_r format
-    check('[push4 AC3] ch1 start tile matches Push 3 canonical coord (-1,2)',
-      a1.startTileId === 'tile_-1_2',
+    check('[push4 AC3] ch1 start tile matches campus south arrival (0,7)',
+      a1.startTileId === 'tile_0_7',
       `actual: ${a1.startTileId}`);
-    check('[push4 AC3] ch1 gate tile matches Push 3 canonical coord (3,0)',
-      a1.gateAnchorTileId === 'tile_3_0',
+    check('[push4 AC3] ch1 gate tile matches campus north gate (0,-7)',
+      a1.gateAnchorTileId === 'tile_0_-7',
       `actual: ${a1.gateAnchorTileId}`);
   }
 
@@ -508,14 +506,14 @@ console.log('\n── Push 4: Ch1 fixed terrain + seed-driven encounters ──'
   }
 
   // ── AC5: Unauth'd chapters retain procedural terrain (fallback intact) ──────
-  // Ch5 is NOT in PRODUCTION_AUTHORED_CHAPTERS so it uses generateHexTopology.
+  // Ch11 is NOT in PRODUCTION_AUTHORED_CHAPTERS so it uses generateHexTopology.
   // Different seeds → different terrain coordinates.  This is the old behaviour
   // that Push 4 intentionally preserves for not-yet-authored chapters.
   {
-    const c5a1 = makeRun({ chapterId: 5, attemptNumber: 1 });
-    const c5a2 = makeRun({ chapterId: 5, attemptNumber: 2 });
-    check('[push4 AC5] ch5 (unauth) terrain differs between attempt1 and attempt2',
-      terrainOf(c5a1) !== terrainOf(c5a2));
+    const c11a1 = makeRun({ chapterId: 11, attemptNumber: 1 });
+    const c11a2 = makeRun({ chapterId: 11, attemptNumber: 2 });
+    check('[push4 AC5] ch11 (unauth) terrain differs between attempt1 and attempt2',
+      terrainOf(c11a1) !== terrainOf(c11a2));
   }
 }
 

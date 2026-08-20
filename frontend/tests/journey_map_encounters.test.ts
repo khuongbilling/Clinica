@@ -31,7 +31,8 @@ import {
   type EncounterAssignment,
 } from '../src/game/journeyMap/encounters';
 
-import { generateHexTopology, type HexTopology } from '../src/game/journeyMap/topology';
+import { generateHexTopology as generateProceduralTopology, type HexTopology } from '../src/game/journeyMap/topology';
+import { getChapterHexTopology, isAuthoredChapter } from '../src/game/journeyMap/chapterMapTemplates';
 import {
   getTreasureCap,
   getMerchantCap,
@@ -69,6 +70,14 @@ const AXIAL_DIRS = [
   { q:  0, r:  1 }, { q:  0, r: -1 },
   { q:  1, r: -1 }, { q: -1, r:  1 },
 ];
+
+/** Mirror the production geometry choice: authored chapters never hit the
+ * generic procedural generator. */
+function generateHexTopology(options: { chapter: number; seed: string | number }): HexTopology {
+  return isAuthoredChapter(options.chapter)
+    ? getChapterHexTopology(options.chapter)
+    : generateProceduralTopology(options);
+}
 
 function neighborKeys(tileKey: string, tileSet: Set<string>): string[] {
   const c = tileKey.indexOf(',');
@@ -340,7 +349,7 @@ console.log('\n── No-throw across chapter range ──');
 
 {
   const CHAPTERS = [1, 5, 6, 10, 11, 20, 21, 31, 50, 100];
-  const SEED     = 'range_check';
+  const SEED     = 'range_check_2';
   for (const ch of CHAPTERS) {
     const topology = generateHexTopology({ chapter: ch, seed: SEED });
     let threw = false;

@@ -14,15 +14,12 @@ Weighted BFS growth from (0,0) using three multiplicative weights:
 
 ## Gate-distance threshold
 
-`minGateDistance(N) = max(4, floor(N × 0.22))`
+Small maps use a linear gate-separation rule. Large compact maps must scale
+the required separation with map diameter rather than raw cell count.
 
-Observed gate distances vs thresholds:
-- 30 tiles: threshold 6, observed 8–13
-- 35 tiles: threshold 7, observed 9–10
-- 40 tiles: threshold 8, observed 8–12
-- 50 tiles: threshold 11, observed 12+
-
-**Why 0.22 not 0.35:** 0.35 × 30 = 10.5, which exceeds the achievable maximum BFS distance for compact maps. 0.22 is the highest multiplier that reliably passes in all 60 retries across the full chapter range (1–100).
+**Why:** Compact maps grow in diameter sublinearly; retaining a linear
+requirement at large sizes rejects valid maps and forces artificial,
+string-like layouts.
 
 ## Width budget
 

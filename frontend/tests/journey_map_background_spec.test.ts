@@ -67,6 +67,18 @@ const VALID_ENV_TYPES = new Set([
 
 const SHIFTS = ['day', 'evening', 'night'] as const;
 
+function expectedAssetPath(chapter: number, shift: typeof SHIFTS[number]): string {
+  if (chapter === 1) {
+    const suffix = shift === 'day' ? '' : '-locked';
+    return `assets/ui/journey/map/map-campus-background-ch1-${shift}${suffix}.png`;
+  }
+  return `assets/ui/journey/map/map-platform-background-ch${chapter}-${shift}.png`;
+}
+
+function expectedMetroPath(chapter: number, shift: typeof SHIFTS[number]): string {
+  return `@/${expectedAssetPath(chapter, shift)}`;
+}
+
 // Keywords expected in per-shift AI prompts
 const SHIFT_KEYWORDS: Record<string, string[]> = {
   day:     ['morning', 'sunlight', 'golden'],
@@ -146,11 +158,11 @@ function assertSpecValid(ch: number, spec: ChapterBackgroundSpec, label: string)
       `[${label}] shift[${shift}].negativePrompt missing 'text'`);
 
     // Target asset path matches convention
-    const expectedPath = `assets/ui/journey/map/map-platform-background-ch${ch}-${shift}.png`;
+    const expectedPath = expectedAssetPath(ch, shift);
     eq(sv.targetAssetPath, expectedPath, `[${label}] shift[${shift}].targetAssetPath`);
 
     // Metro require path matches convention
-    const expectedMetro = `@/assets/ui/journey/map/map-platform-background-ch${ch}-${shift}.png`;
+    const expectedMetro = expectedMetroPath(ch, shift);
     eq(sv.metroRequirePath, expectedMetro, `[${label}] shift[${shift}].metroRequirePath`);
 
     // Target dimensions
@@ -243,7 +255,7 @@ test('[paths] target asset paths follow canonical convention', () => {
   for (let ch = 1; ch <= 10; ch++) {
     const spec = getChapterBackgroundSpec(ch);
     for (const shift of SHIFTS) {
-      const expected = `assets/ui/journey/map/map-platform-background-ch${ch}-${shift}.png`;
+      const expected = expectedAssetPath(ch, shift);
       eq(spec.shifts[shift].targetAssetPath, expected, `Ch${ch} ${shift} targetAssetPath`);
     }
   }
@@ -253,7 +265,7 @@ test('[paths] metro require paths follow canonical convention', () => {
   for (let ch = 1; ch <= 10; ch++) {
     const spec = getChapterBackgroundSpec(ch);
     for (const shift of SHIFTS) {
-      const expected = `@/assets/ui/journey/map/map-platform-background-ch${ch}-${shift}.png`;
+      const expected = expectedMetroPath(ch, shift);
       eq(spec.shifts[shift].metroRequirePath, expected, `Ch${ch} ${shift} metroRequirePath`);
     }
   }
@@ -262,14 +274,14 @@ test('[paths] metro require paths follow canonical convention', () => {
 test('[paths] Ch1 day path matches existing chapterMapVisuals.ts convention', () => {
   const spec = getChapterBackgroundSpec(1);
   eq(spec.shifts.day.targetAssetPath,
-    'assets/ui/journey/map/map-platform-background-ch1-day.png',
+    'assets/ui/journey/map/map-campus-background-ch1-day.png',
     'Ch1 day path');
 });
 
 test('[paths] Ch1 evening path matches existing chapterMapVisuals.ts convention', () => {
   const spec = getChapterBackgroundSpec(1);
   eq(spec.shifts.evening.targetAssetPath,
-    'assets/ui/journey/map/map-platform-background-ch1-evening.png',
+    'assets/ui/journey/map/map-campus-background-ch1-evening-locked.png',
     'Ch1 evening path');
 });
 

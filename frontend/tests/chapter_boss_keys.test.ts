@@ -115,8 +115,8 @@ check('20. all constants are integers',
 
 console.log('\n── areaBossProbabilityBp ──');
 
-// Ch 1–3: 0%
-eq(areaBossProbabilityBp(1),   0,   '21. ch1 → 0 bp (0%)');
+// Ch 1: 3%; Ch 2–3 remain 0%.
+eq(areaBossProbabilityBp(1), 300,   '21. ch1 → 300 bp (3% campus expedition)');
 eq(areaBossProbabilityBp(2),   0,   '22. ch2 → 0 bp');
 eq(areaBossProbabilityBp(3),   0,   '23. ch3 → 0 bp (boundary)');
 
@@ -162,7 +162,7 @@ for (const ch of [1,4,11,21,50]) {
 
 console.log('\n── areaBossEnabled ──');
 
-check('45. ch1 disabled',   !areaBossEnabled(1));
+check('45. ch1 enabled',     areaBossEnabled(1));
 check('46. ch2 disabled',   !areaBossEnabled(2));
 check('47. ch3 disabled',   !areaBossEnabled(3));
 check('48. ch4 enabled',     areaBossEnabled(4));

@@ -76,9 +76,10 @@ function targetClearingCount(tileCount: number): number {
 }
 
 /**
- * Chapter 1's university quad is intentionally plaza-first rather than a web of
- * one-hex corridors. Three overlapping courtyard discs keep all 60 progression
- * cells inside a compact, open campus footprint with many natural route loops.
+ * Chapter 1 is a large, plaza-first university expedition rather than a web of
+ * one-hex corridors. Five connected courts form a south-to-north campus inside
+ * a 20-row visual envelope: arrival court, grand quad, west scholar court, east
+ * observatory court, and the northern academy gate.
  */
 function buildChapterOneOpenCourtyardLayout(
   dna: ChapterMapDNA,
@@ -89,20 +90,24 @@ function buildChapterOneOpenCourtyardLayout(
     for (const cell of cells) addCells.set(hexKey(cell.q, cell.r), cell);
   };
 
-  const entryPlaza = hexDisc({ q: 1, r: 0 }, 2);
-  const grandQuad = hexDisc({ q: 5, r: 0 }, 3);
-  const gateCourt = hexDisc({ q: 10, r: 0 }, 1);
-  add(entryPlaza);
+  const southArrival = hexDisc({ q: 0, r: 7 }, 2);
+  const grandQuad = hexDisc({ q: 0, r: 0 }, 4);
+  const westScholarCourt = hexDisc({ q: -4, r: 0 }, 2);
+  const eastObservatoryCourt = hexDisc({ q: 4, r: 0 }, 2);
+  const northGateCourt = hexDisc({ q: 0, r: -7 }, 2);
+  const southernArch = [{ q: 1, r: 9 }];
+
+  add(southArrival);
   add(grandQuad);
-  add(gateCourt);
-  // A south garden step makes the 59-cell triple-courtyard composition exactly
-  // match the stable 60-cell progression budget without narrowing any route.
-  add([{ q: 5, r: 4 }]);
+  add(westScholarCourt);
+  add(eastObservatoryCourt);
+  add(northGateCourt);
+  add(southernArch);
 
   const cells = [...addCells.values()].sort((a, b) => a.q - b.q || a.r - b.r);
   if (cells.length !== targetCount) {
     throw new Error(
-      `Chapter 1 open courtyard must contain exactly ${targetCount} cells; got ${cells.length}.`,
+      `Chapter 1 campus expedition must contain exactly ${targetCount} cells; got ${cells.length}.`,
     );
   }
 
@@ -131,19 +136,17 @@ function buildChapterOneOpenCourtyardLayout(
     chapterId: 1,
     seed: dna.seed,
     cells,
-    startCell: { q: 0, r: 0 },
-    gateCell: { q: 11, r: 0 },
+    startCell: { q: 0, r: 7 },
+    gateCell: { q: 0, r: -7 },
     clearingZones: [
-      zone('entry-plaza', 'start', 'SIDE_CLEARING', 'court', { q: 1, r: 0 }, 'major', entryPlaza, 4),
-      zone('grand-quad', 'j1', 'JUNCTION_CLEARING', 'widened_intersection', { q: 5, r: 0 }, 'major', grandQuad, 6),
-      zone('gate-court', 'fa', 'FINAL_CLEARING', 'court', { q: 10, r: 0 }, 'normal', gateCourt, 4),
-      zone('north-colonnade', 'j2', 'JUNCTION_CLEARING', 'oval', { q: 5, r: -2 }, 'normal',
-        [{ q: 4, r: -2 }, { q: 5, r: -3 }, { q: 5, r: -2 }, { q: 6, r: -3 }], 3),
-      zone('south-garden', 'c1', 'GENERAL_CLEARING', 'irregular_bay', { q: 5, r: 3 }, 'normal',
-        [{ q: 4, r: 3 }, { q: 5, r: 3 }, { q: 5, r: 4 }, { q: 6, r: 2 }, { q: 6, r: 3 }], 3),
+      zone('south-arrival', 'start', 'SIDE_CLEARING', 'court', { q: 0, r: 7 }, 'major',
+        [...southArrival, ...southernArch], 4),
+      zone('grand-quad', 'j1', 'JUNCTION_CLEARING', 'widened_intersection', { q: 0, r: 0 }, 'major', grandQuad, 6),
+      zone('west-scholar-court', 'j2', 'SIDE_CLEARING', 'court', { q: -4, r: 0 }, 'normal', westScholarCourt, 4),
+      zone('east-observatory-court', 'j3', 'SIDE_CLEARING', 'court', { q: 4, r: 0 }, 'normal', eastObservatoryCourt, 4),
+      zone('north-academy-gate', 'fa', 'FINAL_CLEARING', 'court', { q: 0, r: -7 }, 'major', northGateCourt, 4),
     ],
-    // Intersections are plazas, not corridor bottlenecks. Empty lane segments
-    // intentionally classify all cells as open clearings/transition spaces.
+    // The campus is all open courts rather than corridor bottlenecks.
     laneSegments: [],
     targetTileCount: targetCount,
     actualTileCount: cells.length,

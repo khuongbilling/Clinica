@@ -59,7 +59,7 @@ function eq(a: number, b: number, label: string): void {
 console.log('\n── getChapterTerrainCellCount ──');
 
 // Required spec cases
-eq(getChapterTerrainCellCount(1),    60, 'ch 1  →  60');
+eq(getChapterTerrainCellCount(1),   120, 'ch 1  → 120 (campus expedition)');
 eq(getChapterTerrainCellCount(5),    60, 'ch 5  →  60');
 eq(getChapterTerrainCellCount(6),    70, 'ch 6  →  70');
 eq(getChapterTerrainCellCount(10),   70, 'ch 10 →  70');
@@ -116,12 +116,11 @@ console.log('\n── design-spec table ──');
 function pct(bp: number) { return bp / 100; }
 
 {
-  // Ch1–3: areaBoss = 0% (area bosses start at Ch4).  The 10% that used to be
-  // allocated to areaBoss now goes into none.
+  // Ch1's expanded campus has a 3% Area Boss rate.
   const r = getEncounterRatesBp(1);
-  check('ch1 none=65%',     pct(r.none)     === 65, `${pct(r.none)}%`);
+  check('ch1 none=62%',     pct(r.none)     === 62, `${pct(r.none)}%`);
   check('ch1 battle=30%',   pct(r.battle)   === 30, `${pct(r.battle)}%`);
-  check('ch1 areaBoss=0%',  pct(r.areaBoss) ===  0, `${pct(r.areaBoss)}%`);
+  check('ch1 areaBoss=3%',  pct(r.areaBoss) ===  3, `${pct(r.areaBoss)}%`);
   check('ch1 treasure=5%',  pct(r.treasure) ===  5, `${pct(r.treasure)}%`);
   check('ch1 merchant=0%',  pct(r.merchant) ===  0, `${pct(r.merchant)}%`);
 }

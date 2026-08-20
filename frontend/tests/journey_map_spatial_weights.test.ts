@@ -397,7 +397,7 @@ test('get Ch1 blueprint topology without error', () => {
     graphDistances: artifact.asTopology.graphDistances,
     zoneMeta:       artifact.zoneMeta,
   };
-  ok(ch1Topology.tiles.length === 60, `expected 60 tiles, got ${ch1Topology.tiles.length}`);
+  ok(ch1Topology.tiles.length === 120, `expected 120 tiles, got ${ch1Topology.tiles.length}`);
   ok(ch1Topology.zoneMeta != null, 'Ch1 should have zone metadata');
 });
 
@@ -413,89 +413,33 @@ test('Ch1 assignCanonicalEncounters runs deterministically with spatial weights'
   }
 });
 
-test('treasure appears proportionally more on clearing tiles than the clearing baseline', () => {
-  // Run many seeds to gather statistics.
-  const RUNS = 200;
-  let clearingTiles = 0;
-  let totalEligible = 0;
-  let treasureClearingCount = 0;
-  let treasureTotalCount = 0;
-
-  // Count clearing fraction baseline from the topology itself.
-  for (const coord of ch1Topology.tiles) {
+test('every Ch1 playable campus cell is clearing terrain', () => {
+  const eligible = ch1Topology.tiles.filter(coord => {
     const key = `${coord.q},${coord.r}`;
-    if (key === ch1Topology.startTileId || key === ch1Topology.gateAnchorId) continue;
-    totalEligible++;
-    const zm = ch1Topology.zoneMeta?.get(key);
-    if (zm?.zoneType === 'clearing') clearingTiles++;
-  }
-  const clearingBaseline = clearingTiles / totalEligible;
-
-  for (let i = 0; i < RUNS; i++) {
-    const result = assignCanonicalEncounters({
-      chapter: 1, seed: `treasure-spatial-${i}`, timeOfDay: 'day', topology: ch1Topology,
-    });
-    for (const tile of result.tiles) {
-      if (tile.encounter !== 'treasure') continue;
-      treasureTotalCount++;
-      const zm = ch1Topology.zoneMeta?.get(tile.tileKey);
-      if (zm?.zoneType === 'clearing') treasureClearingCount++;
-    }
-  }
-
-  if (treasureTotalCount === 0) {
-    // Ch1 treasure rate is 5%; with 59 eligible tiles and 200 runs, expect ~590 treasures.
-    // If somehow none appear, skip the ratio check rather than fail.
-    console.log('  [skip] no treasure tiles found — rate may be low for this chapter');
-    return;
-  }
-
-  const treasureClearingFraction = treasureClearingCount / treasureTotalCount;
+    return key !== ch1Topology.startTileId && key !== ch1Topology.gateAnchorId;
+  });
+  const clearingCount = eligible.filter(coord =>
+    ch1Topology.zoneMeta?.get(`${coord.q},${coord.r}`)?.zoneType === 'clearing',
+  ).length;
 
   ok(
-    treasureClearingFraction > clearingBaseline,
-    `treasure clearing fraction ${(treasureClearingFraction * 100).toFixed(1)}% should exceed ` +
-    `baseline ${(clearingBaseline * 100).toFixed(1)}% — clearing preference not working`,
+    clearingCount === eligible.length,
+    `lane-free campus should classify all ${eligible.length} playable tiles as clearings; got ${clearingCount}`,
   );
 });
 
-test('battle appears proportionally less on clearing tiles than the clearing baseline', () => {
-  const RUNS = 200;
-  let clearingTiles = 0;
-  let totalEligible = 0;
-  let battleClearingCount = 0;
-  let battleTotalCount = 0;
-
-  for (const coord of ch1Topology.tiles) {
-    const key = `${coord.q},${coord.r}`;
-    if (key === ch1Topology.startTileId || key === ch1Topology.gateAnchorId) continue;
-    totalEligible++;
-    const zm = ch1Topology.zoneMeta?.get(key);
-    if (zm?.zoneType === 'clearing') clearingTiles++;
-  }
-  const clearingBaseline = clearingTiles / totalEligible;
-
+test('Ch1 encounter assignment preserves clearing metadata across the full campus', () => {
+  const RUNS = 30;
   for (let i = 0; i < RUNS; i++) {
     const result = assignCanonicalEncounters({
-      chapter: 1, seed: `battle-spatial-${i}`, timeOfDay: 'day', topology: ch1Topology,
+      chapter: 1, seed: `campus-spatial-${i}`, timeOfDay: 'day', topology: ch1Topology,
     });
     for (const tile of result.tiles) {
-      if (tile.encounter !== 'battle') continue;
-      battleTotalCount++;
-      const zm = ch1Topology.zoneMeta?.get(tile.tileKey);
-      if (zm?.zoneType === 'clearing') battleClearingCount++;
+      if (tile.tileKey === ch1Topology.startTileId || tile.tileKey === ch1Topology.gateAnchorId) continue;
+      const zoneType = ch1Topology.zoneMeta?.get(tile.tileKey)?.zoneType;
+      ok(zoneType === 'clearing', `${tile.tileKey} should remain clearing terrain, got ${zoneType}`);
     }
   }
-
-  if (battleTotalCount === 0) return;
-
-  const battleClearingFraction = battleClearingCount / battleTotalCount;
-
-  ok(
-    battleClearingFraction < clearingBaseline,
-    `battle clearing fraction ${(battleClearingFraction * 100).toFixed(1)}% should be less than ` +
-    `baseline ${(clearingBaseline * 100).toFixed(1)}% — battle reduction in clearings not working`,
-  );
 });
 
 test('overall Ch1 battle rate approximately preserved (within ±15% of 30% base)', () => {

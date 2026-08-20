@@ -11,7 +11,8 @@
  *   the current map.
  *
  * Area Boss tile probability (per generated map)
- *   Ch  1– 3 →  0%   (no area bosses in early chapters)
+ *   Ch  1     →  3%   (expanded campus expedition)
+ *   Ch  2– 3 →  0%   (no area bosses in the remaining opening chapters)
  *   Ch  4–10 →  3%
  *   Ch 11–20 →  4%
  *   Ch 21+   →  5%
@@ -71,7 +72,8 @@ export const AREA_BOSS_MAP_MAX = 3;
  * The generator zero-out this rate once AREA_BOSS_MAP_MAX tiles have been
  * placed — so the actual count per map is bounded to [0, AREA_BOSS_MAP_MAX].
  *
- *   Ch  1– 3  →    0  (  0 %)
+ *   Ch  1     →  300  (  3 %)
+ *   Ch  2– 3  →    0  (  0 %)
  *   Ch  4–10  →  300  (  3 %)
  *   Ch 11–20  →  400  (  4 %)
  *   Ch 21+    →  500  (  5 %)
@@ -81,6 +83,7 @@ export const AREA_BOSS_MAP_MAX = 3;
  */
 export function areaBossProbabilityBp(chapter: number): number {
   if (chapter <= 0)  return 0;
+  if (chapter === 1) return 300;
   if (chapter <= 3)  return 0;
   if (chapter <= 10) return 300;
   if (chapter <= 20) return 400;
@@ -89,7 +92,7 @@ export function areaBossProbabilityBp(chapter: number): number {
 
 /**
  * True when Area Boss tiles are possible for the given chapter.
- * Chapters 1–3 always return false.
+ * Chapter 1 has a 3% expedition rate; Chapters 2–3 remain disabled.
  */
 export function areaBossEnabled(chapter: number): boolean {
   return areaBossProbabilityBp(chapter) > 0;

@@ -230,13 +230,13 @@ test('exact persisted coordinate set and anchors pass the canonical geometry che
 test('same-count hybrid footprint fails even when it claims the current identity', () => {
   const hybrid = {
     ...builtRun,
-  tiles: builtRun.tiles.map(tile => tile.id === '5,4'
+  tiles: builtRun.tiles.map(tile => tile.id === '0,9'
       ? { ...tile, id: '12,0', q: 12, r: 0 }
       : tile),
   };
   const comparison = compareRunGeometryToCanonicalArtifact(hybrid, artifact);
   ok(!comparison.matches, 'hybrid coordinate footprint should fail');
-  ok(comparison.missingTileIds.includes('5,4'), 'missing canonical tile should be reported');
+  ok(comparison.missingTileIds.includes('0,9'), 'missing canonical tile should be reported');
   ok(comparison.extraTileIds.includes('12,0'), 'extra legacy tile should be reported');
 });
 

@@ -235,11 +235,16 @@ export function bfsDistances(
  *   40 tiles → 8   (diameter ~10–14)
  *   55 tiles → 12
  *
- * Using 0.22 × N keeps the requirement achievable while still ensuring the
- * gate is meaningfully distant from the start.
+ * Up to 100 cells, 0.22 × N keeps the requirement achievable while still
+ * ensuring the gate is meaningfully distant from the start. Larger maps retain
+ * the same compact growth profile, so their diameter grows with √N rather than
+ * linearly; use a scale-aware floor there to avoid rejecting every valid map.
  */
 function minGateDistance(targetCount: number): number {
-  return Math.max(4, Math.floor(targetCount * 0.22));
+  if (targetCount <= 100) {
+    return Math.max(4, Math.floor(targetCount * 0.22));
+  }
+  return Math.max(4, Math.floor(Math.sqrt(targetCount) * 2));
 }
 
 /**

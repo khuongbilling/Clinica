@@ -307,6 +307,17 @@ function buildBedPromptFragment(
     );
   }
 
+  // A plaza-first authored map can intentionally be made entirely of adjoining
+  // courts. State that explicitly so raster authoring preserves open circulation
+  // rather than inventing corridor bottlenecks that are not in the gameplay map.
+  if (primaryLanes.length === 0 && secondaryLanes.length === 0) {
+    parts.push(
+      'COURTYARD NETWORK (lane-free campus): all open courts adjoin directly as ' +
+      'one continuous navigable stone surface; NO CORRIDORS, bottlenecks, walls, ' +
+      'or narrow passages may be invented between the courts',
+    );
+  }
+
   // ── Start / gate callouts ──────────────────────────────────────────────────
   parts.push(
     `ENTRANCE (${startPosition}): open welcoming threshold — flat bare paved approach, ` +

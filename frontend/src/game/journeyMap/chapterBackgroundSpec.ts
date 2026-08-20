@@ -314,10 +314,18 @@ const STYLE_ANCHOR =
 // ── Asset path helpers ────────────────────────────────────────────────────────
 
 function targetAssetPath(chapter: number, shift: TimeOfDay): string {
+  if (chapter === 1) {
+    const suffix = shift === 'day' ? '' : '-locked';
+    return `assets/ui/journey/map/map-campus-background-ch1-${shift}${suffix}.png`;
+  }
   return `assets/ui/journey/map/map-platform-background-ch${chapter}-${shift}.png`;
 }
 
 function metroRequirePath(chapter: number, shift: TimeOfDay): string {
+  if (chapter === 1) {
+    const suffix = shift === 'day' ? '' : '-locked';
+    return `@/assets/ui/journey/map/map-campus-background-ch1-${shift}${suffix}.png`;
+  }
   return `@/assets/ui/journey/map/map-platform-background-ch${chapter}-${shift}.png`;
 }
 

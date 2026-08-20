@@ -34,6 +34,7 @@
 
 import { generateHexTopology, bfsDistances } from './topology';
 import { getChapterTerrainCellCount }         from './config';
+import { getChapterHexLayout }                from './chapterHexLayout';
 import type { AxialCoord, HexTopology }      from './topology';
 import type {
   ChapterMapTemplate,
@@ -84,6 +85,20 @@ interface AuthoredRawMap {
   readonly start: string;                                   // "q,r"
   readonly gate:  string;                                   // "q,r"
   readonly tiles: ReadonlyArray<readonly [number, number]>; // [q, r] pairs
+}
+
+/**
+ * Chapter 1 is rendered through the modern fixed-layout pipeline. This adapter
+ * keeps the older JourneyRun topology API on that same canonical coordinate
+ * set, rather than maintaining a second hand-authored campus footprint.
+ */
+function getChapterOneCampusRawMap(): AuthoredRawMap {
+  const layout = getChapterHexLayout(1);
+  return {
+    start: `${layout.startCell.q},${layout.startCell.r}`,
+    gate:  `${layout.gateCell.q},${layout.gateCell.r}`,
+    tiles: layout.cells.map(cell => [cell.q, cell.r] as const),
+  };
 }
 
 const AUTHORED_CHAPTER_MAPS: Readonly<Record<number, AuthoredRawMap>> = {
@@ -855,7 +870,9 @@ function masterTemplate(chapter: number): ChapterMapTemplate {
   const cached = templateCache.get(chapter);
   if (cached) return cached;
 
-  const authored = AUTHORED_CHAPTER_MAPS[chapter];
+  const authored = chapter === 1
+    ? getChapterOneCampusRawMap()
+    : AUTHORED_CHAPTER_MAPS[chapter];
   const template = authored
     ? buildFromAuthoredData(chapter, authored)
     : buildFromProcedural(chapter);

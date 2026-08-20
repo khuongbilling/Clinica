@@ -45,6 +45,7 @@ import {
 import { createChapterBossKeyState } from '../src/game/journeyMap/chapterBossKeys';
 
 import { generateHexTopology }     from '../src/game/journeyMap/topology';
+import { getChapterHexTopology }   from '../src/game/journeyMap/chapterMapTemplates';
 import { assignJourneyEncounters } from '../src/game/journeyMap/encounters';
 import { generateSecureSeed }      from '../src/game/journeyMap/secureSeed';
 import type { JourneyRun }         from '../src/game/journeyMap/types';
@@ -205,7 +206,7 @@ console.log('\n── buildInitialJourneyRun ──');
 {
   const chapter    = 1;
   const seed       = 'build_run_seed';
-  const topology   = generateHexTopology({ chapter, seed });
+  const topology   = getChapterHexTopology(chapter);
   const encounters = assignJourneyEncounters({ chapter, seed, topology });
   const run = buildInitialJourneyRun({
     id: 'test-id-1', playerId: 'p1', chapterId: chapter,

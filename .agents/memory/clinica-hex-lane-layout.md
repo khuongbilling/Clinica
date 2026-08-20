@@ -15,6 +15,14 @@ description: getChapterHexLayout — converts PathwayGraph into exact walkable h
 
 ## Critical implementation notes
 
+### Lane-free campus exception
+Chapter 1 is intentionally an open-courtyard campus, not a corridor map. Its
+walkable-art direction must prohibit invented bottlenecks, and generic
+lane-oriented checks must treat this as an explicit exception.
+
+**Why:** Fabricating corridor metadata would make the finished environment
+contradict the playable map.
+
 ### Lane width
 - `LANE_HALF_WIDTH = { primary: 0, secondary: 0 }` — corridors are 1-wide at baseline.
 - `TRANSITION_HALF_WIDTH_BONUS = 1` on the last `TRANSITION_ZONE_TILES = 2` tiles approaching a clearing node → widens to 3 there (directive §5 transition effect).

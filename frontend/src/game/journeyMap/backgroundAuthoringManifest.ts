@@ -223,9 +223,9 @@ export interface BackgroundAuthoringManifest {
 //   3. Day/Evening/Night variants must all be 'validated' before the chapter
 //      is considered fully synced.
 //
-// Ch1 — v2 open-courtyard rasters share one five-court composition across every
-// shift. Their clear paving is reviewed against the authored walkable bed; the
-// geometry validator continues to enforce scenery-zone safety.
+// Ch1 — v3 campus-expedition rasters share one broad five-court composition
+// across every shift. Their clear paving is reviewed against the authored
+// walkable bed; the geometry validator continues to enforce scenery-zone safety.
 
 const ASSET_REGISTRY: Partial<Record<number, Record<TimeOfDay, ManifestAssetStatus>>> = {
   1: {

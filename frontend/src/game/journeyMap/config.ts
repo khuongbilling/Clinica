@@ -19,6 +19,7 @@
  */
 
 import type { BasisPoints, EncounterType, ChestTier } from './types';
+import { areaBossProbabilityBp } from './chapterBossKeys';
 
 const BP = 10_000;
 
@@ -49,6 +50,7 @@ const BP = 10_000;
  * Formula for ch ≥ 11: 80 + 10 × floor((chapter − 11) / 10)
  */
 export function getChapterTerrainCellCount(chapter: number): number {
+  if (chapter === 1)  return 120;
   if (chapter <= 5)  return 60;
   if (chapter <= 10) return 70;
 
@@ -277,10 +279,7 @@ export const MERCHANT_STEP_BP: BasisPoints = 100; // 1%
  *             Use chapterBossKeys.areaBossProbabilityBp() as the canonical source.
  */
 export function legacyAreaBossRateBp(chapter: number): BasisPoints {
-  if (chapter <= 3)  return   0;
-  if (chapter <= 10) return 300;
-  if (chapter <= 20) return 400;
-  return 500;
+  return areaBossProbabilityBp(chapter) as BasisPoints;
 }
 
 /**
