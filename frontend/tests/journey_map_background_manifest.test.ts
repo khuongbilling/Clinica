@@ -20,8 +20,9 @@ import {
   type BackgroundAuthoringManifest,
   type WalkableBounds,
 } from '../src/game/journeyMap/backgroundAuthoringManifest';
-import { getCanonicalChapterMapArtifact, MAP_LAYOUT_VERSION } from '../src/game/journeyMap/canonicalMapArtifact';
+import { getCanonicalChapterMapArtifact } from '../src/game/journeyMap/canonicalMapArtifact';
 import { getChapterHexLayout } from '../src/game/journeyMap/chapterHexLayout';
+import { getChapterMapLayoutVersion } from '../src/game/journeyMap/journeyMapVersion';
 
 // ── Test harness ──────────────────────────────────────────────────────────────
 
@@ -81,8 +82,8 @@ test('all manifests have chapterId = 1', () => {
   for (const m of manifests) eq(m.chapterId, 1);
 });
 
-test('mapLayoutVersion matches MAP_LAYOUT_VERSION for all shifts', () => {
-  for (const m of manifests) eq(m.mapLayoutVersion, MAP_LAYOUT_VERSION);
+test('mapLayoutVersion matches the active chapter-scoped layout version for all shifts', () => {
+  for (const m of manifests) eq(m.mapLayoutVersion, getChapterMapLayoutVersion(1));
 });
 
 test('mapBlueprintHash is an 8-char hex string for all shifts', () => {
@@ -131,7 +132,11 @@ test('assetVersion is BACKGROUND_ASSET_REQUIRED when no raster, version:blueprin
     if (NO_RASTER.includes(m.assetStatus)) {
       eq(m.assetVersion, 'BACKGROUND_ASSET_REQUIRED');
     } else {
-      ok(/^v\d+:[0-9a-f]{8}:[0-9a-f]{8}$/.test(m.assetVersion), `bad version: ${m.assetVersion}`);
+      eq(
+        m.assetVersion,
+        `${m.mapLayoutVersion}:${m.mapBlueprintHash}:${m.mapStructureHash}`,
+        `bad version: ${m.assetVersion}`,
+      );
     }
   }
 });

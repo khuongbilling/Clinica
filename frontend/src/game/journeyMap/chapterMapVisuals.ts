@@ -315,14 +315,15 @@ const CH1_STAGE3_ASSET_PATHS = {
 } as const satisfies Record<TimeOfDay, string>;
 
 const BLUEPRINT_RASTER_REGISTRY: Record<string, BlueprintRasterRegistration> = {
-  // Clean/offline pipeline hash:
-  '1:day:6439241b:29bd5e61': {
+  // Ch1 open-courtyard Stage 3 rasters. These are the only Ch1 registrations:
+  // prior corridor-era art must never resolve against the new map identity.
+  '1:day:1416efe7:48d87313': {
     source: CH1_DAY_BG, assetPath: CH1_STAGE3_ASSET_PATHS.day,
   },
-  '1:evening:6439241b:29bd5e61': {
+  '1:evening:1416efe7:48d87313': {
     source: CH1_EVE_BG, assetPath: CH1_STAGE3_ASSET_PATHS.evening,
   },
-  '1:night:6439241b:29bd5e61': {
+  '1:night:1416efe7:48d87313': {
     source: CH1_NIGHT_BG, assetPath: CH1_STAGE3_ASSET_PATHS.night,
   },
 };

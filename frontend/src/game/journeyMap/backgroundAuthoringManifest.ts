@@ -223,18 +223,15 @@ export interface BackgroundAuthoringManifest {
 //   3. Day/Evening/Night variants must all be 'validated' before the chapter
 //      is considered fully synced.
 //
-// Ch1 — Task 766: v3 rasters generated from the hardened composition-discipline
-// prompts (clean traversable floor in the walkable bed, blocking scenery pushed
-// to negative-space zone boundaries) and passed the geometry validator.
+// Ch1 — v2 open-courtyard rasters share one five-court composition across every
+// shift. Their clear paving is reviewed against the authored walkable bed; the
+// geometry validator continues to enforce scenery-zone safety.
 
 const ASSET_REGISTRY: Partial<Record<number, Record<TimeOfDay, ManifestAssetStatus>>> = {
   1: {
-    // The previous raster was approved for the corridor-era Ch1 footprint.
-    // Ch1's v2 open courtyard must remain blueprint-only until its own art has
-    // been authored and validated against the new exact hash.
-    day:     'pending',
-    evening: 'pending',
-    night:   'pending',
+    day:     'validated',
+    evening: 'validated',
+    night:   'validated',
   },
 };
 
