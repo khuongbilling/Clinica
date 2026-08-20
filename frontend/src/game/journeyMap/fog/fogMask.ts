@@ -48,6 +48,8 @@
  *   Web only — uses HTML5 Canvas 2D API.
  */
 
+import { getFogFovScale } from './fogRevealGeometry';
+
 // ── Types ──────────────────────────────────────────────────────────────────────
 
 export interface FogMaskParams {
@@ -292,7 +294,7 @@ export function drawFogMask(
   //
   // Explored tiles outside the FOV were already fully erased in step 2;
   // applying destination-out on alpha=0 pixels is a no-op (0 × anything = 0).
-  const fovScale  = 1 + (effectiveFieldOfVision - 1) * 0.55;
+  const fovScale  = getFogFovScale(effectiveFieldOfVision);
   const fovInnerR = sz * 1.45 * fovScale;   // hard clear zone — fog fully erased inside
   const featherW  = sz * 0.60;              // width of soft edge transition
   const fovOuterR = fovInnerR + featherW;   // fog unchanged beyond this radius
@@ -389,7 +391,7 @@ export function drawFogMaskDev(
   }
 
   // VISIBLE_NOW tiles — feathered gradient (dark center → white at outer edge)
-  const fovScale  = 1 + (effectiveFieldOfVision - 1) * 0.55;
+  const fovScale  = getFogFovScale(effectiveFieldOfVision);
   const fovInnerR = sz * 1.45 * fovScale;
   const featherW  = sz * 0.60;
   const fovOuterR = fovInnerR + featherW;
@@ -606,7 +608,7 @@ export function buildOrganicRevealInfluences({
   // fovScale: each extra FOV point extends the clearing by ~sz × 0.8.
   //   FOV=1 → radius ≈ sz × 1.45 (7-tile cluster → one continuous clearing)
   //   FOV=2 → radius ≈ sz × 2.25
-  const fovScale        = 1 + (effectiveFieldOfVision - 1) * 0.55;
+  const fovScale        = getFogFovScale(effectiveFieldOfVision);
   const visiblePrimaryR = sz * 1.45 * fovScale * radiusMultiplier;
   for (const id of visibleNowIds) {
     const c = tileCenters.get(id);

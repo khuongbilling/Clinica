@@ -52,13 +52,21 @@
  *   WorldContent       z = 3000–4900
  *   FogOfWarLayer      z = 5200
  *
- * Web-only — returns null on native (HexMapLayer provides a native fallback).
+ * Web uses a canvas mask. Native uses clipped reveal lobes, each positioned
+ * against the same world-sized image, so it never exposes finished art in
+ * unexplored territory while retaining the exact same source alignment.
  */
 
-import React, { useLayoutEffect, useRef } from 'react';
+import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Platform, View } from 'react-native';
 import { Asset } from 'expo-asset';
+import Svg, { Circle, ClipPath, Defs, Image as SvgImage } from 'react-native-svg';
 import { buildFogMaskCacheKey } from '@/src/game/journeyMap/fog/fogMask';
+import {
+  EXPLORED_ENVIRONMENT_REVEAL_FACTOR,
+  getEnvironmentRevealRadius,
+  VISIBLE_ENVIRONMENT_REVEAL_FACTOR,
+} from '@/src/game/journeyMap/fog/fogRevealGeometry';
 import { JOURNEY_Z } from './journeyZ';
 
 // ── Reveal strength constants ──────────────────────────────────────────────────
@@ -84,7 +92,7 @@ const VISIBLE_STRENGTH = 0.96;
  * This value is sz × 1.25 — 5 % larger than fog erasure — so the environment
  * paint always covers the fully-cleared zone with no seam at the edge.
  */
-const EXPLORED_RADIUS_FACTOR = 1.25;
+const EXPLORED_RADIUS_FACTOR = EXPLORED_ENVIRONMENT_REVEAL_FACTOR;
 
 /**
  * Reveal lobe radius for VISIBLE_NOW tiles, as a multiple of sz × fovScale.
@@ -92,7 +100,7 @@ const EXPLORED_RADIUS_FACTOR = 1.25;
  * Fog erasure visible = sz × 1.45 × fovScale (fogMask.ts visiblePrimaryR).
  * This value is sz × 1.50 × fovScale — 5 % larger than fog erasure.
  */
-const VISIBLE_RADIUS_FACTOR = 1.50;
+const VISIBLE_RADIUS_FACTOR = VISIBLE_ENVIRONMENT_REVEAL_FACTOR;
 
 /** Duration of the materialisation fade when new territory is discovered (ms). */
 const MATERIALIZE_MS = 350;
@@ -186,8 +194,123 @@ export interface EnvironmentRevealLayerProps {
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export function EnvironmentRevealLayer(props: EnvironmentRevealLayerProps): React.ReactElement | null {
-  if (Platform.OS !== 'web') return null;
+  if (Platform.OS !== 'web') return <EnvironmentRevealLayerNative {...props} />;
   return <EnvironmentRevealLayerWeb {...props} />;
+}
+
+/**
+ * Canvas compositing is web-only. Native draws at most two full-world SVG image
+ * layers, each clipped by all of its reveal circles. This bounds image instances
+ * on a fully explored map while retaining the no-leak visibility contract.
+ */
+function EnvironmentRevealLayerNative({
+  source,
+  worldWidth,
+  worldHeight,
+  sz,
+  tileCenters,
+  exploredTileIds = [],
+  visibleTileIds,
+  effectiveFieldOfVision = 1,
+}: EnvironmentRevealLayerProps): React.ReactElement {
+  const [uri, setUri] = useState<string | null>(null);
+  const clipId = useRef(`environment-reveal-${String(source).replace(/[^a-zA-Z0-9]/g, '')}`).current;
+  const circles = useMemo(() => {
+    const explored: Array<{ id: string; cx: number; cy: number; radius: number }> = [];
+    const visible: Array<{ id: string; cx: number; cy: number; radius: number }> = [];
+    const visibleIds = visibleTileIds ?? new Set<string>();
+    const ids = new Set<string>(exploredTileIds);
+    for (const id of visibleIds) ids.add(id);
+    for (const id of ids) {
+      const center = tileCenters.get(id);
+      if (!center) continue;
+      const target = visibleIds.has(id) ? visible : explored;
+      target.push({
+        id,
+        cx: center.cx,
+        cy: center.cy,
+        radius: getEnvironmentRevealRadius(
+          sz,
+          visibleIds.has(id) ? 'visible' : 'explored',
+          effectiveFieldOfVision,
+        ),
+      });
+    }
+    return { explored, visible };
+  }, [effectiveFieldOfVision, exploredTileIds, sz, tileCenters, visibleTileIds]);
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        let nextUri: string | undefined;
+        if (typeof source === 'number') {
+          const asset = Asset.fromModule(source);
+          if (!asset.uri) await asset.downloadAsync();
+          nextUri = asset.uri;
+        } else if (typeof source === 'string') {
+          nextUri = source;
+        } else if (source && typeof source === 'object' && 'uri' in source) {
+          nextUri = (source as { uri?: string }).uri;
+        }
+        if (!cancelled) setUri(nextUri ?? null);
+      } catch {
+        if (!cancelled) setUri(null);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [source]);
+
+  return (
+    <View
+      pointerEvents="none"
+      style={{
+        position: 'absolute',
+        left: 0,
+        top: 0,
+        width: worldWidth,
+        height: worldHeight,
+        zIndex: JOURNEY_Z.ENV_REVEAL,
+      }}
+    >
+      {uri != null && (
+        <Svg width={worldWidth} height={worldHeight}>
+          <Defs>
+            <ClipPath id={`${clipId}-explored`}>
+              {circles.explored.map(circle => (
+                <Circle key={circle.id} cx={circle.cx} cy={circle.cy} r={circle.radius} />
+              ))}
+            </ClipPath>
+            <ClipPath id={`${clipId}-visible`}>
+              {circles.visible.map(circle => (
+                <Circle key={circle.id} cx={circle.cx} cy={circle.cy} r={circle.radius} />
+              ))}
+            </ClipPath>
+          </Defs>
+          {circles.explored.length > 0 && (
+            <SvgImage
+              href={{ uri }}
+              width={worldWidth}
+              height={worldHeight}
+              opacity={EXPLORED_STRENGTH}
+              preserveAspectRatio="xMidYMid slice"
+              clipPath={`url(#${clipId}-explored)`}
+            />
+          )}
+          {circles.visible.length > 0 && (
+            <SvgImage
+              href={{ uri }}
+              width={worldWidth}
+              height={worldHeight}
+              opacity={VISIBLE_STRENGTH}
+              preserveAspectRatio="xMidYMid slice"
+              clipPath={`url(#${clipId}-visible)`}
+            />
+          )}
+        </Svg>
+      )}
+    </View>
+  );
 }
 
 function EnvironmentRevealLayerWeb({
@@ -407,7 +530,7 @@ async function drawReveal(
   // Radius = sz × EXPLORED_RADIUS_FACTOR (1.25).
   // Fog erasure explored = sz × 1.20 → reveal exceeds erasure by 0.05 × sz
   // so the environment surface always covers the cleared fog zone completely.
-  const explRadius = sz * EXPLORED_RADIUS_FACTOR;
+  const explRadius = getEnvironmentRevealRadius(sz, 'explored');
   for (const id of exploredIds) {
     const c = tileCenters.get(id);
     if (!c) continue;
@@ -424,8 +547,11 @@ async function drawReveal(
   // Radius = sz × VISIBLE_RADIUS_FACTOR (1.50) × fovScale.
   // Fog erasure visible = sz × 1.45 × fovScale → reveal exceeds erasure by
   // 0.05 × sz × fovScale — same proportional margin as explored lobes.
-  const fovScale  = 1 + ((effectiveFieldOfVision ?? 1) - 1) * 0.55;
-  const visRadius = sz * VISIBLE_RADIUS_FACTOR * fovScale;
+  const visRadius = getEnvironmentRevealRadius(
+    sz,
+    'visible',
+    effectiveFieldOfVision ?? 1,
+  );
   for (const id of visibleNowIds) {
     const c = tileCenters.get(id);
     if (!c) continue;

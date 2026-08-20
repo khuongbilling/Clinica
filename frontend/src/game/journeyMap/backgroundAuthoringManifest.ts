@@ -41,7 +41,9 @@ import { getWalkableBed }          from './walkableBedGenerator';
 import { validateBackgroundComposition } from './backgroundValidator';
 import type { BackgroundValidationResult } from './backgroundValidator';
 import { MAP_LAYOUT_VERSION }      from './journeyMapVersion';    // leaf import — no cycle
-import { fnv1a32 }                 from './prng';
+import { getCanonicalStage1Snapshot } from './canonicalStageIdentity';
+import type { CanonicalStage1Snapshot } from './canonicalStageIdentity';
+import type { CanonicalStageStatus } from './canonicalStageContract';
 import type { TimeOfDay }          from './types';
 import type { WalkableBed }        from './chapterMapTemplate.types';
 import type {
@@ -114,13 +116,15 @@ export interface ManifestSceneryZone {
  *   • metroRequirePath uses the `@/` alias — must match what
  *     chapterMapVisuals.ts passes to require().
  *   • assetVersion is either 'BACKGROUND_ASSET_REQUIRED' (pending) or
- *     '{mapLayoutVersion}:{blueprintHash}' (generated).
+ *     '{mapLayoutVersion}:{blueprintHash}:{structureHash}' (generated).
  */
 export interface BackgroundAuthoringManifest {
   // Identity
   readonly chapterId:        number;
   readonly shift:            TimeOfDay;
   readonly mapBlueprintHash: string;
+  /** Obstacle-aware Stage 1 identity required for exact Stage 3 approval. */
+  readonly mapStructureHash: string;
   readonly mapLayoutVersion: string;
   readonly topologyFamily:   string;
 
@@ -182,12 +186,18 @@ export interface BackgroundAuthoringManifest {
    * Blueprint version string when the asset was generated.
    *
    *   'BACKGROUND_ASSET_REQUIRED' — no usable raster ('pending' / 'spec_ready' / 'failed')
-   *   '{mapLayoutVersion}:{hash}'  — a raster exists for this blueprint
+ *   '{mapLayoutVersion}:{blueprintHash}:{structureHash}' — a raster exists
+ *   for this complete Stage 1 blueprint
    *
    * DevDiagnostics compares this to the live artifact's version+hash to
    * detect whether the background is stale (geometry changed since generation).
    */
   readonly assetVersion:     string;
+  /**
+   * Explicit Stage 3 approval state. This records authoring readiness only;
+   * runtime still requires the exact hash registration in stage3AssetSelector.
+   */
+  readonly stage3Status: CanonicalStageStatus;
 
   /**
    * Task 766: result of validateBackgroundComposition for this chapter's
@@ -257,17 +267,6 @@ function computeAspectRatio(
   return 'balanced';
 }
 
-// ── Blueprint hash (mirrors canonicalMapArtifact.ts logic) ───────────────────
-
-function computeBlueprintHash(layout: HexLaneLayout): string {
-  const sortedKeys = layout.cells
-    .map(c => `${c.q},${c.r}`)
-    .sort()
-    .join('|');
-  const raw = fnv1a32(`${layout.seed}:${MAP_LAYOUT_VERSION}:${sortedKeys}`);
-  return raw.toString(16).padStart(8, '0');
-}
-
 // ── Builder ───────────────────────────────────────────────────────────────────
 
 function buildManifest(
@@ -276,7 +275,7 @@ function buildManifest(
   layout:        HexLaneLayout,
   scenery:       SceneryLayout,
   bgSpec:        ChapterBackgroundSpec,
-  blueprintHash: string,
+  stage1:        CanonicalStage1Snapshot,
   bed:           WalkableBed,
   validation:    BackgroundValidationResult,
 ): BackgroundAuthoringManifest {
@@ -295,8 +294,13 @@ function buildManifest(
     : declaredStatus;
 
   const assetVersion = hasRaster
-    ? `${MAP_LAYOUT_VERSION}:${blueprintHash}`
+    ? `${MAP_LAYOUT_VERSION}:${stage1.blueprintHash}:${stage1.structureHash}`
     : 'BACKGROUND_ASSET_REQUIRED';
+  const stage3Status: CanonicalStageStatus =
+    assetStatus === 'validated' ? 'APPROVED'
+      : assetStatus === 'invalid_overlap' || assetStatus === 'failed' ? 'REJECTED'
+      : declaredStatus === 'raster_unvalidated' ? 'PENDING_APPROVAL'
+      : 'PENDING_UPLOAD';
 
   const walkableBounds  = computeWalkableBounds(layout.cells);
   const worldAspectRatio = computeAspectRatio(walkableBounds);
@@ -323,7 +327,8 @@ function buildManifest(
   return {
     chapterId:        chapter,
     shift,
-    mapBlueprintHash: blueprintHash,
+    mapBlueprintHash: stage1.blueprintHash,
+    mapStructureHash: stage1.structureHash,
     mapLayoutVersion: MAP_LAYOUT_VERSION,
     topologyFamily:   layout.seed.includes(':')
       ? layout.seed.split(':')[1] ?? bgSpec.environmentName
@@ -340,6 +345,7 @@ function buildManifest(
     metroRequirePath: shiftSpec.metroRequirePath,
     assetStatus,
     assetVersion,
+    stage3Status,
     validationResult: validation,
   };
 }
@@ -375,7 +381,7 @@ export function getBackgroundAuthoringManifests(
   const scenery  = getChapterSceneryLayout(chapter);
   const bgSpec   = getChapterBackgroundSpec(chapter);
   const bed      = getWalkableBed(chapter);   // Push 6: blueprint-first bed
-  const hash     = computeBlueprintHash(layout);
+  const stage1   = getCanonicalStage1Snapshot(chapter);
 
   // Task 766: run the geometry-level composition validator once per chapter;
   // the result is cached alongside the manifests (all shifts share it).
@@ -383,7 +389,7 @@ export function getBackgroundAuthoringManifests(
 
   const SHIFTS: TimeOfDay[] = ['day', 'evening', 'night'];
   const manifests = SHIFTS.map(shift =>
-    buildManifest(chapter, shift, layout, scenery, bgSpec, hash, bed, validation),
+    buildManifest(chapter, shift, layout, scenery, bgSpec, stage1, bed, validation),
   );
 
   manifestCache.set(chapter, manifests);
@@ -409,8 +415,10 @@ export function getBackgroundAuthoringManifest(
  */
 export function isChapterBackgroundSynced(chapter: number): boolean {
   const layout    = getChapterHexLayout(chapter);
-  const hash      = computeBlueprintHash(layout);
-  const currentVer = `${MAP_LAYOUT_VERSION}:${hash}`;
+  const scenery   = getChapterSceneryLayout(chapter);
+  const stage1    = getCanonicalStage1Snapshot(chapter);
+  const currentVer =
+    `${MAP_LAYOUT_VERSION}:${stage1.blueprintHash}:${stage1.structureHash}`;
   return getBackgroundAuthoringManifests(chapter).every(
     m => m.assetStatus === 'validated' && m.assetVersion === currentVer,
   );

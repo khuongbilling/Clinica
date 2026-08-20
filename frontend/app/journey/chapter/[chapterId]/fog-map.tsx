@@ -379,9 +379,12 @@ function DevDiagnostics({
   chapterNum,
   blueprintBackgroundMissing,
   stage3AssetPath,
+  stage3CandidateAssetPath,
   stage3ManifestAssetPath,
   stage3RegistryKey,
   stage3RegistryMatch,
+  stage3Status,
+  stage3Reason,
 }: {
   run: JourneyRun;
   chapterKeysCollected: number;
@@ -394,12 +397,15 @@ function DevDiagnostics({
   blueprintBackgroundMissing?: boolean;
   /** Exact runtime Stage 3 raster path selected by the visual registry. */
   stage3AssetPath?: string;
+  stage3CandidateAssetPath?: string;
   /** Raster path declared by the current ChapterBackgroundAuthoringManifest. */
   stage3ManifestAssetPath?: string;
   /** Exact chapter:shift:blueprintHash key checked by the visual registry. */
   stage3RegistryKey?: string;
   /** True only when that exact registry entry points to the manifest raster. */
   stage3RegistryMatch?: boolean;
+  stage3Status?: 'APPROVED' | 'MISSING' | 'MISMATCHED';
+  stage3Reason?: string;
 }) {
   const { counts, tiers } = useMemo(() => countEncounters(run.tiles), [run.tiles]);
   const exploredPct = run.tileCount > 0
@@ -437,27 +443,24 @@ function DevDiagnostics({
     || run.mapBlueprintHash === pipelineArtifact.blueprintHash;
 
   // Stage 3: is a registered finished-background raster aligned to this hash?
-  const stage3AllGood = bgManifests != null
-    && bgManifests.every(m => m.assetStatus === 'validated')
+  const stage3AllGood = stage3Status === 'APPROVED'
     && !blueprintBackgroundMissing
     && stage3RegistryMatch === true;
   const stage3AnyBad  = bgManifests != null
     && bgManifests.some(m =>
         m.assetStatus === 'invalid_overlap' || m.assetStatus === 'failed');
   const stage3Color = bgManifests == null ? '#94a3b8'
-    : stage3AllGood ? '#4ade80' : stage3AnyBad ? '#f87171' : '#facc15';
+    : stage3AllGood ? '#4ade80'
+      : stage3Status === 'MISMATCHED' || stage3AnyBad ? '#f87171'
+      : '#facc15';
   const stage3Label = bgManifests == null
     ? '— NOT LOADED'
     : stage3AllGood
     ? '✓ ALIGNED'
-    : stage3AnyBad
-    ? '✗ ALIGNMENT FAIL'
-    : blueprintBackgroundMissing && stage3AssetPath == null
-    ? '⚠ HASH NOT IN REGISTRY — BLUEPRINT FOUNDATION SHOWN'
-    : stage3RegistryMatch === false
-    ? '⚠ REGISTRY / MANIFEST MISMATCH — BLUEPRINT FOUNDATION SHOWN'
-    : blueprintBackgroundMissing
-    ? '⚠ STAGE 3 PENDING — BLUEPRINT FOUNDATION SHOWN'
+    : stage3Status === 'MISMATCHED' || stage3AnyBad
+    ? '✗ MISMATCHED — BLUEPRINT FOUNDATION SHOWN'
+    : stage3Status === 'MISSING' || blueprintBackgroundMissing
+    ? '⚠ MISSING — BLUEPRINT FOUNDATION SHOWN'
     : '⚠ PENDING — NO FINISHED ART YET';
 
   return (
@@ -528,8 +531,18 @@ function DevDiagnostics({
             {'✓ GEOMETRY LOCKED'}
           </Text>
           <Text style={sDev.row}>
+            <Text style={sDev.key}>Source    </Text>
+            <Text style={sDev.val}>
+              {pipelineArtifact.stage1Blueprint.status} · {pipelineArtifact.stage1Blueprint.artifactPath}
+            </Text>
+          </Text>
+          <Text style={sDev.row}>
             <Text style={sDev.key}>Blueprint </Text>
             <Text style={sDev.val}>{pipelineArtifact.blueprintHash} · {pipelineArtifact.mapLayoutVersion}</Text>
+          </Text>
+          <Text style={sDev.row}>
+            <Text style={sDev.key}>Structure </Text>
+            <Text style={sDev.val}>{pipelineArtifact.stage1Blueprint.structureHash} · walkable + obstacle zones</Text>
           </Text>
           <Text style={sDev.row}>
             <Text style={sDev.key}>Cells     </Text>
@@ -537,8 +550,14 @@ function DevDiagnostics({
               {pipelineArtifact.tileCount} total — 1 start + {pipelineArtifact.tileCount - 2} encounter + 1 gate
             </Text>
           </Text>
+          <Text style={[sDev.row, { color: '#facc15' }]}>
+            {'References  '}
+            {pipelineArtifact.stage1Blueprint.authoringReferences.length === 0
+              ? 'No Pack A/B slot applies.'
+              : `${pipelineArtifact.stage1Blueprint.authoringReferences.length} PENDING_UPLOAD slot(s) — non-rendering`}
+          </Text>
           <Text style={sDev.row}>
-            <Text style={sDev.key}>Structure </Text>
+            <Text style={sDev.key}>Regions   </Text>
             <Text style={sDev.val}>
               {pipelineArtifact.clearingCount} clearings · {pipelineArtifact.loopCount} loops
             </Text>
@@ -558,14 +577,21 @@ function DevDiagnostics({
           <View style={sDev.divider} />
           <Text style={sDev.subhead}>STAGE 2 — WALKABLE HEX PATH</Text>
           <Text style={[sDev.val, {
-            color: stage2HashMatch ? '#4ade80' : '#f87171',
+            color: stage2HashMatch && pipelineArtifact.stage2Validation.pass ? '#4ade80' : '#f87171',
             fontWeight: '700',
           }]}>
-            {stage2HashMatch ? '✓ VALIDATED' : '✗ RUN GEOMETRY MISMATCH'}
+            {stage2HashMatch && pipelineArtifact.stage2Validation.pass ? '✓ VALIDATED' : '✗ VALIDATION FAILED'}
+          </Text>
+          <Text style={sDev.row}>
+            <Text style={sDev.key}>Evidence  </Text>
+            <Text style={sDev.val}>{pipelineArtifact.stage2Validation.validationArtifactPath}</Text>
           </Text>
           <Text style={sDev.row}>
             <Text style={sDev.key}>Playable  </Text>
-            <Text style={sDev.val}>{run.tileCount} tiles (gate excluded from count)</Text>
+            <Text style={sDev.val}>
+              {pipelineArtifact.stage2Validation.actualTileCount}/{pipelineArtifact.stage2Validation.expectedTileCount}
+              {' locked footprint tiles'}
+            </Text>
           </Text>
           {zoneCounts != null && (
             <Text style={sDev.row}>
@@ -578,20 +604,36 @@ function DevDiagnostics({
           <Text style={sDev.row}>
             <Text style={sDev.key}>Connected </Text>
             <Text style={[sDev.val, { color: '#4ade80' }]}>
-              {'✓ start='}
+              {pipelineArtifact.stage2Validation.startToGateConnected &&
+                pipelineArtifact.stage2Validation.requiredRegionsConnected
+                ? '✓' : '✗'}
+              {' start='}
               {pipelineArtifact.asTopology.startTileId}
               {'  gate='}
               {pipelineArtifact.asTopology.gateAnchorId}
+              {'  · '}
+              {pipelineArtifact.stage2Validation.connectedTileCount}/
+              {pipelineArtifact.stage2Validation.actualTileCount} reachable
             </Text>
           </Text>
           <Text style={sDev.row}>
             <Text style={sDev.key}>Obstacle  </Text>
             <Text style={[sDev.val, {
-              color: pipelineArtifact.scenerySafetyPass ? '#4ade80' : '#f87171',
+              color: pipelineArtifact.stage2Validation.obstacleIntersectionPass ? '#4ade80' : '#f87171',
             }]}>
-              {pipelineArtifact.scenerySafetyPass
+              {pipelineArtifact.stage2Validation.obstacleIntersectionPass
                 ? '✓ NO HEX-OBSTACLE INTERSECTIONS'
                 : '✗ INTERSECTIONS DETECTED'}
+            </Text>
+          </Text>
+          <Text style={sDev.row}>
+            <Text style={sDev.key}>Void      </Text>
+            <Text style={[sDev.val, {
+              color: pipelineArtifact.stage2Validation.voidIntersectionPass ? '#4ade80' : '#f87171',
+            }]}>
+              {pipelineArtifact.stage2Validation.voidIntersectionPass
+                ? '✓ NO VOID / MISSING-FOOTPRINT INTERSECTIONS'
+                : `✗ ${pipelineArtifact.stage2Validation.voidIntersectionCellKeys.length} INVALID FOOTPRINT CELL(S)`}
             </Text>
           </Text>
           <Text style={sDev.row}>
@@ -623,11 +665,18 @@ function DevDiagnostics({
           <Text style={sDev.row}>
             <Text style={sDev.key}>Selected  </Text>
             <Text style={[sDev.val, {
-              color: stage3AssetPath != null ? '#A5D6A7' : '#facc15',
+              color: stage3AssetPath != null ? '#A5D6A7'
+                : stage3Status === 'MISMATCHED' ? '#f87171' : '#facc15',
             }]}>
               {stage3AssetPath ?? '(none — environment reveal suppressed)'}
             </Text>
           </Text>
+          {stage3CandidateAssetPath != null && (
+            <Text style={sDev.row}>
+              <Text style={sDev.key}>Rejected  </Text>
+              <Text style={[sDev.val, { color: '#f87171' }]}>{stage3CandidateAssetPath}</Text>
+            </Text>
+          )}
           <Text style={sDev.row}>
             <Text style={sDev.key}>Manifest  </Text>
             <Text style={sDev.val}>
@@ -645,10 +694,16 @@ function DevDiagnostics({
               {stage3RegistryMatch === true
                 ? '✓ exact entry matches manifest'
                 : stage3RegistryMatch === false
-                ? '✗ no exact manifest-aligned entry'
+                ? `✗ ${stage3Status ?? 'NOT APPROVED'} — no render`
                 : '— not evaluated'}
             </Text>
           </Text>
+          {stage3Reason != null && (
+            <Text style={sDev.row}>
+              <Text style={sDev.key}>Why       </Text>
+              <Text style={sDev.val}>{stage3Reason}</Text>
+            </Text>
+          )}
           {bgManifests != null && (
             <>
               {bgManifests[0] != null && (
@@ -676,7 +731,7 @@ function DevDiagnostics({
               {blueprintBackgroundMissing && (
                 <View style={sDev.mismatchBanner}>
                   <Text style={sDev.mismatchText}>
-                    {'⚠ NO REGISTERED RASTER FOR HASH\n'}
+                    {'⚠ STAGE 3 NOT APPROVED FOR HASH\n'}
                     {'Ch '}{chapterNum}{'  hash: '}{pipelineArtifact.blueprintHash}{'\n'}
                     {'Display: BLUEPRINT FOUNDATION ONLY\n'}
                     {'Fix: generate art from bgManifest.aiPrompt,\n'}
@@ -1109,15 +1164,24 @@ export default function ChapterFogMapShell() {
   // The night→day flash is impossible when every visual prop comes from
   // chapterVisuals and HexMapLayer is never rendered while chapterVisuals is null.
   const mapShift: TimeOfDay | undefined = run?.shift;
+  const stage2Pass = useMemo(() => {
+    const visualChapter = run?.chapterId ?? (debugTiles !== null ? chNum : undefined);
+    if (visualChapter == null || !BLUEPRINT_PIPELINE_CHAPTERS.has(visualChapter)) return true;
+    try {
+      return getCanonicalChapterMapArtifact(visualChapter).stage2Validation.pass;
+    } catch {
+      return false;
+    }
+  }, [chNum, debugTiles, run?.chapterId]);
   const chapterVisuals = mapShift != null
-    ? getChapterMapVisuals(run!.chapterId, mapShift)
+    ? getChapterMapVisuals(run!.chapterId, mapShift, stage2Pass)
     // Debug fixture mode: no real run → resolve visuals from the chapter number so
     // blueprint-pipeline chapters (Ch1) activate the dual-layer reveal system.
     // For non-blueprint chapters fall back to the generic night visuals as before.
     // This path is only reachable when __DEV__ && debugTiles !== null.
     : (debugTiles !== null
         ? (BLUEPRINT_PIPELINE_CHAPTERS.has(chNum)
-            ? getChapterMapVisuals(chNum, 'night')
+            ? getChapterMapVisuals(chNum, 'night', stage2Pass)
             : DEV_FALLBACK_VISUALS)
         : null);
 
@@ -1722,7 +1786,7 @@ export default function ChapterFogMapShell() {
               // provide the visible foundation; EnvironmentRevealLayer activates
               // only once a validated raster is registered in
               // BLUEPRINT_RASTER_REGISTRY (Stage 3 complete).
-              chapterVisuals.blueprintBackgroundMissing
+              chapterVisuals.blueprintBackgroundMissing || chapterVisuals.background == null
                 ? undefined
                 : {
                     source:  chapterVisuals.background,
@@ -1839,9 +1903,12 @@ export default function ChapterFogMapShell() {
             chapterNum={chNum}
             blueprintBackgroundMissing={chapterVisuals?.blueprintBackgroundMissing}
             stage3AssetPath={chapterVisuals?.stage3AssetPath}
+            stage3CandidateAssetPath={chapterVisuals?.stage3CandidateAssetPath}
             stage3ManifestAssetPath={chapterVisuals?.stage3ManifestAssetPath}
             stage3RegistryKey={chapterVisuals?.stage3RegistryKey}
             stage3RegistryMatch={chapterVisuals?.stage3RegistryMatch}
+            stage3Status={chapterVisuals?.stage3Status}
+            stage3Reason={chapterVisuals?.stage3Reason}
           />
         )}
 

@@ -38,6 +38,11 @@
 import type { TimeOfDay } from './types';
 import { BLUEPRINT_PIPELINE_CHAPTERS } from './config';
 import { getBackgroundAuthoringManifest } from './backgroundAuthoringManifest';
+import {
+  selectStage3Asset,
+  type BlueprintRasterRegistration,
+  type Stage3SelectionStatus,
+} from './stage3AssetSelector';
 
 // ── Visual theme interface ────────────────────────────────────────────────────
 
@@ -46,7 +51,7 @@ export interface ChapterShiftVisuals {
    * Map-platform background rendered behind all tiles.
    * The primary shift differentiator — three dedicated rasters per chapter.
    */
-  background: number;
+  background?: number;
 
   /**
    * Optional painting transform for aligning the background artwork with the
@@ -168,8 +173,14 @@ export interface ChapterShiftVisuals {
 
   /** Exact Stage 3 raster path selected by the runtime registry. */
   stage3AssetPath?: string;
+  /** Rejected registry path, exposed for diagnostics only and never rendered. */
+  stage3CandidateAssetPath?: string;
+  /** Runtime approval result for this exact chapter, shift, and blueprint hash. */
+  stage3Status?: Stage3SelectionStatus;
+  /** Human-readable explanation when Stage 3 is missing or mismatched. */
+  stage3Reason?: string;
 
-  /** Exact chapter:shift:blueprintHash key checked by the runtime registry. */
+  /** Exact chapter:shift:blueprintHash:structureHash key checked at runtime. */
   stage3RegistryKey?: string;
 
   /** True only when the exact registry entry also matches manifest.rasterAsset. */
@@ -297,11 +308,6 @@ const CH1_NIGHT_BG = require('@/assets/ui/journey/map/map-platform-background-ch
 // both values here makes that contract enforceable at runtime and inspectable in
 // DevDiagnostics. Do not add a chapter/shift-only fallback: a new geometry hash
 // must show the blueprint foundation until aligned art is approved and registered.
-interface BlueprintRasterRegistration {
-  readonly source: number;
-  readonly assetPath: string;
-}
-
 const CH1_STAGE3_ASSET_PATHS = {
   day:     'assets/ui/journey/map/map-platform-background-ch1-day.png',
   evening: 'assets/ui/journey/map/map-platform-background-ch1-evening.png',
@@ -310,24 +316,13 @@ const CH1_STAGE3_ASSET_PATHS = {
 
 const BLUEPRINT_RASTER_REGISTRY: Record<string, BlueprintRasterRegistration> = {
   // Clean/offline pipeline hash:
-  '1:day:6439241b': {
+  '1:day:6439241b:29bd5e61': {
     source: CH1_DAY_BG, assetPath: CH1_STAGE3_ASSET_PATHS.day,
   },
-  '1:evening:6439241b': {
+  '1:evening:6439241b:29bd5e61': {
     source: CH1_EVE_BG, assetPath: CH1_STAGE3_ASSET_PATHS.evening,
   },
-  '1:night:6439241b': {
-    source: CH1_NIGHT_BG, assetPath: CH1_STAGE3_ASSET_PATHS.night,
-  },
-  // Existing Metro browser-runtime hash. This is an explicit compatibility
-  // registration for the same approved assets, not a hash-agnostic fallback.
-  '1:day:01dd9c64': {
-    source: CH1_DAY_BG, assetPath: CH1_STAGE3_ASSET_PATHS.day,
-  },
-  '1:evening:01dd9c64': {
-    source: CH1_EVE_BG, assetPath: CH1_STAGE3_ASSET_PATHS.evening,
-  },
-  '1:night:01dd9c64': {
+  '1:night:6439241b:29bd5e61': {
     source: CH1_NIGHT_BG, assetPath: CH1_STAGE3_ASSET_PATHS.night,
   },
 };
@@ -472,7 +467,8 @@ CHAPTER_SHIFT_VISUALS[1] = {
  *     • Include blueprintHash / blueprintLayoutVersion / isBlueprintBacked.
  *     • Omit backgroundScale / backgroundOffsetX / backgroundOffsetY so the
  *       raster fills worldWidth × worldHeight naturally (no manual alignment).
- *   On manifest lookup failure the static registry entry is returned as-is.
+ *   On manifest lookup failure the pipeline remains fail-closed on its
+ *   blueprint foundation.
  *
  * Always returns a complete ChapterShiftVisuals object — callers never
  * receive undefined.  Pass the result's fields directly to HexMapLayer
@@ -480,10 +476,12 @@ CHAPTER_SHIFT_VISUALS[1] = {
  *
  * @param chapter   Chapter number (1-based).
  * @param timeOfDay 'day' | 'evening' | 'night'
+ * @param stage2Pass Current canonical walkable-path validation result.
  */
 export function getChapterMapVisuals(
   chapter:    number,
   timeOfDay:  TimeOfDay,
+  stage2Pass = true,
 ): ChapterShiftVisuals {
   const base = CHAPTER_SHIFT_VISUALS[chapter]?.[timeOfDay] ?? DEFAULT_SHIFT_VISUALS[timeOfDay];
 
@@ -495,60 +493,57 @@ export function getChapterMapVisuals(
   if (BLUEPRINT_PIPELINE_CHAPTERS.has(chapter)) {
     try {
       const manifest = getBackgroundAuthoringManifest(chapter, timeOfDay);
+      const selection = selectStage3Asset(manifest, BLUEPRINT_RASTER_REGISTRY, { stage2Pass });
+      // A pipeline chapter may never inherit a generic or legacy background.
+      // Its terrain texture remains available, but environment rendering is
+      // explicitly undefined until Stage 3 returns APPROVED.
+      const pipelineBase: ChapterShiftVisuals = {
+        ...base,
+        background: undefined,
+        backgroundScale: undefined,
+        backgroundOffsetX: undefined,
+        backgroundOffsetY: undefined,
+        blueprintHash: manifest.mapBlueprintHash,
+        blueprintLayoutVersion: manifest.mapLayoutVersion,
+        isBlueprintBacked: true,
+        stage3RegistryKey: selection.registryKey,
+        stage3Status: selection.status,
+        stage3Reason: selection.reason,
+        stage3ManifestAssetPath: manifest.rasterAsset,
+      };
 
-      const registryKey = `${chapter}:${timeOfDay}:${manifest.mapBlueprintHash}`;
-      const registration = BLUEPRINT_RASTER_REGISTRY[registryKey];
-      const registryMatchesManifest =
-        registration?.assetPath === manifest.rasterAsset;
-
-      if (registration != null && registryMatchesManifest) {
+      if (selection.status === 'APPROVED' && selection.source != null) {
         // ✓ Exact, manifest-aligned Stage 3 raster found.
-        // Strip old manual alignment: the generated art fills worldW × worldH
-        // via contentFit="cover" without compensation.
         return {
-          ...base,
-          background:             registration.source,
-          blueprintHash:          manifest.mapBlueprintHash,
-          blueprintLayoutVersion: manifest.mapLayoutVersion,
-          isBlueprintBacked:      true,
+          ...pipelineBase,
+          background:             selection.source,
           blueprintBackgroundMissing: false,
-          stage3AssetPath:        registration.assetPath,
-          stage3RegistryKey:      registryKey,
+          stage3AssetPath:        selection.selectedAssetPath,
           stage3RegistryMatch:    true,
-          stage3ManifestAssetPath: manifest.rasterAsset,
-          backgroundScale:   undefined,
-          backgroundOffsetX: undefined,
-          backgroundOffsetY: undefined,
-        };
-      } else {
-        // ✗ No exact manifest-aligned raster for this chapter+shift+hash.
-        // Set isBlueprintBacked so the blueprint canvas layers activate (dark
-        // navy foundation + linework via BlueprintHexLayer).  The fog-map.tsx
-        // rendering suppresses EnvironmentRevealLayer when
-        // blueprintBackgroundMissing=true so base.background is not revealed.
-        // DevDiagnostics surfaces "⚠ STAGE 3 PENDING" with the missing hash
-        // and a reminder to generate art from bgManifest.aiPrompt and register
-        // it in BLUEPRINT_RASTER_REGISTRY.
-        return {
-          ...base,
-          blueprintHash:              manifest.mapBlueprintHash,
-          blueprintLayoutVersion:     manifest.mapLayoutVersion,
-          isBlueprintBacked:          true,
-          blueprintBackgroundMissing: true,
-          stage3AssetPath:            registration?.assetPath,
-          stage3RegistryKey:          registryKey,
-          stage3RegistryMatch:        registryMatchesManifest === true,
-          stage3ManifestAssetPath:    manifest.rasterAsset,
         };
       }
+      // No fallthrough to `base.background`: missing and mismatched art leave
+      // only the permanent Stage 1 blueprint foundation visible.
+      return {
+        ...pipelineBase,
+        blueprintBackgroundMissing: true,
+        stage3CandidateAssetPath: selection.candidateAssetPath,
+        stage3RegistryMatch: false,
+      };
     } catch {
-      // Manifest lookup failed. Keep the app usable with its approved
-      // per-shift base raster, but never claim that it completed Stage 3.
+      // A manifest failure is fail-closed for pipeline chapters. Do not reveal
+      // a default map painting that has no demonstrable geometry relationship.
       return {
         ...base,
+        background: undefined,
+        backgroundScale: undefined,
+        backgroundOffsetX: undefined,
+        backgroundOffsetY: undefined,
         isBlueprintBacked: true,
         blueprintBackgroundMissing: true,
         stage3AssetPath: undefined,
+        stage3Status: 'MISSING',
+        stage3Reason: 'The Stage 3 manifest could not be loaded.',
         stage3RegistryMatch: false,
       };
     }

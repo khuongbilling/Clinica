@@ -5,7 +5,7 @@
  *   • Manifest structure — all required fields present and correctly typed
  *   • Spatial data integrity — walkable bounds, clearing zones, scenery zones
  *   • Ch1 asset registration — all three shifts declared 'generated'
- *   • Blueprint hash binding — assetVersion matches MAP_LAYOUT_VERSION:hash
+ *   • Stage 1 binding — assetVersion matches layout + walkable + obstacle hashes
  *   • Consistency with canonical artifact — manifests match artifact data
  *   • isChapterBackgroundSynced returns true for Ch1
  *   • Spatial context injected into BackgroundSpec AI prompts
@@ -125,13 +125,13 @@ test('assetStatus is a valid ManifestAssetStatus (Task 766 union)', () => {
   }
 });
 
-test('assetVersion is BACKGROUND_ASSET_REQUIRED when no raster, version:hash otherwise', () => {
+test('assetVersion is BACKGROUND_ASSET_REQUIRED when no raster, version:blueprint:structure otherwise', () => {
   const NO_RASTER = ['pending', 'spec_ready', 'failed'];
   for (const m of manifests) {
     if (NO_RASTER.includes(m.assetStatus)) {
       eq(m.assetVersion, 'BACKGROUND_ASSET_REQUIRED');
     } else {
-      ok(/^v\d+:[0-9a-f]{8}$/.test(m.assetVersion), `bad version: ${m.assetVersion}`);
+      ok(/^v\d+:[0-9a-f]{8}:[0-9a-f]{8}$/.test(m.assetVersion), `bad version: ${m.assetVersion}`);
     }
   }
 });
@@ -250,11 +250,11 @@ test('all three shifts share the same blueprint hash', () => {
   ok(dayMf.mapBlueprintHash === ngtMf.mapBlueprintHash, 'day vs night hash mismatch');
 });
 
-test('assetVersion encodes mapLayoutVersion:mapBlueprintHash for raster-backed shifts', () => {
+test('assetVersion encodes mapLayoutVersion:blueprintHash:structureHash for raster-backed shifts', () => {
   const HAS_RASTER = ['raster_unvalidated', 'validated', 'invalid_overlap'];
   for (const m of manifests) {
     if (HAS_RASTER.includes(m.assetStatus)) {
-      const expected = `${m.mapLayoutVersion}:${m.mapBlueprintHash}`;
+      const expected = `${m.mapLayoutVersion}:${m.mapBlueprintHash}:${m.mapStructureHash}`;
       eq(m.assetVersion, expected);
     }
   }

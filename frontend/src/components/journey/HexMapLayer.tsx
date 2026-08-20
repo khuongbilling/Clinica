@@ -2653,13 +2653,12 @@ export function HexMapLayer({
            * Web: two canvas layers (blueprint linework + reveal) plus
            *      the full FogOfWarLayer at z=5200 with dark-navy foundation.
            *
-           * Native / Expo Go: canvas API is unavailable.  Render a dark-navy
-           *   base View (matches #060D1A blueprint colour) and the blueprint
-           *   raster at 30 % opacity so unexplored areas read as atmospheric
-           *   dark architecture without requiring canvas compositing.
+            * Native / Expo Go: canvas API is unavailable. The shared
+            * EnvironmentRevealLayer supplies clipped native image lobes, so
+            * Stage 3 remains restricted to explored/visible territory.
            */
           Platform.OS !== 'web' ? (
-            /* ── Native fallback — static dark atmospheric render ────── */
+            /* ── Native fallback — safe blueprint foundation ─────────── */
             <>
               {/* Dark navy base that matches the blueprint background colour */}
               <View
@@ -2669,12 +2668,17 @@ export function HexMapLayer({
                   { backgroundColor: '#060D1A', zIndex: JOURNEY_Z.BACKGROUND },
                 ]}
               />
-              {/* Blueprint raster at low opacity — environment art dimly visible */}
               {environmentBackground && (
-                <Image
+                <EnvironmentRevealLayer
                   source={environmentBackground.source}
-                  style={[StyleSheet.absoluteFillObject, { opacity: 0.30, zIndex: JOURNEY_Z.ENV_REVEAL }]}
-                  contentFit="cover"
+                  worldWidth={worldW}
+                  worldHeight={worldH}
+                  sz={sz}
+                  tileCenters={fogTileCenters}
+                  exploredTileIds={fogExploredTileIds}
+                  visibleTileIds={fogVisibleTileIds}
+                  effectiveFieldOfVision={fogEffectiveFieldOfVision}
+                  runSeed={runSeed}
                 />
               )}
             </>

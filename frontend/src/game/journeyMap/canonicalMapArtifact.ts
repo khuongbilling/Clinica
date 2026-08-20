@@ -40,7 +40,12 @@ import { getChapterSceneryLayout }                 from './chapterSceneryLayout'
 import { getChapterBackgroundSpec }                from './chapterBackgroundSpec';
 import { computeFullFingerprint }                  from './chapterDiversityEnforcement';
 import { getBackgroundAuthoringManifests }         from './backgroundAuthoringManifest';
-import { fnv1a32 }                                 from './prng';
+import { getChapterTerrainCellCount }              from './config';
+import { getCanonicalStage1Blueprint }             from './canonicalStageContract';
+import {
+  createLiveStage1CandidateSnapshot,
+  getCanonicalStage1Snapshot,
+}                                                   from './canonicalStageIdentity';
 import type { AxialCoord, HexTileZoneMeta }        from './topology';
 import type {
   ChapterMapDNA,
@@ -172,23 +177,6 @@ function buildZoneMeta(layout: HexLaneLayout): Map<string, HexTileZoneMeta> {
   return meta;
 }
 
-// ── Blueprint hash ──────────────────────────────────────────────────────────
-
-/**
- * Deterministic short hash identifying the physical layout.
- * Encodes: layout.seed + MAP_LAYOUT_VERSION + sorted tile keys.
- * Changes whenever the geometry changes; stable otherwise.
- * Used in DEV diagnostics and can detect stale cached runs.
- */
-function computeBlueprintHash(layout: HexLaneLayout): string {
-  const sortedKeys = layout.cells
-    .map(c => cellKey(c.q, c.r))
-    .sort()
-    .join('|');
-  const raw = fnv1a32(`${layout.seed}:${MAP_LAYOUT_VERSION}:${sortedKeys}`);
-  return raw.toString(16).padStart(8, '0');
-}
-
 // ── Scenery safety check ────────────────────────────────────────────────────
 
 /**
@@ -227,6 +215,52 @@ export interface ArtifactTopology {
 }
 
 /**
+ * Stage 2 proof that the locked Stage 1 geometry can host the Journey run.
+ * This is deliberately derived from the canonical artifact, never from a run
+ * seed, so content rerolls cannot alter the validation result.
+ */
+export interface CanonicalStage2Validation {
+  readonly status: 'VALIDATED' | 'INVALID';
+  readonly validationArtifactPath: string;
+  readonly expectedTileCount: number;
+  readonly actualTileCount: number;
+  readonly footprintLocked: boolean;
+  readonly stage1FootprintMatch: boolean;
+  readonly stage1StructureMatch: boolean;
+  readonly connectedTileCount: number;
+  readonly startPresent: boolean;
+  readonly gatePresent: boolean;
+  readonly startToGateConnected: boolean;
+  readonly requiredRegionsConnected: boolean;
+  readonly obstacleIntersectionPass: boolean;
+  readonly obstacleIntersectionCellKeys: readonly string[];
+  /**
+   * A void result identifies an invalid coordinate, duplicate footprint cell,
+   * or a required clearing cell that is absent from the locked footprint.
+   */
+  readonly voidIntersectionPass: boolean;
+  readonly voidIntersectionCellKeys: readonly string[];
+  readonly pass: boolean;
+}
+
+/**
+ * Compare a mutable Stage 2 candidate with the immutable Stage 1 snapshot.
+ * Exported for contract tests and authoring tools that evaluate a prospective
+ * footprint before it can replace a shipped chapter map.
+ */
+export function compareStage2ToStage1(
+  stage1: ReturnType<typeof getCanonicalStage1Blueprint>,
+  layout: HexLaneLayout,
+  scenery: SceneryLayout,
+): Pick<CanonicalStage2Validation, 'stage1FootprintMatch' | 'stage1StructureMatch'> {
+  const liveSnapshot = createLiveStage1CandidateSnapshot(layout, scenery);
+  return {
+    stage1FootprintMatch: stage1.blueprintHash === liveSnapshot.blueprintHash,
+    stage1StructureMatch: stage1.structureHash === liveSnapshot.structureHash,
+  };
+}
+
+/**
  * Complete canonical map artifact for one chapter.
  *
  * Returned by getCanonicalChapterMapArtifact().  Cached per chapter for
@@ -260,6 +294,10 @@ export interface CanonicalChapterMapArtifact {
   readonly blueprintHash:     string;
   /** Canonical layout version baked into blueprintHash. */
   readonly mapLayoutVersion:  string;
+  /** Stage 1 authored structure identity and non-rendering Pack A/B references. */
+  readonly stage1Blueprint:   ReturnType<typeof getCanonicalStage1Blueprint>;
+  /** Stage 2 locked-footprint validation evidence. */
+  readonly stage2Validation:  CanonicalStage2Validation;
   /**
    * True when the scenery safety invariant passes (walkable ∩ scenery = ∅).
    * Always expected to be true — log a warning and inspect if false.
@@ -293,6 +331,88 @@ const artifactCache = new Map<number, CanonicalChapterMapArtifact>();
 
 // ── Builder ──────────────────────────────────────────────────────────────────
 
+/**
+ * The production Stage 2 evaluator. Authoring tools and contract tests use this
+ * exact function so a prospective layout is judged against the same immutable
+ * Stage 1 source that artifact construction uses.
+ */
+export function validateStage2Candidate(
+  chapter: number,
+  hexLayout: HexLaneLayout,
+  sceneryLayout: SceneryLayout,
+): CanonicalStage2Validation {
+  const stage1Blueprint = getCanonicalStage1Blueprint(
+    chapter,
+    getCanonicalStage1Snapshot(chapter),
+  );
+  const startKey = stage1Blueprint.startKey;
+  const gateKey = stage1Blueprint.gateKey;
+  const adj = buildAdjacency(hexLayout.cells);
+  const graphDistances = bfsDistances(adj, startKey);
+  const scenerySafetyPass = checkScenerySafety(sceneryLayout);
+  const walkableKeys = new Set(hexLayout.cells.map(c => cellKey(c.q, c.r)));
+  const { stage1FootprintMatch, stage1StructureMatch } =
+    compareStage2ToStage1(stage1Blueprint, hexLayout, sceneryLayout);
+  const duplicateOrInvalidKeys = hexLayout.cells
+    .filter(c => !Number.isInteger(c.q) || !Number.isInteger(c.r))
+    .map(c => cellKey(c.q, c.r));
+  for (const key of walkableKeys) {
+    const occurrences = hexLayout.cells.filter(c => cellKey(c.q, c.r) === key).length;
+    if (occurrences > 1) duplicateOrInvalidKeys.push(key);
+  }
+  const requiredRegionMissingKeys = stage1Blueprint.requiredRegionCellKeys
+    .filter(key => !walkableKeys.has(key));
+  const voidIntersectionCellKeys = [...new Set([
+    ...duplicateOrInvalidKeys,
+    ...requiredRegionMissingKeys,
+  ])];
+  const obstacleIntersectionCellKeys = sceneryLayout.sceneryZones
+    .flatMap(zone => zone.cells)
+    .map(c => cellKey(c.q, c.r))
+    .filter(key => sceneryLayout.walkableSafetyMaskKeys.includes(key));
+  const startPresent = walkableKeys.has(startKey);
+  const gatePresent = walkableKeys.has(gateKey);
+  const startToGateConnected = graphDistances.has(gateKey);
+  const requiredRegionsConnected = stage1Blueprint.requiredRegionCellKeys.every(key =>
+    graphDistances.has(key),
+  );
+  const footprintLocked =
+    hexLayout.actualTileCount === getChapterTerrainCellCount(chapter) &&
+    hexLayout.cells.length === hexLayout.actualTileCount &&
+    stage1FootprintMatch;
+  const pass =
+    footprintLocked &&
+    stage1StructureMatch &&
+    graphDistances.size === hexLayout.cells.length &&
+    startPresent &&
+    gatePresent &&
+    startToGateConnected &&
+    requiredRegionsConnected &&
+    scenerySafetyPass &&
+    voidIntersectionCellKeys.length === 0;
+
+  return {
+    status: pass ? 'VALIDATED' : 'INVALID',
+    validationArtifactPath:
+      `journey-map://canonical/ch${chapter}/stage-2/${stage1Blueprint.structureHash}.json`,
+    expectedTileCount: getChapterTerrainCellCount(chapter),
+    actualTileCount: hexLayout.actualTileCount,
+    footprintLocked,
+    stage1FootprintMatch,
+    stage1StructureMatch,
+    connectedTileCount: graphDistances.size,
+    startPresent,
+    gatePresent,
+    startToGateConnected,
+    requiredRegionsConnected,
+    obstacleIntersectionPass: scenerySafetyPass,
+    obstacleIntersectionCellKeys: [...new Set(obstacleIntersectionCellKeys)],
+    voidIntersectionPass: voidIntersectionCellKeys.length === 0,
+    voidIntersectionCellKeys,
+    pass,
+  };
+}
+
 function buildArtifact(chapter: number): CanonicalChapterMapArtifact {
   const dna           = getChapterMapDNA(chapter);
   const pathwayGraph  = getChapterPathwayGraph(chapter);
@@ -301,15 +421,21 @@ function buildArtifact(chapter: number): CanonicalChapterMapArtifact {
   const backgroundSpec = getChapterBackgroundSpec(chapter);
   const fingerprint   = computeFullFingerprint(chapter);
 
-  const startKey = cellKey(hexLayout.startCell.q, hexLayout.startCell.r);
-  const gateKey  = cellKey(hexLayout.gateCell.q,  hexLayout.gateCell.r);
+  // Stage 1 is materialized once as an immutable authoring snapshot. Stage 2
+  // validates the live layout against that snapshot rather than merely
+  // re-asserting facts derived from the same mutable object.
+  const stage1Snapshot = getCanonicalStage1Snapshot(chapter);
+  const stage1Blueprint = getCanonicalStage1Blueprint(chapter, stage1Snapshot);
+  const startKey = stage1Blueprint.startKey;
+  const gateKey = stage1Blueprint.gateKey;
 
   const adj          = buildAdjacency(hexLayout.cells);
   const graphDistances = bfsDistances(adj, startKey);
 
   const zoneMeta         = buildZoneMeta(hexLayout);
-  const blueprintHash    = computeBlueprintHash(hexLayout);
-  const scenerySafetyPass = checkScenerySafety(sceneryLayout);
+  const blueprintHash    = stage1Snapshot.blueprintHash;
+  const stage2Validation = validateStage2Candidate(chapter, hexLayout, sceneryLayout);
+  const scenerySafetyPass = stage2Validation.obstacleIntersectionPass;
 
   if (!scenerySafetyPass) {
     console.warn(
@@ -347,6 +473,8 @@ function buildArtifact(chapter: number): CanonicalChapterMapArtifact {
     zoneMeta,
     blueprintHash,
     mapLayoutVersion: MAP_LAYOUT_VERSION,
+    stage1Blueprint,
+    stage2Validation,
     scenerySafetyPass,
     asTopology,
     backgroundManifests,
