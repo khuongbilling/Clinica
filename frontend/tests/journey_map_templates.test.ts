@@ -374,7 +374,8 @@ for (const ch of [1, 5, 10, 12]) {
       run.topology.gateAnchorId === CH1_GATE);
   }
 
-  // BFS1: Gate is reachable from start in exactly 7 hops.
+  // BFS1: The fountain basin creates an intentional two-step promenade detour
+  // from the otherwise straight north/south campus route.
   {
     const adj = new Map<string, string[]>();
     for (const t of tpl.tiles) {
@@ -393,7 +394,7 @@ for (const ch of [1, 5, 10, 12]) {
     }
     const d = dist.get(CH1_GATE) ?? -1;
     check('[push3-placement BFS1] gate reachable from start', d >= 0);
-    check('[push3-placement BFS1] BFS distance start→gate = 14', d === 14, `actual: ${d}`);
+    check('[push3-placement BFS1] BFS distance start→gate = 16', d === 16, `actual: ${d}`);
   }
 }
 
@@ -486,7 +487,9 @@ for (const ch of [1, 5, 10, 12]) {
       `actual: ${gateDistance}`);
   }
 
-  // AC7: Campus footprint spans nineteen axial rows with a broad central quad.
+  // AC7: Campus footprint spans nineteen axial rows with an obstacle-aware
+  // central promenade. The preserved fountain void deliberately narrows the
+  // playable footprint without changing the 120-cell expedition budget.
   {
     const rValues = tiles.map(t => t.r);
     const minR    = Math.min(...rValues);
@@ -498,16 +501,17 @@ for (const ch of [1, 5, 10, 12]) {
       const width = tiles.filter(t => t.r === r).length;
       maxWidth = Math.max(maxWidth, width);
     }
-    check('[push2 AC7] central quad reaches 13 cells wide', maxWidth === 13,
+    check('[push2 AC7] central promenade reaches 10 cells wide', maxWidth === 10,
       `actual max width: ${maxWidth}`);
   }
 
-  // AC8: Five courts form a broad central quad with north/south terminal courts.
+  // AC8: Five courts retain their terminal profiles while the middle rows
+  // reserve the fountain and planted-bed cells as physical voids.
   {
     const widthByRow = [-9,-8,-7,-6,-5,-4,-3,-2,-1,0,1,2,3,4,5,6,7,8,9]
       .map(r => tiles.filter(t => t.r === r).length);
-    const expected   = [3,4,5,4,3,5,6,11,12,13,12,11,6,5,3,4,5,4,4];
-    check('[push2 AC8] row widths match the five-court campus profile',
+    const expected   = [3,4,5,6,4,4,6,10,10,10,10,10,7,8,6,4,5,4,4];
+    check('[push2 AC8] row widths match the obstacle-aware campus profile',
       widthByRow.join(',') === expected.join(','),
       `actual: ${widthByRow.join(',')}`);
   }

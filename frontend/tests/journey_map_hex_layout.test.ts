@@ -19,6 +19,7 @@ import assert from 'assert';
 import { getChapterHexLayout, getChapterHexLayoutRange, hexLine, hexDist } from '../src/game/journeyMap/chapterHexLayout';
 import { getChapterTerrainCellCount } from '../src/game/journeyMap/config';
 import { getChapterPathwayGraph } from '../src/game/journeyMap/chapterPathwayGraph';
+import { getCanonicalStage1Source } from '../src/game/journeyMap/canonicalStage1Source';
 import type { HexLaneLayout, ClearingZone, LaneSegment } from '../src/game/journeyMap/chapterMapTemplate.types';
 
 // ── Test harness ──────────────────────────────────────────────────────────────
@@ -140,6 +141,23 @@ function assertLayoutValid(ch: number, layout: HexLaneLayout, label: string): vo
 
 test('[Ch1] full layout validation', () => {
   assertLayoutValid(1, getChapterHexLayout(1), 'Ch1');
+});
+
+test('[Ch1 campus] locked fountain and planted-scene cells are never playable', () => {
+  const layout = getChapterHexLayout(1);
+  const playable = new Set(layout.cells.map(cell => coordKey(cell.q, cell.r)));
+  const lockedObstacles = getCanonicalStage1Source(1).obstacleCellKeys ?? [];
+
+  eq(lockedObstacles.length, 14, 'Ch1 should retain all authored campus exclusions');
+  for (const key of lockedObstacles) {
+    ok(!playable.has(key), `Ch1 physical campus obstacle '${key}' is playable`);
+  }
+
+  // The fountain must remain a complete physical void rather than merely losing
+  // its centre tile. This gives the player a visible route around the basin.
+  for (const key of ['0,0', '-1,0', '-1,1', '0,-1', '0,1', '1,-1', '1,0']) {
+    ok(!playable.has(key), `Ch1 fountain cell '${key}' is playable`);
+  }
 });
 
 test('[Ch2] full layout validation', () => {

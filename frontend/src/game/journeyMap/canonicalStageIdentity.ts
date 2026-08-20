@@ -31,12 +31,12 @@ export function createLiveStage1CandidateSnapshot(
   scenery: SceneryLayout,
 ): CanonicalStage1Snapshot {
   const layoutVersion = getChapterMapLayoutVersion(layout.chapterId);
+  const authoredObstacleCellKeys = Object.freeze([
+    ...(getCanonicalStage1Source(layout.chapterId).obstacleCellKeys ?? []),
+  ].sort());
   const footprintCellKeys = sortedUniqueKeys(layout.cells);
   const requiredRegionCellKeys = sortedUniqueKeys(
     layout.clearingZones.flatMap(zone => zone.cells),
-  );
-  const obstacleCellKeys = sortedUniqueKeys(
-    scenery.sceneryZones.flatMap(zone => zone.cells),
   );
   const blueprintHash = fnv1a32(
     `${layout.seed}:${layoutVersion}:${footprintCellKeys.join('|')}`,
@@ -59,7 +59,10 @@ export function createLiveStage1CandidateSnapshot(
   const gateKey = cellKey(layout.gateCell.q, layout.gateCell.r);
   const structureHash = fnv1a32(
     `${layout.seed}:${layoutVersion}:${blueprintHash}:start=${startKey}:gate=${gateKey}:` +
-    `clearings=${clearingSignature}:scenery=${scenerySignature}`,
+    `clearings=${clearingSignature}:scenery=${scenerySignature}` +
+    (authoredObstacleCellKeys.length > 0
+      ? `:obstacles=${authoredObstacleCellKeys.join('|')}`
+      : ''),
   ).toString(16).padStart(8, '0');
 
   return Object.freeze({
@@ -67,7 +70,7 @@ export function createLiveStage1CandidateSnapshot(
     structureHash,
     footprintCellKeys,
     requiredRegionCellKeys,
-    obstacleCellKeys,
+    obstacleCellKeys: authoredObstacleCellKeys,
     startKey,
     gateKey,
   });
@@ -84,7 +87,7 @@ export function getCanonicalStage1Snapshot(chapter: number): CanonicalStage1Snap
     structureHash: source.structureHash,
     footprintCellKeys: Object.freeze([]),
     requiredRegionCellKeys: source.requiredRegionCellKeys,
-    obstacleCellKeys: Object.freeze([]),
+    obstacleCellKeys: Object.freeze([...(source.obstacleCellKeys ?? [])]),
     startKey: source.startKey,
     gateKey: source.gateKey,
   });

@@ -33,6 +33,7 @@ import { fnv1a32, mulberry32 } from './prng';
 import { getChapterTerrainCellCount } from './config';
 import { getChapterMapDNA } from './chapterMapDNA';
 import { getChapterPathwayGraph } from './chapterPathwayGraph';
+import { getCanonicalStage1Source } from './canonicalStage1Source';
 import type { AxialCoord } from './topology';
 import type {
   ChapterMapDNA,
@@ -81,7 +82,7 @@ function targetClearingCount(tileCount: number): number {
  * a 20-row visual envelope: arrival court, grand quad, west scholar court, east
  * observatory court, and the northern academy gate.
  */
-function buildChapterOneOpenCourtyardLayout(
+function buildChapterOneObstacleAwareCampusLayout(
   dna: ChapterMapDNA,
   targetCount: number,
 ): HexLaneLayout {
@@ -96,6 +97,22 @@ function buildChapterOneOpenCourtyardLayout(
   const eastObservatoryCourt = hexDisc({ q: 4, r: 0 }, 2);
   const northGateCourt = hexDisc({ q: 0, r: -7 }, 2);
   const southernArch = [{ q: 1, r: 9 }];
+  const lockedObstacleKeys = new Set(
+    getCanonicalStage1Source(1).obstacleCellKeys ?? [],
+  );
+  /**
+   * One-for-one replacements for the painted physical obstacles. Each lies on
+   * an adjacent paved campus promenade, so the five courts remain a single
+   * connected expedition while the fountain, lawn beds, and lower planter stay
+   * visibly clear. Keep this literal in axial coordinates: the background art
+   * is locked and all three shifts share this exact footprint.
+   */
+  const pavedDetours: AxialCoord[] = [
+    { q: -3, r: -3 }, { q: -2, r: -4 }, { q: -2, r: 5 }, { q: -1, r: 5 },
+    { q: 1, r: 4 }, { q: 2, r: -6 }, { q: 2, r: 3 },
+    { q: 2, r: 4 }, { q: 3, r: -6 }, { q: 3, r: -5 }, { q: 3, r: 3 }, { q: 3, r: 4 },
+    { q: 3, r: 5 }, { q: 4, r: 3 },
+  ];
 
   add(southArrival);
   add(grandQuad);
@@ -103,11 +120,21 @@ function buildChapterOneOpenCourtyardLayout(
   add(eastObservatoryCourt);
   add(northGateCourt);
   add(southernArch);
+  for (const blockedKey of lockedObstacleKeys) addCells.delete(blockedKey);
+  add(pavedDetours);
 
   const cells = [...addCells.values()].sort((a, b) => a.q - b.q || a.r - b.r);
   if (cells.length !== targetCount) {
     throw new Error(
       `Chapter 1 campus expedition must contain exactly ${targetCount} cells; got ${cells.length}.`,
+    );
+  }
+  const obstacleIntersections = cells
+    .map(cell => hexKey(cell.q, cell.r))
+    .filter(key => lockedObstacleKeys.has(key));
+  if (obstacleIntersections.length > 0) {
+    throw new Error(
+      `Chapter 1 campus terrain intersects locked obstacles: ${obstacleIntersections.join(', ')}.`,
     );
   }
 
@@ -141,12 +168,14 @@ function buildChapterOneOpenCourtyardLayout(
     clearingZones: [
       zone('south-arrival', 'start', 'SIDE_CLEARING', 'court', { q: 0, r: 7 }, 'major',
         [...southArrival, ...southernArch], 4),
-      zone('grand-quad', 'j1', 'JUNCTION_CLEARING', 'widened_intersection', { q: 0, r: 0 }, 'major', grandQuad, 6),
+      zone('grand-quad-promenade', 'j1', 'JUNCTION_CLEARING', 'widened_intersection', { q: 0, r: -2 }, 'major', grandQuad, 6),
       zone('west-scholar-court', 'j2', 'SIDE_CLEARING', 'court', { q: -4, r: 0 }, 'normal', westScholarCourt, 4),
       zone('east-observatory-court', 'j3', 'SIDE_CLEARING', 'court', { q: 4, r: 0 }, 'normal', eastObservatoryCourt, 4),
       zone('north-academy-gate', 'fa', 'FINAL_CLEARING', 'court', { q: 0, r: -7 }, 'major', northGateCourt, 4),
+      zone('paved-detours', 'j1', 'GENERAL_CLEARING', 'irregular_bay', { q: -3, r: -3 }, 'normal', pavedDetours, 4),
     ],
-    // The campus is all open courts rather than corridor bottlenecks.
+    // The campus is an open court network with fixed promenade detours around
+    // the physical scenery painted into the locked background.
     laneSegments: [],
     targetTileCount: targetCount,
     actualTileCount: cells.length,
@@ -842,7 +871,7 @@ export function getChapterHexLayout(chapter: number): HexLaneLayout {
   const rng         = mulberry32(fnv1a32(seedStr));
 
   const layout = chapter === 1
-    ? buildChapterOneOpenCourtyardLayout(dna, targetCount)
+    ? buildChapterOneObstacleAwareCampusLayout(dna, targetCount)
     : buildHexLayout(graph, dna, targetCount, rng);
   layoutCache.set(chapter, layout);
   return layout;

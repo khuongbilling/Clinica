@@ -438,10 +438,16 @@ export function validateStage2Candidate(
     ...duplicateOrInvalidKeys,
     ...requiredRegionMissingKeys,
   ])];
-  const obstacleIntersectionCellKeys = sceneryLayout.sceneryZones
+  const sceneryObstacleIntersectionCellKeys = sceneryLayout.sceneryZones
     .flatMap(zone => zone.cells)
     .map(c => cellKey(c.q, c.r))
     .filter(key => sceneryLayout.walkableSafetyMaskKeys.includes(key));
+  const authoredObstacleIntersectionCellKeys = stage1Blueprint.obstacleCellKeys
+    .filter(key => walkableKeys.has(key));
+  const obstacleIntersectionCellKeys = [...new Set([
+    ...sceneryObstacleIntersectionCellKeys,
+    ...authoredObstacleIntersectionCellKeys,
+  ])].sort();
   const startPresent = walkableKeys.has(startKey);
   const gatePresent = walkableKeys.has(gateKey);
   const startToGateConnected = graphDistances.has(gateKey);
@@ -461,6 +467,7 @@ export function validateStage2Candidate(
     startToGateConnected &&
     requiredRegionsConnected &&
     scenerySafetyPass &&
+    obstacleIntersectionCellKeys.length === 0 &&
     voidIntersectionCellKeys.length === 0;
 
   return {
@@ -477,8 +484,8 @@ export function validateStage2Candidate(
     gatePresent,
     startToGateConnected,
     requiredRegionsConnected,
-    obstacleIntersectionPass: scenerySafetyPass,
-    obstacleIntersectionCellKeys: [...new Set(obstacleIntersectionCellKeys)],
+    obstacleIntersectionPass: scenerySafetyPass && obstacleIntersectionCellKeys.length === 0,
+    obstacleIntersectionCellKeys,
     voidIntersectionPass: voidIntersectionCellKeys.length === 0,
     voidIntersectionCellKeys,
     pass,

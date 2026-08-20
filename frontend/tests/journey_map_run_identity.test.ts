@@ -116,7 +116,7 @@ test('generateRunData(1) does not throw', () => {
   ch1ResultEvening = generateRunData(CH1, SEED_A, 'evening');
 });
 
-test('Ch1 mapLayoutVersion carries its open-courtyard identity', () => {
+test('Ch1 mapLayoutVersion carries its obstacle-aware campus identity', () => {
   eq(ch1ResultA.mapLayoutVersion, artifact.mapLayoutVersion,
     `expected '${artifact.mapLayoutVersion}', got '${ch1ResultA.mapLayoutVersion}'`);
 });
@@ -238,6 +238,29 @@ test('same-count hybrid footprint fails even when it claims the current identity
   ok(!comparison.matches, 'hybrid coordinate footprint should fail');
   ok(comparison.missingTileIds.includes('0,9'), 'missing canonical tile should be reported');
   ok(comparison.extraTileIds.includes('12,0'), 'extra legacy tile should be reported');
+});
+
+test('old open-campus fountain route fails recovery checks even at the same tile count', () => {
+  // This mirrors the historical campus footprint at the exact point that now
+  // detours around the fountain. A stale run can still claim the current hash,
+  // so coordinate comparison — not count or hash alone — must force recovery.
+  const legacyOpenCampus = {
+    ...builtRun,
+    tiles: builtRun.tiles.map(tile => tile.id === '-3,-3'
+      ? { ...tile, id: '0,0', q: 0, r: 0 }
+      : tile),
+  };
+  const comparison = compareRunGeometryToCanonicalArtifact(legacyOpenCampus, artifact);
+  ok(!comparison.matches, 'old fountain-crossing footprint should fail');
+  ok(comparison.missingTileIds.includes('-3,-3'), 'missing paved detour should be reported');
+  ok(comparison.extraTileIds.includes('0,0'), 'legacy fountain tile should be reported');
+});
+
+test('canonical Stage 2 proof reports no authored campus obstacle intersection', () => {
+  ok(artifact.stage2Validation.obstacleIntersectionPass,
+    `obstacle intersection: ${artifact.stage2Validation.obstacleIntersectionCellKeys.join(', ')}`);
+  eq(artifact.stage2Validation.obstacleIntersectionCellKeys.length, 0,
+    'no fountain or planted-scene cell should be playable');
 });
 
 // ── Identity check (mirrors getActiveRun staleness logic) ────────────────────
