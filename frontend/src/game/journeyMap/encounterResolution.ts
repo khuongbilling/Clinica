@@ -58,21 +58,28 @@ const CHAPTER_BATTLE_POOL: Record<number, readonly string[]> = {
   1: ['dehydration_wisp', 'air_sprite', 'fluid_phantom'],
   2: ['fever_imp',        'air_sprite', 'dehydration_wisp'],
   3: ['fever_shade',      'gale_spirit', 'fluid_phantom'],
-  4: ['fever_shade',      'gale_spirit', 'dehydration_specter'],
-  5: ['gale_spirit',      'dehydration_specter', 'fever_shade'],
+  4: ['fever_shade',      'gale_spirit', 'fluid_phantom'],
+  5: ['gale_spirit',      'fever_shade', 'fluid_phantom'],
 };
 
 const DEFAULT_BATTLE_POOL = CHAPTER_BATTLE_POOL[1];
 
 /** Chapter → area-boss enemy (fixed, not seeded — there is exactly one per run). */
 const CHAPTER_AREA_BOSS: Record<number, string> = {
-  1: 'dehydration_specter',
+  1: 'fluid_phantom',
   2: 'fever_shade',
   3: 'gale_spirit',
   4: 'gale_spirit',
-  5: 'dehydration_specter',
+  5: 'fever_shade',
+  6: 'gale_spirit',
+  7: 'fever_shade',
+  8: 'gale_spirit',
+  9: 'dehydration_specter',
 };
 
+// Chapters after the explicit early-game table inherit the Chapter 9+
+// real-world boss.  Keeping the default here is safe because every
+// pre-Chapter-9 chapter has an explicit entry above.
 const DEFAULT_AREA_BOSS = 'dehydration_specter';
 
 /**

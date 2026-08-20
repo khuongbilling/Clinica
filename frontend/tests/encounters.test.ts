@@ -248,6 +248,19 @@ function makeRun(overrides: Partial<JourneyRun> = {}, tileOverrides: Partial<Jou
 
   const areaBossId = getAreaBossEnemyId(1);
   check('26. getAreaBossEnemyId returns non-empty string', areaBossId.length > 0);
+  check('26a. Chapter 1 area boss is not the Chapter 9 Dehydration Specter',
+    areaBossId !== 'dehydration_specter');
+  check('26b. Chapter 8 area boss remains below the Specter gate',
+    getAreaBossEnemyId(8) !== 'dehydration_specter');
+  check('26c. Chapter 9 unlocks the Dehydration Specter area boss',
+    getAreaBossEnemyId(9) === 'dehydration_specter');
+  const preGateBattleIds = [1, 4, 5].flatMap(chapter =>
+    Array.from({ length: 12 }, (_, index) =>
+      deriveEnemyId(seed, `${index},${chapter}`, chapter),
+    ),
+  );
+  check('26d. pre-Chapter-9 battle pools exclude the Dehydration Specter',
+    !preGateBattleIds.includes('dehydration_specter'));
 
   const bosId = getChapterBossEnemyId(1);
   check('27. getChapterBossEnemyId returns non-empty string', bosId.length > 0);
