@@ -274,6 +274,34 @@ const ASSET_REGISTRY: Partial<Record<number, Record<TimeOfDay, AssetRegistryEntr
     evening: 'validated',
     night:   'validated',
   },
+  // Chapters 6–10: reviewed finished-environment rasters. Future maps require
+  // the dual presentation contract: each registered painting depicts its
+  // blocking perimeter zone and the matching raised prop is placed at runtime.
+  6: {
+    day:     { status: 'validated', rasterObstaclesAttested: true },
+    evening: { status: 'validated', rasterObstaclesAttested: true },
+    night:   { status: 'validated', rasterObstaclesAttested: true },
+  },
+  7: {
+    day:     { status: 'validated', rasterObstaclesAttested: true },
+    evening: { status: 'validated', rasterObstaclesAttested: true },
+    night:   { status: 'validated', rasterObstaclesAttested: true },
+  },
+  8: {
+    day:     { status: 'validated', rasterObstaclesAttested: true },
+    evening: { status: 'validated', rasterObstaclesAttested: true },
+    night:   { status: 'validated', rasterObstaclesAttested: true },
+  },
+  9: {
+    day:     { status: 'validated', rasterObstaclesAttested: true },
+    evening: { status: 'validated', rasterObstaclesAttested: true },
+    night:   { status: 'validated', rasterObstaclesAttested: true },
+  },
+  10: {
+    day:     { status: 'validated', rasterObstaclesAttested: true },
+    evening: { status: 'validated', rasterObstaclesAttested: true },
+    night:   { status: 'validated', rasterObstaclesAttested: true },
+  },
 };
 
 // ── Coordinate helpers ────────────────────────────────────────────────────────

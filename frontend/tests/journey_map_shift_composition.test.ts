@@ -59,6 +59,46 @@ const CHAPTER_SHIFT_SETS = [
       'map-platform-background-ch5-night-v2.png',
     ],
   },
+  {
+    label: 'Chapter 6',
+    master: 'map-platform-background-ch6-day.png',
+    variants: [
+      'map-platform-background-ch6-evening-locked-v3.png',
+      'map-platform-background-ch6-night-locked-v3.png',
+    ],
+  },
+  {
+    label: 'Chapter 7',
+    master: 'map-platform-background-ch7-day.png',
+    variants: [
+      'map-platform-background-ch7-evening-locked-v3.png',
+      'map-platform-background-ch7-night-locked-v3.png',
+    ],
+  },
+  {
+    label: 'Chapter 8',
+    master: 'map-platform-background-ch8-day.png',
+    variants: [
+      'map-platform-background-ch8-evening-locked-v3.png',
+      'map-platform-background-ch8-night-locked-v3.png',
+    ],
+  },
+  {
+    label: 'Chapter 9',
+    master: 'map-platform-background-ch9-day.png',
+    variants: [
+      'map-platform-background-ch9-evening-locked-v3.png',
+      'map-platform-background-ch9-night-locked-v3.png',
+    ],
+  },
+  {
+    label: 'Chapter 10',
+    master: 'map-platform-background-ch10-day.png',
+    variants: [
+      'map-platform-background-ch10-evening-locked-v3.png',
+      'map-platform-background-ch10-night-locked-v3.png',
+    ],
+  },
 ] as const;
 const GRID = 64;
 const MIN_STRUCTURE_CORRELATION = 0.85;

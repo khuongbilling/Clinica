@@ -17,6 +17,8 @@ import {
   getRequiredRuntimePropType,
   validateObstaclePresentationContract,
 } from '../src/game/journeyMap/obstaclePresentationContract';
+import { getBackgroundAuthoringManifest } from '../src/game/journeyMap/backgroundAuthoringManifest';
+import { getChapterMapVisuals } from '../src/game/journeyMap/chapterMapVisuals';
 import { planSceneryProps } from '../src/game/journeyMap/sceneryPropPlacer';
 import { SCENERY_PROP_DEFS } from '../src/game/journeyMap/sceneryPropTypes';
 import type { SceneryLayout } from '../src/game/journeyMap/chapterMapTemplate.types';
@@ -355,6 +357,34 @@ test('Chapters 2–10 render their raised primary scenery props through safe pla
       [],
       `Ch${chapter} cannot leave required raised blockers unplaced`,
     );
+  }
+});
+
+test('Chapters 6–10 reveal only reviewed, obstacle-approved environment rasters', () => {
+  const shifts = ['day', 'evening', 'night'] as const;
+
+  for (const chapter of [6, 7, 8, 9, 10]) {
+    for (const shift of shifts) {
+      const manifest = getBackgroundAuthoringManifest(chapter, shift);
+      const visuals = getChapterMapVisuals(chapter, shift, true);
+
+      assert.strictEqual(manifest.assetStatus, 'validated', `Ch${chapter} ${shift} manifest`);
+      assert.strictEqual(manifest.stage3Status, 'APPROVED', `Ch${chapter} ${shift} approval`);
+      assert.strictEqual(
+        manifest.obstaclePresentation.pass,
+        true,
+        `Ch${chapter} ${shift} obstacle presentation`,
+      );
+      assert.strictEqual(
+        manifest.obstaclePresentation.rasterObstaclesAttested,
+        true,
+        `Ch${chapter} ${shift} raster review`,
+      );
+      assert.strictEqual(visuals.stage3Status, 'APPROVED', `Ch${chapter} ${shift} selection`);
+      assert.strictEqual(visuals.stage3RegistryMatch, true, `Ch${chapter} ${shift} exact path`);
+      assert.strictEqual(visuals.stage3AssetPath, manifest.rasterAsset, `Ch${chapter} ${shift} asset`);
+      assert.notStrictEqual(visuals.background, undefined, `Ch${chapter} ${shift} background`);
+    }
   }
 });
 

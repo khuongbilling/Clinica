@@ -6,7 +6,7 @@ on:
 
 jobs:
   test:
-    name: Route validation tests
+    name: Route and journey-map validation tests
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -29,3 +29,9 @@ jobs:
 
       - name: Route constant ↔ screen file cross-check
         run: node scripts/check-routes.js
+
+      - name: Journey-map Stage 3 release contract
+        run: npm run test:journey-stage-contract
+
+      - name: Journey-map shift composition lock
+        run: node_modules/.bin/sucrase-node tests/journey_map_shift_composition.test.ts

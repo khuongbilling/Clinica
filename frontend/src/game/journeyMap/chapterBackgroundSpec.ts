@@ -318,6 +318,9 @@ function targetAssetPath(chapter: number, shift: TimeOfDay): string {
     const revision = shift === 'night' ? '-v4' : shift === 'evening' ? '-v2' : '';
     return `assets/ui/journey/map/map-campus-background-ch1-${shift}-clean${revision}.png`;
   }
+  if (chapter >= 6 && chapter <= 10 && shift !== 'day') {
+    return `assets/ui/journey/map/map-platform-background-ch${chapter}-${shift}-locked-v3.png`;
+  }
   const revision =
     chapter === 2 && shift === 'evening' ? '-v3'
       : chapter === 2 && shift === 'night' ? '-v2'
@@ -331,6 +334,9 @@ function metroRequirePath(chapter: number, shift: TimeOfDay): string {
   if (chapter === 1) {
     const revision = shift === 'night' ? '-v4' : shift === 'evening' ? '-v2' : '';
     return `@/assets/ui/journey/map/map-campus-background-ch1-${shift}-clean${revision}.png`;
+  }
+  if (chapter >= 6 && chapter <= 10 && shift !== 'day') {
+    return `@/assets/ui/journey/map/map-platform-background-ch${chapter}-${shift}-locked-v3.png`;
   }
   const revision =
     chapter === 2 && shift === 'evening' ? '-v3'
@@ -437,6 +443,22 @@ const COMPOSITION_DISCIPLINE: Partial<Record<ChapterEnvironmentType, string>> = 
   ].join('; '),
 };
 
+// ── Future-map obstacle presentation ─────────────────────────────────────────
+//
+// Chapters 6–10 show a reviewed painted counterpart of their blocking scenery
+// zone while the collision-safe, raised prop remains a separate runtime layer.
+// Calling out both parts in the authoring specification prevents a future
+// regeneration from either burying a prop in the walkable bed or omitting the
+// visual landmark that tells the player why that perimeter is non-traversable.
+
+const FUTURE_OBSTACLE_PRESENTATION: Partial<Record<number, string>> = {
+  6: 'OBSTACLE PRESENTATION: depict the mock-ward simulation structure only beyond the non-walkable promenade edge; its visible footprint must correspond to the separately raised Simulation Bed runtime prop, never cover a route or clearing',
+  7: 'OBSTACLE PRESENTATION: depict the medicinal diagnostic garden only beyond the non-walkable braided-path edge; its visible perimeter must correspond to separately raised Academy Planter runtime props, never cover a route or clearing',
+  8: 'OBSTACLE PRESENTATION: depict the scholarly anatomy-garden landmark only beyond the non-walkable plaza edge; its visible footprint must correspond to separately raised Decorative Column runtime props, never cover a route or clearing',
+  9: 'OBSTACLE PRESENTATION: depict the clinical-complex landmark only beyond the non-walkable serpentine-walk edge; its visible footprint must correspond to separately raised Decorative Column runtime props, never cover a route or clearing',
+  10: 'OBSTACLE PRESENTATION: depict the capstone observation deck only beyond the non-walkable assessment-court edge; its visible footprint must correspond to separately raised Observation Terminal runtime props, never cover a route or clearing',
+};
+
 // ── AI prompt builder ─────────────────────────────────────────────────────────
 //
 // Push 6: bedPromptFragment is injected FIRST (after style anchor) as the
@@ -455,6 +477,7 @@ function buildAiPrompt(
   spatialContext:           string,
   bedPromptFragment:        string,
   sceneryConstraintFragment: string,
+  obstaclePresentation?:    string,
 ): string {
   const lt = SHIFT_LIGHTING[shift];
   return [
@@ -470,6 +493,7 @@ function buildAiPrompt(
     // Task 766: per-environment composition discipline (walkable bed floor
     // language, clearing openness, scenery-zone grouping, hard negatives).
     ...(COMPOSITION_DISCIPLINE[envType] ? [COMPOSITION_DISCIPLINE[envType] as string] : []),
+    ...(obstaclePresentation ? [obstaclePresentation] : []),
     `spatial layout: ${spatialContext}`,
     `floor/ground layer: ${pathStyle} — visually obvious as the traversal space`,
     `open encounter spaces: ${clearStyle}`,
@@ -537,6 +561,7 @@ function buildChapterBackgroundSpec(
         // Push 6: bed fragments injected for Blueprint-first geometry
         bed.bedPromptFragment,
         bed.sceneryConstraintFragment,
+        FUTURE_OBSTACLE_PRESENTATION[chapter],
       ),
       negativePrompt:   NEGATIVE_PROMPT,
       targetAssetPath:  targetAssetPath(chapter, shift),

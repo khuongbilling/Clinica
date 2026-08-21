@@ -72,6 +72,9 @@ function expectedAssetPath(chapter: number, shift: typeof SHIFTS[number]): strin
     const revision = shift === 'night' ? '-v4' : shift === 'evening' ? '-v2' : '';
     return `assets/ui/journey/map/map-campus-background-ch1-${shift}-clean${revision}.png`;
   }
+  if (chapter >= 6 && chapter <= 10 && shift !== 'day') {
+    return `assets/ui/journey/map/map-platform-background-ch${chapter}-${shift}-locked-v3.png`;
+  }
   const revision =
     chapter === 2 && shift === 'evening' ? '-v3'
       : chapter === 2 && shift === 'night' ? '-v2'

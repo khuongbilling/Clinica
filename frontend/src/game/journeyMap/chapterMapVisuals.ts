@@ -319,6 +319,26 @@ const CH5_DAY_BG = require('@/assets/ui/journey/map/map-platform-background-ch5-
 const CH5_EVE_BG = require('@/assets/ui/journey/map/map-platform-background-ch5-evening-v2.png') as number;
 const CH5_NIGHT_BG = require('@/assets/ui/journey/map/map-platform-background-ch5-night-v2.png') as number;
 
+// Chapters 6–10: reviewed, geometry-locked Stage 3 environment raster sets.
+// Raised blocking props stay in SceneryPropLayerView, so these paintings keep
+// every walkable lane and clearing clean while showing the matching perimeter
+// obstacle context.
+const CH6_DAY_BG = require('@/assets/ui/journey/map/map-platform-background-ch6-day.png') as number;
+const CH6_EVE_BG = require('@/assets/ui/journey/map/map-platform-background-ch6-evening-locked-v3.png') as number;
+const CH6_NIGHT_BG = require('@/assets/ui/journey/map/map-platform-background-ch6-night-locked-v3.png') as number;
+const CH7_DAY_BG = require('@/assets/ui/journey/map/map-platform-background-ch7-day.png') as number;
+const CH7_EVE_BG = require('@/assets/ui/journey/map/map-platform-background-ch7-evening-locked-v3.png') as number;
+const CH7_NIGHT_BG = require('@/assets/ui/journey/map/map-platform-background-ch7-night-locked-v3.png') as number;
+const CH8_DAY_BG = require('@/assets/ui/journey/map/map-platform-background-ch8-day.png') as number;
+const CH8_EVE_BG = require('@/assets/ui/journey/map/map-platform-background-ch8-evening-locked-v3.png') as number;
+const CH8_NIGHT_BG = require('@/assets/ui/journey/map/map-platform-background-ch8-night-locked-v3.png') as number;
+const CH9_DAY_BG = require('@/assets/ui/journey/map/map-platform-background-ch9-day.png') as number;
+const CH9_EVE_BG = require('@/assets/ui/journey/map/map-platform-background-ch9-evening-locked-v3.png') as number;
+const CH9_NIGHT_BG = require('@/assets/ui/journey/map/map-platform-background-ch9-night-locked-v3.png') as number;
+const CH10_DAY_BG = require('@/assets/ui/journey/map/map-platform-background-ch10-day.png') as number;
+const CH10_EVE_BG = require('@/assets/ui/journey/map/map-platform-background-ch10-evening-locked-v3.png') as number;
+const CH10_NIGHT_BG = require('@/assets/ui/journey/map/map-platform-background-ch10-night-locked-v3.png') as number;
+
 // ── Stage 3: exact blueprint-hash → approved finished-environment registry ───
 //
 // A registry entry is valid only when its source path is exactly the raster
@@ -354,6 +374,36 @@ const CH5_STAGE3_ASSET_PATHS = {
   day:     'assets/ui/journey/map/map-platform-background-ch5-day.png',
   evening: 'assets/ui/journey/map/map-platform-background-ch5-evening-v2.png',
   night:   'assets/ui/journey/map/map-platform-background-ch5-night-v2.png',
+} as const satisfies Record<TimeOfDay, string>;
+
+const CH6_STAGE3_ASSET_PATHS = {
+  day:     'assets/ui/journey/map/map-platform-background-ch6-day.png',
+  evening: 'assets/ui/journey/map/map-platform-background-ch6-evening-locked-v3.png',
+  night:   'assets/ui/journey/map/map-platform-background-ch6-night-locked-v3.png',
+} as const satisfies Record<TimeOfDay, string>;
+
+const CH7_STAGE3_ASSET_PATHS = {
+  day:     'assets/ui/journey/map/map-platform-background-ch7-day.png',
+  evening: 'assets/ui/journey/map/map-platform-background-ch7-evening-locked-v3.png',
+  night:   'assets/ui/journey/map/map-platform-background-ch7-night-locked-v3.png',
+} as const satisfies Record<TimeOfDay, string>;
+
+const CH8_STAGE3_ASSET_PATHS = {
+  day:     'assets/ui/journey/map/map-platform-background-ch8-day.png',
+  evening: 'assets/ui/journey/map/map-platform-background-ch8-evening-locked-v3.png',
+  night:   'assets/ui/journey/map/map-platform-background-ch8-night-locked-v3.png',
+} as const satisfies Record<TimeOfDay, string>;
+
+const CH9_STAGE3_ASSET_PATHS = {
+  day:     'assets/ui/journey/map/map-platform-background-ch9-day.png',
+  evening: 'assets/ui/journey/map/map-platform-background-ch9-evening-locked-v3.png',
+  night:   'assets/ui/journey/map/map-platform-background-ch9-night-locked-v3.png',
+} as const satisfies Record<TimeOfDay, string>;
+
+const CH10_STAGE3_ASSET_PATHS = {
+  day:     'assets/ui/journey/map/map-platform-background-ch10-day.png',
+  evening: 'assets/ui/journey/map/map-platform-background-ch10-evening-locked-v3.png',
+  night:   'assets/ui/journey/map/map-platform-background-ch10-night-locked-v3.png',
 } as const satisfies Record<TimeOfDay, string>;
 
 const BLUEPRINT_RASTER_REGISTRY: Record<string, BlueprintRasterRegistration> = {
@@ -408,6 +458,56 @@ const BLUEPRINT_RASTER_REGISTRY: Record<string, BlueprintRasterRegistration> = {
   },
   '5:night:df7e58f6:25e02f93': {
     source: CH5_NIGHT_BG, assetPath: CH5_STAGE3_ASSET_PATHS.night,
+  },
+  // Ch6 Mock Ward Campus: perimeter simulation structure + raised beds.
+  '6:day:9241e1c0:bd6a348f': {
+    source: CH6_DAY_BG, assetPath: CH6_STAGE3_ASSET_PATHS.day,
+  },
+  '6:evening:9241e1c0:bd6a348f': {
+    source: CH6_EVE_BG, assetPath: CH6_STAGE3_ASSET_PATHS.evening,
+  },
+  '6:night:9241e1c0:bd6a348f': {
+    source: CH6_NIGHT_BG, assetPath: CH6_STAGE3_ASSET_PATHS.night,
+  },
+  // Ch7 Diagnostic Training Center: perimeter medicinal garden + planters.
+  '7:day:9a14eb17:ab3981d9': {
+    source: CH7_DAY_BG, assetPath: CH7_STAGE3_ASSET_PATHS.day,
+  },
+  '7:evening:9a14eb17:ab3981d9': {
+    source: CH7_EVE_BG, assetPath: CH7_STAGE3_ASSET_PATHS.evening,
+  },
+  '7:night:9a14eb17:ab3981d9': {
+    source: CH7_NIGHT_BG, assetPath: CH7_STAGE3_ASSET_PATHS.night,
+  },
+  // Ch8 Anatomy Learning Garden: scholarly landmark + decorative columns.
+  '8:day:80bfc313:9cc86d91': {
+    source: CH8_DAY_BG, assetPath: CH8_STAGE3_ASSET_PATHS.day,
+  },
+  '8:evening:80bfc313:9cc86d91': {
+    source: CH8_EVE_BG, assetPath: CH8_STAGE3_ASSET_PATHS.evening,
+  },
+  '8:night:80bfc313:9cc86d91': {
+    source: CH8_NIGHT_BG, assetPath: CH8_STAGE3_ASSET_PATHS.night,
+  },
+  // Ch9 Clinical Skills Complex: perimeter landmark + decorative columns.
+  '9:day:ef0b2530:c6884b60': {
+    source: CH9_DAY_BG, assetPath: CH9_STAGE3_ASSET_PATHS.day,
+  },
+  '9:evening:ef0b2530:c6884b60': {
+    source: CH9_EVE_BG, assetPath: CH9_STAGE3_ASSET_PATHS.evening,
+  },
+  '9:night:ef0b2530:c6884b60': {
+    source: CH9_NIGHT_BG, assetPath: CH9_STAGE3_ASSET_PATHS.night,
+  },
+  // Ch10 Capstone Simulation Campus: outer observation deck + terminals.
+  '10:day:7f7937f5:f736419a': {
+    source: CH10_DAY_BG, assetPath: CH10_STAGE3_ASSET_PATHS.day,
+  },
+  '10:evening:7f7937f5:f736419a': {
+    source: CH10_EVE_BG, assetPath: CH10_STAGE3_ASSET_PATHS.evening,
+  },
+  '10:night:7f7937f5:f736419a': {
+    source: CH10_NIGHT_BG, assetPath: CH10_STAGE3_ASSET_PATHS.night,
   },
 };
 
