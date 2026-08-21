@@ -232,7 +232,12 @@ test('future maps require both raster attestation and asset-backed raised obstac
   assert.strictEqual(currentMap.required, false);
   assert.strictEqual(currentMap.pass, true);
 
-  const futureMap = validateObstaclePresentationContract(6, blockingScenery, true);
+  const futureMap = validateObstaclePresentationContract(
+    6,
+    blockingScenery,
+    true,
+    () => false,
+  );
   assert.strictEqual(futureMap.required, true);
   assert.strictEqual(futureMap.rasterObstaclesAttested, true);
   assert.strictEqual(futureMap.pass, false);
@@ -308,12 +313,17 @@ test('an unsafe required future blocker suppresses runtime placement and future 
   }
 });
 
-test('Chapters 2–5 render their raised primary scenery props through safe placement', () => {
+test('Chapters 2–10 render their raised primary scenery props through safe placement', () => {
   const expectedPrimaryProps = {
     2: 'DECORATIVE_COLUMN',
     3: 'WORKSTATION',
     4: 'OBSERVATION_TERMINAL',
     5: 'DECORATIVE_COLUMN',
+    6: 'SIMULATION_BED',
+    7: 'ACADEMY_PLANTER',
+    8: 'DECORATIVE_COLUMN',
+    9: 'DECORATIVE_COLUMN',
+    10: 'OBSERVATION_TERMINAL',
   } as const;
 
   for (const [chapterValue, expectedType] of Object.entries(expectedPrimaryProps)) {
