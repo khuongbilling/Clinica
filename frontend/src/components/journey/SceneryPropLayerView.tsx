@@ -3,31 +3,25 @@
  *
  * Sits INSIDE the world Animated.View (same camera transform as terrain and
  * player sprite).  Each prop is absolutely positioned at its world-pixel
- * top-left and depth-sorted by groundY within the WORLD_CONTENT z-range.
+ * top-left and depth-sorted by the shared axial map depth within the
+ * WORLD_CONTENT z-range.
  *
  * When a prop's `def.asset` is non-null, the actual PNG asset is rendered.
  * While assets are pending, a labelled placeholder box is shown in DEV mode.
  * In production, props with null assets are silently skipped.
  *
  * Depth sort formula (mirrors HexObjectLayer):
- *   zIndex = min(WORLD_CONTENT_MAX, WORLD_CONTENT_BASE + groundY × OBJECT_DEPTH)
+ *   zIndex = min(WORLD_CONTENT_MAX, WORLD_CONTENT_BASE + (r + q / 2) × 10)
  */
 
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Image } from 'expo-image';
 import type { PlacedSceneryProp } from '../../game/journeyMap/sceneryPropTypes';
+import { worldContentZForAxialDepth } from './journeyZ';
 
-// ── Z-index constants (mirrors HexMapLayer internals) ─────────────────────────
-const WORLD_CONTENT_BASE = 3000;
-const WORLD_CONTENT_MAX  = 4900;
-const OBJECT_DEPTH       = 10;
-
-function propZ(groundY: number): number {
-  return Math.min(
-    WORLD_CONTENT_MAX,
-    WORLD_CONTENT_BASE + Math.round(groundY * OBJECT_DEPTH),
-  );
+function propZ(axialDepth: number): number {
+  return worldContentZForAxialDepth(axialDepth);
 }
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -52,7 +46,7 @@ export function SceneryPropLayerView({
   return (
     <>
       {placedProps.map(prop => {
-        const z = propZ(prop.groundY);
+        const z = propZ(prop.axialDepth);
         const hasAsset = prop.def.asset !== null;
 
         // In production, skip props without art.

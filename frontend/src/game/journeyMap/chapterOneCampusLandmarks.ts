@@ -6,6 +6,8 @@
  * be painted underneath a playable hex.
  */
 
+import { worldContentZForAxialDepth } from '../../components/journey/journeyZ';
+
 export type CampusLandmarkKind = 'grandFountain' | 'planterCypresses';
 
 export interface ChapterOneCampusLandmark {
@@ -52,12 +54,7 @@ export const CHAPTER_ONE_CAMPUS_OBSTACLE_CELL_KEYS: readonly string[] = Object.f
   CHAPTER_ONE_CAMPUS_LANDMARKS.flatMap(landmark => landmark.blockedCellKeys),
 );
 
-const WORLD_CONTENT_BASE = 3000;
-const WORLD_CONTENT_MAX = 4900;
-const OBJECT_DEPTH = 10;
-
 /** Matches HexObjectLayer's axial depth axis for stable 2.5D occlusion. */
 export function chapterOneCampusLandmarkZ(q: number, r: number): number {
-  const axialDepth = r + q / 2;
-  return Math.min(WORLD_CONTENT_MAX, WORLD_CONTENT_BASE + Math.round(axialDepth * OBJECT_DEPTH));
+  return worldContentZForAxialDepth(r + q / 2);
 }

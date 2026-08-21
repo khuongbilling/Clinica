@@ -11,6 +11,8 @@ import {
   type Stage3ManifestIdentity,
 } from '../src/game/journeyMap/stage3AssetSelector';
 import { getEnvironmentRevealRadius } from '../src/game/journeyMap/fog/fogRevealGeometry';
+import { AUTHORED_MAP_TILE_SZ, computeHexWorldCoords } from '../src/components/journey/hexWorldCoords';
+import { worldContentZForAxialDepth } from '../src/components/journey/journeyZ';
 import {
   getRequiredRuntimePropType,
   validateObstaclePresentationContract,
@@ -303,6 +305,46 @@ test('an unsafe required future blocker suppresses runtime placement and future 
     assert.strictEqual(approval.pass, false);
   } finally {
     planter.asset = originalAsset;
+  }
+});
+
+test('Chapters 2–5 render their raised primary scenery props through safe placement', () => {
+  const expectedPrimaryProps = {
+    2: 'DECORATIVE_COLUMN',
+    3: 'WORKSTATION',
+    4: 'OBSERVATION_TERMINAL',
+    5: 'DECORATIVE_COLUMN',
+  } as const;
+
+  for (const [chapterValue, expectedType] of Object.entries(expectedPrimaryProps)) {
+    const chapter = Number(chapterValue);
+    const artifact = getCanonicalChapterMapArtifact(chapter);
+    const coords = computeHexWorldCoords(
+      artifact.hexLayout.cells,
+      1,
+      AUTHORED_MAP_TILE_SZ,
+    );
+    const placement = planSceneryProps(artifact.sceneryLayout, coords, chapter);
+    const primaryProp = placement.props.find(prop => prop.type === expectedType);
+
+    assert.ok(primaryProp, `Ch${chapter} should place ${expectedType}`);
+    assert.notStrictEqual(primaryProp!.def.asset, null, `Ch${chapter} ${expectedType} needs production art`);
+    const propZ = worldContentZForAxialDepth(primaryProp!.axialDepth);
+    const northernPlayerZ = worldContentZForAxialDepth(primaryProp!.axialDepth - 1);
+    const southernPlayerZ = worldContentZForAxialDepth(primaryProp!.axialDepth + 1);
+    assert.ok(
+      northernPlayerZ < propZ,
+      `Ch${chapter} player north of ${expectedType} should render behind it`,
+    );
+    assert.ok(
+      propZ < southernPlayerZ,
+      `Ch${chapter} player south of ${expectedType} should render in front of it`,
+    );
+    assert.deepStrictEqual(
+      placement.unplacedRequiredZoneIds,
+      [],
+      `Ch${chapter} cannot leave required raised blockers unplaced`,
+    );
   }
 });
 

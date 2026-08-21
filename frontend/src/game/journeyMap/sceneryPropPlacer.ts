@@ -115,6 +115,13 @@ function zoneCenterWorld(
   return { cx, cy };
 }
 
+interface PropCandidate {
+  q: number;
+  r: number;
+  cx: number;
+  cy: number;
+}
+
 // ── Candidate positions for perimeter placement ───────────────────────────────
 
 function perimeterCandidates(
@@ -123,7 +130,7 @@ function perimeterCandidates(
   sz: number,
   rand: () => number,
   count: number,
-): Array<{ cx: number; cy: number }> {
+): PropCandidate[] {
   // Sample cells from the zone excluding those within CLEARING_PERIMETER_RATIO
   // of the centroid.
   const { cx: cCx, cy: cCy } = zoneCenterWorld(zone, coords);
@@ -132,13 +139,13 @@ function perimeterCandidates(
     : sz;
   const minDist = maxRadius * CLEARING_PERIMETER_RATIO;
 
-  const candidates: Array<{ cx: number; cy: number }> = [];
+  const candidates: PropCandidate[] = [];
 
   for (const cell of zone.cells) {
     const { cx, cy } = coords.axialToWorld(cell.q, cell.r);
     const dist = Math.sqrt((cx - cCx) ** 2 + (cy - cCy) ** 2);
     if (dist >= minDist) {
-      candidates.push({ cx, cy });
+      candidates.push({ q: cell.q, r: cell.r, cx, cy });
     }
   }
 
@@ -146,7 +153,7 @@ function perimeterCandidates(
   if (candidates.length === 0) {
     for (const cell of zone.cells) {
       const { cx, cy } = coords.axialToWorld(cell.q, cell.r);
-      candidates.push({ cx, cy });
+      candidates.push({ q: cell.q, r: cell.r, cx, cy });
     }
   }
 
@@ -214,13 +221,13 @@ export function planSceneryProps(
       }
 
       // Candidate positions: perimeter for clearing zones, any cell otherwise.
-      const candidates: Array<{ cx: number; cy: number }> = isClearing
+      const candidates: PropCandidate[] = isClearing
         ? perimeterCandidates(zone, coords, sz, rand, 8)
         : (() => {
-            const all: Array<{ cx: number; cy: number }> = [];
+            const all: PropCandidate[] = [];
             for (const cell of zone.cells) {
               const { cx, cy } = coords.axialToWorld(cell.q, cell.r);
-              all.push({ cx, cy });
+              all.push({ q: cell.q, r: cell.r, cx, cy });
             }
             // Shuffle.
             for (let i = all.length - 1; i > 0; i--) {
@@ -232,7 +239,7 @@ export function planSceneryProps(
 
       // Find a safe position.
       let placed = false;
-      for (const { cx, cy } of candidates) {
+      for (const { q, r, cx, cy } of candidates) {
         // Avoid placing too close to already-placed props in this zone.
         const tooClose = usedPositions.some(p => {
           const dist = Math.sqrt((p.cx - cx) ** 2 + (p.cy - cy) ** 2);
@@ -251,7 +258,7 @@ export function planSceneryProps(
             def,
             worldLeft:  Math.round(cx - pw / 2),
             worldTop:   Math.round(cy - ph),       // ground at bottom-center
-            groundY:    Math.round(cy),             // depth-sort anchor
+            axialDepth: r + q / 2,
             pixelWidth:  pw,
             pixelHeight: ph,
             zoneId:     zone.id,

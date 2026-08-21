@@ -9,7 +9,7 @@
  * Contract
  * ────────
  * - Props may ONLY be placed outside the walkable safety mask.
- * - Props depth-sort by groundY (bottom anchor) within WORLD_CONTENT_BASE–MAX.
+ * - Props depth-sort by axialDepth (`r + q / 2`) within WORLD_CONTENT_BASE–MAX.
  * - The `collisionRadiusTiles` is the half-width of the prop's footprint in
  *   tile-size units, used for the safety-buffer check.
  * - `sizeTiles` is the visual width/height in tile-size units.
@@ -150,7 +150,7 @@ export const SCENERY_PROP_DEFS: Readonly<Record<SceneryPropType, SceneryPropDef>
     sizeTiles:          { w: 1.1, h: 0.8 },
     collisionRadiusTiles: 0.45,
     safetyBufferTiles:  0.18,
-    asset:              null,
+    asset:              require('@/assets/map-props/academy-medical-workstation.png') as number,
     devPlaceholderColor: '#5ba0c8',
     isBlocking:         true,
   },
@@ -161,7 +161,7 @@ export const SCENERY_PROP_DEFS: Readonly<Record<SceneryPropType, SceneryPropDef>
     sizeTiles:          { w: 0.8, h: 1.0 },
     collisionRadiusTiles: 0.35,
     safetyBufferTiles:  0.17,
-    asset:              null,
+    asset:              require('@/assets/map-props/academy-observation-terminal.png') as number,
     devPlaceholderColor: '#4f8fc0',
     isBlocking:         true,
   },
@@ -216,7 +216,7 @@ export const SCENERY_PROP_DEFS: Readonly<Record<SceneryPropType, SceneryPropDef>
     sizeTiles:          { w: 0.5, h: 0.6 },
     collisionRadiusTiles: 0.22,
     safetyBufferTiles:  0.15,
-    asset:              null,
+    asset:              require('@/assets/map-props/academy-decorative-column.png') as number,
     devPlaceholderColor: '#b0a090',
     isBlocking:         true,
   },
@@ -255,8 +255,8 @@ export interface PlacedSceneryProp {
   /** Top-left pixel position in world space. */
   worldLeft:   number;
   worldTop:    number;
-  /** Bottom-center Y in world space — used for depth sorting. */
-  groundY:     number;
+  /** Axial world depth (`r + q / 2`) used for 2.5D occlusion sorting. */
+  axialDepth:  number;
   /** Pixel width of the rendered image at 1× scale. */
   pixelWidth:  number;
   /** Pixel height of the rendered image at 1× scale. */

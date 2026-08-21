@@ -73,3 +73,17 @@ export const JOURNEY_Z = {
   DEV_OVERLAY:      19000,
   DEV_DIAGNOSTICS:  19999,
 } as const;
+
+/** Axial-depth multiplier shared by player, encounter, and scenery world objects. */
+export const WORLD_CONTENT_DEPTH_STEP = 10;
+
+/**
+ * Converts the shared axial depth (`r + q / 2`) into a world-content z-index.
+ * Larger depths are farther south and therefore render in front.
+ */
+export function worldContentZForAxialDepth(axialDepth: number): number {
+  return Math.min(
+    JOURNEY_Z.WORLD_CONTENT_MAX,
+    JOURNEY_Z.WORLD_CONTENT_BASE + Math.round(axialDepth * WORLD_CONTENT_DEPTH_STEP),
+  );
+}

@@ -193,7 +193,7 @@ import { FogBaseLayer }     from './FogBaseLayer';
 import { FogMidLayer }      from './FogMidLayer';
 import { FogWispLayer }     from './FogWispLayer';
 import { FogDevDiagnostic } from './FogDevDiagnostic';
-import { JOURNEY_Z }    from './journeyZ';
+import { JOURNEY_Z, worldContentZForAxialDepth } from './journeyZ';
 import { FogOfWarLayer } from '@/src/game/journeyMap/fog/FogOfWarLayer';
 import {
   BLUEPRINT_FOUNDATION_COLOR,
@@ -422,8 +422,6 @@ const SHADOW_RX_MUL    = 0.35;                   // Push 4A.7: 0.48 → 0.35 —
 // WORLD CONTENT passes so a southern terrain tile never rises above its objects.
 const TERRAIN_BASE  = JOURNEY_Z.TERRAIN_BASE;         // 100
 const TERRAIN_DEPTH = 10;
-const OBJECT_BASE   = JOURNEY_Z.WORLD_CONTENT_BASE;   // 3000
-const OBJECT_DEPTH  = 10;
 const GATE_ART_Z    = JOURNEY_Z.GATE;                 // 5100
 const CHR_SHADOW_CY    = CHR_GLOW_CY;   // shadow cy = feet position (0.65 × sz)
 // Push 4A.7: 0.43 → 0.29 — target ~50 % of sprite width (1.15×sz).
@@ -1315,10 +1313,7 @@ function HexObjectLayer({
 
         const pos      = coords.axialToWorld(tile.q, tile.r);
         const worldY   = tile.r + tile.q * 0.5;
-        const objectZ  = Math.min(
-          JOURNEY_Z.WORLD_CONTENT_MAX,
-          OBJECT_BASE + Math.round(worldY * OBJECT_DEPTH),
-        );
+        const objectZ  = worldContentZForAxialDepth(worldY);
         // Push 2: derived from the central fog state, not tile.visibility.
         const isExplored = !tile.current && fogState === 'explored';
         // Unique glow gradient id — only one current tile exists at a time but
