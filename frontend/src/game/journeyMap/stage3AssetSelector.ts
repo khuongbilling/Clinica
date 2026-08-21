@@ -3,6 +3,8 @@
  *
  * Pure, testable Stage 3 approval gate. A raster can be rendered only if an
  * exact chapter:shift:hash registration agrees with a validated manifest.
+ * For future maps, that manifest additionally proves that blocking scenery has
+ * both a painted raster representation and a raised runtime object.
  */
 
 export interface Stage3ManifestIdentity {

@@ -40,6 +40,12 @@ import { getChapterBackgroundSpec } from './chapterBackgroundSpec';
 import { getWalkableBed }          from './walkableBedGenerator';
 import { validateBackgroundComposition } from './backgroundValidator';
 import type { BackgroundValidationResult } from './backgroundValidator';
+import {
+  validateObstaclePresentationContract,
+  type ObstaclePresentationContractResult,
+} from './obstaclePresentationContract';
+import { planSceneryProps } from './sceneryPropPlacer';
+import { AUTHORED_MAP_TILE_SZ, computeHexWorldCoords } from '../../components/journey/hexWorldCoords';
 import { getChapterMapLayoutVersion } from './journeyMapVersion'; // leaf import — no cycle
 import { getCanonicalStage1Snapshot } from './canonicalStageIdentity';
 import type { CanonicalStage1Snapshot } from './canonicalStageIdentity';
@@ -66,6 +72,7 @@ export type ManifestAssetStatus =
   | 'raster_unvalidated'
   | 'validated'
   | 'invalid_overlap'
+  | 'missing_obstacle_presentation'
   | 'failed';
 
 /** Axial bounding box of all walkable tiles, plus total tile count. */
@@ -206,6 +213,11 @@ export interface BackgroundAuthoringManifest {
    * status promotion and the DevDiagnostics BACKGROUND VALIDATED badge.
    */
   readonly validationResult: BackgroundValidationResult;
+  /**
+   * Future-map release gate. A blocking obstacle must be shown in the raster
+   * and have real raised runtime art before a finished environment can ship.
+   */
+  readonly obstaclePresentation: ObstaclePresentationContractResult;
 }
 
 // ── Asset registry ────────────────────────────────────────────────────────────
@@ -227,7 +239,16 @@ export interface BackgroundAuthoringManifest {
 // across every shift. Their clear paving is reviewed against the authored
 // walkable bed; the geometry validator continues to enforce scenery-zone safety.
 
-const ASSET_REGISTRY: Partial<Record<number, Record<TimeOfDay, ManifestAssetStatus>>> = {
+type AssetRegistryEntry = ManifestAssetStatus | {
+  readonly status: ManifestAssetStatus;
+  /**
+   * Add only after reviewing the registered raster against the Stage 1
+   * blocking scenery zones. Required for future maps with blockers.
+   */
+  readonly rasterObstaclesAttested?: true;
+};
+
+const ASSET_REGISTRY: Partial<Record<number, Record<TimeOfDay, AssetRegistryEntry>>> = {
   1: {
     day:     'validated',
     evening: 'validated',
@@ -295,8 +316,26 @@ function buildManifest(
   validation:    BackgroundValidationResult,
 ): BackgroundAuthoringManifest {
   const layoutVersion = getChapterMapLayoutVersion(chapter);
-  const registry = ASSET_REGISTRY[chapter];
-  const declaredStatus: ManifestAssetStatus = registry?.[shift] ?? 'pending';
+  const registryEntry = ASSET_REGISTRY[chapter]?.[shift];
+  const declaredStatus: ManifestAssetStatus = typeof registryEntry === 'string'
+    ? registryEntry
+    : registryEntry?.status ?? 'pending';
+  const rasterObstaclesAttested = typeof registryEntry === 'object' &&
+    registryEntry.rasterObstaclesAttested === true;
+  const placementCoords = computeHexWorldCoords(
+    layout.cells,
+    1,
+    AUTHORED_MAP_TILE_SZ,
+  );
+  const placementPlan = planSceneryProps(scenery, placementCoords, chapter);
+  const unplacedRequiredZoneIds = new Set(placementPlan.unplacedRequiredZoneIds);
+  const obstaclePresentation = validateObstaclePresentationContract(
+    chapter,
+    scenery,
+    rasterObstaclesAttested,
+    undefined,
+    zoneId => !unplacedRequiredZoneIds.has(zoneId),
+  );
 
   // Task 766: statuses that assert "a raster exists" are re-derived from the
   // geometry validator at build time — promote to 'validated' on pass, demote
@@ -305,16 +344,22 @@ function buildManifest(
     declaredStatus === 'raster_unvalidated' ||
     declaredStatus === 'validated' ||
     declaredStatus === 'invalid_overlap';
-  const assetStatus: ManifestAssetStatus = hasRaster
+  const geometryAssetStatus: ManifestAssetStatus = hasRaster
     ? (validation.pass ? 'validated' : 'invalid_overlap')
     : declaredStatus;
+  const assetStatus: ManifestAssetStatus =
+    geometryAssetStatus === 'validated' && !obstaclePresentation.pass
+      ? 'missing_obstacle_presentation'
+      : geometryAssetStatus;
 
   const assetVersion = hasRaster
     ? `${layoutVersion}:${stage1.blueprintHash}:${stage1.structureHash}`
     : 'BACKGROUND_ASSET_REQUIRED';
   const stage3Status: CanonicalStageStatus =
     assetStatus === 'validated' ? 'APPROVED'
-      : assetStatus === 'invalid_overlap' || assetStatus === 'failed' ? 'REJECTED'
+      : assetStatus === 'invalid_overlap' ||
+          assetStatus === 'missing_obstacle_presentation' ||
+          assetStatus === 'failed' ? 'REJECTED'
       : declaredStatus === 'raster_unvalidated' ? 'PENDING_APPROVAL'
       : 'PENDING_UPLOAD';
 
@@ -363,6 +408,7 @@ function buildManifest(
     assetVersion,
     stage3Status,
     validationResult: validation,
+    obstaclePresentation,
   };
 }
 

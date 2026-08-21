@@ -11,6 +11,14 @@ import {
   type Stage3ManifestIdentity,
 } from '../src/game/journeyMap/stage3AssetSelector';
 import { getEnvironmentRevealRadius } from '../src/game/journeyMap/fog/fogRevealGeometry';
+import {
+  getRequiredRuntimePropType,
+  validateObstaclePresentationContract,
+} from '../src/game/journeyMap/obstaclePresentationContract';
+import { planSceneryProps } from '../src/game/journeyMap/sceneryPropPlacer';
+import { SCENERY_PROP_DEFS } from '../src/game/journeyMap/sceneryPropTypes';
+import type { SceneryLayout } from '../src/game/journeyMap/chapterMapTemplate.types';
+import type { HexWorldCoords } from '../src/components/journey/hexWorldCoords';
 
 let passed = 0;
 let failed = 0;
@@ -103,6 +111,19 @@ test('Stage 3 reports MISSING when a registered raster is not approved in the ma
   assert.strictEqual(selection.source, undefined);
 });
 
+test('Stage 3 suppresses a future raster missing its obstacle presentation contract', () => {
+  const m = manifest({
+    chapterId: 6,
+    assetStatus: 'missing_obstacle_presentation',
+  });
+  const selection = selectStage3Asset(m, {
+    '6:day:abc12345:def67890': { source: 790, assetPath: m.rasterAsset },
+  });
+  assert.strictEqual(selection.status, 'MISSING');
+  assert.strictEqual(selection.source, undefined);
+  assert.match(selection.reason, /missing_obstacle_presentation/);
+});
+
 test('Stage 2 failure suppresses an otherwise exact Stage 3 raster', () => {
   const m = manifest();
   const selection = selectStage3Asset(m, {
@@ -191,6 +212,98 @@ test('native and web environment reveal use the shared high-FOV radius geometry'
   assert.strictEqual(getEnvironmentRevealRadius(80, 'explored', 3), 100);
   assert.strictEqual(getEnvironmentRevealRadius(80, 'visible', 2), 186);
   assert.strictEqual(getEnvironmentRevealRadius(80, 'visible', 3), 252);
+});
+
+test('future maps require both raster attestation and asset-backed raised obstacle props', () => {
+  const blockingScenery = {
+    sceneryZones: [{
+      id: 'future-garden',
+      type: 'GARDEN',
+      cells: [{ q: 4, r: 4 }],
+      centroid: { q: 4, r: 4 },
+      area: 1,
+      walkableContactCount: 0,
+    }],
+  } as unknown as SceneryLayout;
+
+  const currentMap = validateObstaclePresentationContract(5, blockingScenery, false);
+  assert.strictEqual(currentMap.required, false);
+  assert.strictEqual(currentMap.pass, true);
+
+  const futureMap = validateObstaclePresentationContract(6, blockingScenery, true);
+  assert.strictEqual(futureMap.required, true);
+  assert.strictEqual(futureMap.rasterObstaclesAttested, true);
+  assert.strictEqual(futureMap.pass, false);
+  assert.ok(futureMap.missingRuntimePropZoneTypes.includes('GARDEN'));
+});
+
+test('a secondary prop asset never approves a future blocking zone', () => {
+  const blockingGarden = {
+    sceneryZones: [{
+      id: 'future-garden',
+      type: 'GARDEN',
+      cells: [{ q: 4, r: 4 }],
+      centroid: { q: 4, r: 4 },
+      area: 1,
+      walkableContactCount: 0,
+    }],
+  } as unknown as SceneryLayout;
+
+  assert.strictEqual(getRequiredRuntimePropType('GARDEN'), 'ACADEMY_PLANTER');
+  const onlySecondaryArt = validateObstaclePresentationContract(
+    6,
+    blockingGarden,
+    true,
+    propType => propType === 'BENCH',
+  );
+  assert.strictEqual(onlySecondaryArt.pass, false);
+  assert.ok(onlySecondaryArt.missingRuntimePropZoneTypes.includes('GARDEN'));
+});
+
+test('an unsafe required future blocker suppresses runtime placement and future approval', () => {
+  const blockingGarden = {
+    sceneryZones: [{
+      id: 'future-garden',
+      type: 'GARDEN',
+      cells: [{ q: 0, r: 0 }],
+      centroid: { q: 0, r: 0 },
+      area: 1,
+      walkableContactCount: 0,
+    }],
+    walkableSafetyMaskKeys: ['0,0'],
+  } as unknown as SceneryLayout;
+  const coords = {
+    sz: 80,
+    worldOriginX: 0,
+    worldOriginY: 0,
+    worldWidth: 400,
+    worldHeight: 400,
+    axialToWorld: (q: number, r: number) => ({
+      left: q * 58,
+      top: r * 63,
+      cx: q * 58 + 40,
+      cy: r * 63 + 40,
+    }),
+  } as HexWorldCoords;
+  const planter = SCENERY_PROP_DEFS.ACADEMY_PLANTER as { asset: number | null };
+  const originalAsset = planter.asset;
+
+  planter.asset = 999;
+  try {
+    const placement = planSceneryProps(blockingGarden, coords, 6);
+    assert.strictEqual(placement.props.length, 0);
+    assert.deepStrictEqual(placement.unplacedRequiredZoneIds, ['future-garden']);
+    const approval = validateObstaclePresentationContract(
+      6,
+      blockingGarden,
+      true,
+      propType => propType === 'ACADEMY_PLANTER',
+      zoneId => !placement.unplacedRequiredZoneIds.includes(zoneId),
+    );
+    assert.strictEqual(approval.pass, false);
+  } finally {
+    planter.asset = originalAsset;
+  }
 });
 
 console.log(`\njourney_map_stage_contract: ${passed} passed, ${failed} failed`);

@@ -125,3 +125,4 @@
 - [Scenery prop layer architecture](scenery-prop-layer-architecture.md) — blocking props NEVER baked into raster; runtime SceneryPropLayer above clean floor background; shift-invariant; safety-mask gated placement.
 - [All-chapters blueprint pipeline](clinica-all-chapters-pipeline.md) — Ch1-10 use the pipeline; Stage 3 must exact-match the manifest’s approved raster path by chapter+shift+hash, or show the blueprint foundation.
 - [Journey run geometry identity](journey-run-geometry-identity.md) — version/hash markers alone cannot prove persisted tiles; compare coordinate set plus start/gate and recover stale runs through abandon→rechallenge.
+- [Future map obstacle presentation](future-map-obstacle-presentation.md) — from Ch6, blockers require fixed non-playable geometry plus reviewed raster art and asset-backed raised runtime props.

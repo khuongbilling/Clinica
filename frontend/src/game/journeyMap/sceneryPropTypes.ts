@@ -19,7 +19,9 @@
  * ────────────────────────────
  * SceneryProps are PRESENTATION only.  They are separate from treasure,
  * merchant, Ward Event, enemy, and Area Boss sprites.  Encounter
- * randomisation is unchanged.
+ * randomisation is unchanged. Starting with Chapter 6, a finished map raster
+ * cannot ship unless every blocking scenery zone is also backed by real runtime
+ * prop art (see obstaclePresentationContract.ts).
  */
 
 // ── Prop types ────────────────────────────────────────────────────────────────

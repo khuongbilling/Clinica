@@ -21,6 +21,7 @@ import {
   type PlacedSceneryProp,
   type SceneryPropType,
 } from './sceneryPropTypes';
+import { isBlockingSceneryZone } from './sceneryClassification';
 import type { SceneryLayout, SceneryZone } from './chapterMapTemplate.types';
 import type { HexWorldCoords } from '../../components/journey/hexWorldCoords';
 
@@ -160,11 +161,23 @@ function perimeterCandidates(
 
 // ── Main placement function ───────────────────────────────────────────────────
 
-export function computeSceneryProps(
+export interface SceneryPropPlacementPlan {
+  readonly props: PlacedSceneryProp[];
+  /** Blocking zones whose primary prop cannot safely render in production. */
+  readonly unplacedRequiredZoneIds: readonly string[];
+}
+
+/**
+ * Uses the same collision rules as the renderer while exposing missing required
+ * blockers to the Stage 3 authoring gate. No required prop may be force-placed:
+ * a failed collision check is an invalid future-map presentation, never a
+ * reason to draw over a playable hex.
+ */
+export function planSceneryProps(
   scenery: SceneryLayout,
   coords: HexWorldCoords,
   chapterId: number,
-): PlacedSceneryProp[] {
+): SceneryPropPlacementPlan {
   const sz = coords.sz;
   const walkableSafetyMaskKeys = new Set(scenery.walkableSafetyMaskKeys);
 
@@ -174,11 +187,13 @@ export function computeSceneryProps(
   const rand = seededRand(seed);
 
   const result: PlacedSceneryProp[] = [];
+  const unplacedRequiredZoneIds: string[] = [];
   let propIndex = 0;
 
   for (const zone of scenery.sceneryZones) {
     const propTypes = ZONE_TYPE_TO_PROPS[zone.type];
     if (!propTypes || propTypes.length === 0) continue;
+    const requiresPrimaryBlocker = isBlockingSceneryZone(zone.type);
 
     const isClearing = zone.walkableContactCount > 3;
     const maxPerZone = Math.min(MAX_PROPS_PER_ZONE, propTypes.length);
@@ -189,6 +204,14 @@ export function computeSceneryProps(
     for (let slot = 0; slot < maxPerZone; slot++) {
       const propType = propTypes[slot % propTypes.length];
       const def = SCENERY_PROP_DEFS[propType];
+      const isRequiredPrimaryBlocker = requiresPrimaryBlocker && slot === 0;
+
+      // Production skips null assets, so a required blocker with no real art
+      // is reported to the authoring gate instead of pretending it was placed.
+      if (isRequiredPrimaryBlocker && def.asset === null) {
+        unplacedRequiredZoneIds.push(zone.id);
+        continue;
+      }
 
       // Candidate positions: perimeter for clearing zones, any cell otherwise.
       const candidates: Array<{ cx: number; cy: number }> = isClearing
@@ -240,9 +263,22 @@ export function computeSceneryProps(
         }
       }
 
-      // If !placed, silently skip — zone geometry is too constrained for this prop.
+      if (!placed && isRequiredPrimaryBlocker) {
+        unplacedRequiredZoneIds.push(zone.id);
+      }
     }
   }
 
-  return result;
+  return {
+    props: result,
+    unplacedRequiredZoneIds: [...new Set(unplacedRequiredZoneIds)],
+  };
+}
+
+export function computeSceneryProps(
+  scenery: SceneryLayout,
+  coords: HexWorldCoords,
+  chapterId: number,
+): PlacedSceneryProp[] {
+  return planSceneryProps(scenery, coords, chapterId).props;
 }
