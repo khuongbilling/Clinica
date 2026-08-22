@@ -6,6 +6,7 @@ from pymongo import ASCENDING, DESCENDING
 from pymongo.errors import DuplicateKeyError
 import os
 import random
+import secrets
 import logging
 import base64
 import hashlib
@@ -234,6 +235,17 @@ class Player(BaseModel):
     kingdom_levels: Dict[str, int] = Field(default_factory=dict)
     runs_completed: int = 0
     ward_defense_waves: int = 0
+    ward_defense_records: Dict[str, Dict[str, Any]] = Field(default_factory=dict)
+    ward_defense_rotation: Dict[str, Any] = Field(default_factory=dict)
+    ward_defense_claimed_run_ids: List[str] = Field(default_factory=list)
+    ward_defense_recent_families: List[str] = Field(default_factory=list)
+    ward_defense_missed_families: List[str] = Field(default_factory=list)
+    ward_exchange_purchases: Dict[str, Dict[str, Any]] = Field(default_factory=dict)
+    ward_aegis_pity: int = 0
+    ward_aegis_lifetime_fragments: int = 0
+    ward_aegis_week_key: str = ""
+    ward_aegis_weekly_random_drops: int = 0
+    ward_aegis_milestone_granted: bool = False
     bosses_defeated: List[str] = Field(default_factory=list)
     failure_counts: Dict[str, int] = Field(default_factory=dict)
     inventory: Dict[str, int] = Field(default_factory=dict)
@@ -440,7 +452,6 @@ class PlayerUpdate(BaseModel):
     insight_crystals: Optional[int] = None
     refined_lotus_gems: Optional[int] = None
     lotus_gems_paid: Optional[int] = None
-    ward_sigils: Optional[int] = None
     epidemic_tokens: Optional[int] = None
     owned_skins: Optional[List[str]] = None
     equipped_skin: Optional[str] = None
@@ -459,6 +470,9 @@ class PlayerUpdate(BaseModel):
     uni_triage_count: Optional[int] = None
     uni_stack_count: Optional[int] = None
     uni_practice_milestones_claimed: Optional[List[str]] = None
+    # Legacy Academy ranks remain writable through their established material
+    # purchase flow; the Ward Aegis sidegrade is stripped in update_player and
+    # only granted by its dedicated imprint-consuming endpoint.
     hero_skill_upgrades: Optional[Dict[str, int]] = None
     practice_modules_completed: Optional[List[str]] = None
     seen_practice_curriculum: Optional[bool] = None
@@ -634,8 +648,26 @@ async def update_player(
         # so a client snapshot cannot unlock a chapter by fabricating progress.
         "chapter_progress", "chapter_boss_keys", "claimed_journey_nodes",
         "claimed_level_rewards", "claimed_chapter_chests", "claimed_chapter_3star",
+        # Ward rewards, rotations, records and Aegis protections are mutated
+        # only by dedicated conditional endpoints. Snapshot writes must never
+        # reset pity, caps or run claims.
+        "ward_sigils", "ward_defense_records", "ward_defense_rotation",
+        "ward_defense_claimed_run_ids", "ward_defense_recent_families",
+        "ward_defense_missed_families", "ward_exchange_purchases",
+        "ward_aegis_pity", "ward_aegis_lifetime_fragments", "ward_aegis_week_key",
+        "ward_aegis_weekly_random_drops", "ward_aegis_milestone_granted", "ward_aegis_qualifying_day",
+        "ward_defense_reward_day", "ward_defense_reward_claims",
     ):
         updates.pop(field, None)
+    # Legacy Skill Academy purchases predate the Ward Aegis feature and still
+    # use the existing client-validated material flow. Preserve those ranks,
+    # but never let the generic endpoint grant the protected Aegis sidegrade.
+    if "hero_skill_upgrades" in updates:
+        requested_upgrades = dict(updates["hero_skill_upgrades"] or {})
+        requested_upgrades.pop("aegis_clinical_resonance", None)
+        if (existing.get("hero_skill_upgrades") or {}).get("aegis_clinical_resonance"):
+            requested_upgrades["aegis_clinical_resonance"] = 1
+        updates["hero_skill_upgrades"] = requested_upgrades
     # class_specialization is immutable once set; refuse any attempt to overwrite
     # it through the generic update path — use POST /claim-specialization instead.
     updates.pop("class_specialization", None)
@@ -760,6 +792,389 @@ class ActivityAttemptRequest(BaseModel):
 class UniversityPracticeCompletionRequest(BaseModel):
     activity: Literal["cue_lab", "triage", "stack"]
     difficulty: Literal["beginner", "standard", "advanced"]
+
+
+WARD_SCENARIO_IDS = {
+    "triage_corridor", "central_cross", "sanctuary_courtyard", "supply_hall",
+    "isolation_wing", "critical_care_hub", "dual_ward", "grand_convergence",
+}
+WARD_SCENARIO_LEVELS = {
+    "triage_corridor": 1, "central_cross": 2, "sanctuary_courtyard": 3,
+    "supply_hall": 4, "isolation_wing": 5, "critical_care_hub": 6,
+    "dual_ward": 8, "grand_convergence": 10,
+}
+WARD_AEGIS_FRAGMENT = "ward_defense_aegis_fragment"
+WARD_AEGIS_IMPRINT = "ward_defense_aegis_imprint"
+WARD_AEGIS_WEEKLY_RANDOM_CAP = 2
+WARD_AEGIS_PITY_CLEAR_COUNT = 12
+WARD_AEGIS_LIFETIME_GUARANTEE = 25
+
+
+class WardDefenseCompleteRequest(BaseModel):
+    run_id: str
+    cleared: bool
+    stability: float = 0
+    score: int = 0
+    clinical_correct: int = 0
+    clinical_total: int = 3
+    overtime_wave: int = 0
+    question_family_ids: List[str] = Field(default_factory=list)
+    missed_family_ids: List[str] = Field(default_factory=list)
+
+
+class WardDefenseStartRequest(BaseModel):
+    requested_scenario_id: Optional[str] = None
+
+
+class WardAegisSidegradeRequest(BaseModel):
+    upgrade_id: Literal["aegis_clinical_resonance"]
+
+
+class WardExchangeRequest(BaseModel):
+    item_id: str
+
+
+WARD_EXCHANGE = {
+    "ward_blueprint": {"cost": 18, "limit": 2, "period": "week", "inventory": {"Defense Blueprint": 1}},
+    "ward_lantern_core": {"cost": 12, "limit": 3, "period": "week", "inventory": {"Vital Lantern Core": 1}},
+    "ward_deployment_fx": {"cost": 42, "limit": 1, "period": "lifetime", "inventory": {"Lotus Deployment Effect": 1}},
+    "ward_title": {"cost": 60, "limit": 1, "period": "lifetime", "title": "warden_of_the_lantern"},
+}
+
+
+def ward_stars(stability: float, clinical_correct: int, clinical_total: int, cleared: bool) -> int:
+    if not cleared:
+        return 0
+    accuracy = clinical_correct / max(1, clinical_total)
+    if stability >= 75 and accuracy >= 0.8:
+        return 3
+    if stability >= 45 and accuracy >= 0.5:
+        return 2
+    return 1
+
+
+@api_router.post("/player/{player_id}/ward-defense/start", response_model=Dict[str, Any])
+async def start_ward_defense(
+    player_id: str,
+    payload: WardDefenseStartRequest,
+    x_clinica_session: Optional[str] = Header(default=None),
+):
+    """Issue one opaque, server-owned Ward Defense run.
+
+    A player may only have one active run. The run's scenario and identity are
+    stored server-side; completion never accepts either from the client.
+    """
+    player = await db.players.find_one({"id": player_id}, {"_id": 0})
+    if not player:
+        raise HTTPException(status_code=404, detail="player not found")
+    if not player_access_ok(player, player_id, x_clinica_session, None):
+        raise HTTPException(status_code=401, detail="invalid player session")
+    level = int(player.get("player_level", 1))
+    unlocked = [scenario for scenario, needed in WARD_SCENARIO_LEVELS.items() if level >= needed]
+    if not unlocked:
+        raise HTTPException(status_code=409, detail="no Ward Defense scenario is unlocked")
+    requested = payload.requested_scenario_id
+    if requested and requested not in unlocked:
+        raise HTTPException(status_code=409, detail="scenario is not unlocked")
+    active = await db.ward_defense_runs.find_one({"player_id": player_id, "status": "active"}, {"_id": 0})
+    if active:
+        return {"run_id": active["id"], "scenario_id": active["scenario_id"], "reused": True}
+    # The real rotation bag is server-owned. Rebuild only after every currently
+    # unlocked map was offered; the first map of a new bag cannot repeat the
+    # most recently offered map, and cycle records reset together.
+    rotation = dict(player.get("ward_defense_rotation") or {})
+    bag = [item for item in rotation.get("bag") or [] if item in unlocked]
+    recent = list(rotation.get("recentScenarioIds") or [])[-1:]
+    if not bag:
+        bag = list(unlocked)
+        secrets.SystemRandom().shuffle(bag)
+        if len(bag) > 1 and recent and bag[0] == recent[0]:
+            bag[0], bag[1] = bag[1], bag[0]
+        rotation["rotationCompletedIds"] = []
+        rotation["cycle"] = int(rotation.get("cycle", 0)) + 1
+    scenario_id = requested or bag[0]
+    if requested:
+        bag.remove(requested)
+    else:
+        bag = bag[1:]
+    rotation["bag"] = bag
+    rotation["recentScenarioIds"] = (recent + [scenario_id])[-1:]
+    rotation["lastScenarioId"] = scenario_id
+    rotation["updatedAt"] = now_iso()
+    rotation_write = await db.players.update_one(
+        {"id": player_id, "updated_at": player.get("updated_at")},
+        {"$set": {"ward_defense_rotation": rotation, "updated_at": now_iso()}},
+    )
+    if rotation_write.modified_count != 1:
+        raise HTTPException(status_code=409, detail="Ward Defense rotation changed; retry")
+    run = {
+        "id": f"wd_{secrets.token_urlsafe(24)}",
+        "player_id": player_id,
+        "scenario_id": scenario_id,
+        "status": "active",
+        "started_at": now_iso(),
+        # A one-minute floor makes a direct start→claim call invalid. The client
+        # still owns animation; server owns eligibility and one-time settlement.
+        "not_before": (datetime.now(timezone.utc) + timedelta(seconds=60)).isoformat(),
+    }
+    await db.ward_defense_runs.insert_one(run)
+    return {"run_id": run["id"], "scenario_id": scenario_id, "reused": False}
+
+
+@api_router.post("/player/{player_id}/ward-defense/complete", response_model=Dict[str, Any])
+async def complete_ward_defense(
+    player_id: str,
+    payload: WardDefenseCompleteRequest,
+    x_clinica_session: Optional[str] = Header(default=None),
+):
+    """Commit one Ward Defense run exactly once and derive grants server-side.
+
+    The client may report run performance for records, but never currency amounts
+    or Aegis outcomes. Overtime only improves records/score; it cannot add XP,
+    materials, or additional Aegis rolls.
+    """
+    if not payload.run_id or len(payload.run_id) > 120:
+        raise HTTPException(status_code=422, detail="invalid Ward Defense run id")
+    player = await db.players.find_one({"id": player_id}, {"_id": 0})
+    if not player:
+        raise HTTPException(status_code=404, detail="player not found")
+    if not player_access_ok(player, player_id, x_clinica_session, None):
+        raise HTTPException(status_code=401, detail="invalid player session")
+    run = await db.ward_defense_runs.find_one({"id": payload.run_id, "player_id": player_id}, {"_id": 0})
+    if not run:
+        raise HTTPException(status_code=404, detail="unknown Ward Defense run")
+    if run.get("status") == "claimed":
+        return {"player": Player(**player).model_dump(), "already_claimed": True, "granted": {}}
+    if run.get("status") != "active":
+        raise HTTPException(status_code=409, detail="Ward Defense run is not active")
+    if datetime.fromisoformat(str(run["not_before"]).replace("Z", "+00:00")) > datetime.now(timezone.utc):
+        raise HTTPException(status_code=409, detail="Ward Defense run has not reached its minimum duration")
+    scenario_id = run["scenario_id"]
+
+    # Board simulation is client-authoritative, but grants are bounded by the
+    # server-owned run, daily claim ceiling, and weekly Aegis protections.
+    # Use one clear value consistently for every record and reward decision.
+    cleared = bool(payload.cleared)
+    stability = max(0, min(100, float(payload.stability)))
+    total = max(1, min(3, int(payload.clinical_total)))
+    correct = max(0, min(total, int(payload.clinical_correct)))
+    accuracy = correct / total
+    overtime_wave = max(0, min(20, int(payload.overtime_wave)))
+    stars = ward_stars(stability, correct, total, cleared)
+    records = dict(player.get("ward_defense_records") or {})
+    previous = records.get(scenario_id) or {}
+    first_clear = cleared and int(previous.get("clears", 0)) == 0
+    record = {
+        "bestStars": max(int(previous.get("bestStars", 0)), stars),
+        "bestScore": max(int(previous.get("bestScore", 0)), max(0, min(1_000_000, int(payload.score)))),
+        "bestStability": max(int(previous.get("bestStability", 0)), int(round(stability))),
+        "highestOvertimeWave": max(int(previous.get("highestOvertimeWave", 0)), overtime_wave),
+        "bestClinicalAccuracy": max(float(previous.get("bestClinicalAccuracy", 0)), accuracy),
+        "clears": int(previous.get("clears", 0)) + (1 if cleared else 0),
+    }
+    records[scenario_id] = record
+
+    granted: Dict[str, int] = {}
+    sigils = 0
+    xp = 0
+    shards = 0
+    reward_day = age1_day_key()
+    reward_claims = int(player.get("ward_defense_reward_claims", 0)) if player.get("ward_defense_reward_day") == reward_day else 0
+    # A Ward run remains replayable for score, records, learning and cosmetics,
+    # but only a small server-counted set can grant standard resources each day.
+    # This closes unique-run-id farming even if a browser is automated.
+    reward_eligible = cleared and reward_claims < 1
+    if reward_eligible:
+        # Uses the existing Age 1 repeat taper. Sigils stay a Ward-only currency.
+        day = age1_day_key()
+        used = int(player.get("age1_reward_units", 0)) if player.get("age1_reward_day") == day else 0
+        multiplier = age1_reward_multiplier(used, 1)
+        xp = int(round((48 + stars * 12) * multiplier))
+        shards = int(round((8 + round(accuracy * 6)) * multiplier))
+        # Daily and rotation bonuses are server-derived. Completion cannot
+        # fabricate either flag. Rotation is one bonus per map per cycle.
+        rotation = dict(player.get("ward_defense_rotation") or {})
+        completed = set(rotation.get("rotationCompletedIds") or [])
+        rotation_bonus = scenario_id not in completed
+        daily_key = age1_day_key()
+        daily_bonus = rotation.get("dailyClaimed") is not True or rotation.get("dailyKey") != daily_key
+        sigils = 6 + stars * 2 + (4 if first_clear else 0) + (2 if daily_bonus else 0) + (3 if rotation_bonus else 0)
+        if overtime_wave > 0 and overtime_wave % 5 == 0:
+            sigils += 1
+        if xp: granted["xp"] = xp
+        if shards: granted["codex_shards"] = shards
+        granted["ward_sigils"] = sigils
+
+    # Aegis has one protected roll per qualifying clear only. It is independent
+    # of score/Overtime and a loss/practice run never advances pity.
+    inventory = dict(player.get("inventory") or {})
+    week = age1_week_key()
+    weekly_drops = int(player.get("ward_aegis_weekly_random_drops", 0)) if player.get("ward_aegis_week_key") == week else 0
+    pity = int(player.get("ward_aegis_pity", 0))
+    lifetime = int(player.get("ward_aegis_lifetime_fragments", 0))
+    milestone_granted = bool(player.get("ward_aegis_milestone_granted", False))
+    aegis_fragment = False
+    # One qualifying Aegis opportunity per server day. This prevents quick
+    # replay attempts from advancing pity independently of normal Ward rewards.
+    aegis_day = str(player.get("ward_aegis_qualifying_day") or "")
+    qualifies = reward_eligible and stars >= 2 and aegis_day != age1_day_key()
+    if qualifies:
+        guaranteed = (not milestone_granted and lifetime >= WARD_AEGIS_LIFETIME_GUARANTEE - 1)
+        random_allowed = weekly_drops < WARD_AEGIS_WEEKLY_RANDOM_CAP
+        random_hit = random_allowed and (pity + 1 >= WARD_AEGIS_PITY_CLEAR_COUNT or random.random() < 0.08)
+        if guaranteed or random_hit:
+            aegis_fragment = True
+            inventory[WARD_AEGIS_FRAGMENT] = int(inventory.get(WARD_AEGIS_FRAGMENT, 0)) + 1
+            lifetime += 1
+            pity = 0
+            if guaranteed:
+                milestone_granted = True
+            elif random_allowed:
+                weekly_drops += 1
+        else:
+            pity += 1
+
+    recent_families = list(dict.fromkeys((player.get("ward_defense_recent_families") or []) + payload.question_family_ids))[-18:]
+    missed_families = list(dict.fromkeys((player.get("ward_defense_missed_families") or []) + payload.missed_family_ids))[-36:]
+    increments = dict(granted)
+    update: Dict[str, Any] = {
+        "$set": {
+            "ward_defense_records": records,
+            "ward_defense_claimed_run_ids": ((player.get("ward_defense_claimed_run_ids") or []) + [payload.run_id])[-500:],
+            "ward_defense_recent_families": recent_families,
+            "ward_defense_missed_families": missed_families,
+            "inventory": inventory,
+            "ward_aegis_pity": pity,
+            "ward_aegis_lifetime_fragments": lifetime,
+            "ward_aegis_week_key": week,
+            "ward_aegis_weekly_random_drops": weekly_drops,
+            "ward_aegis_milestone_granted": milestone_granted,
+            "ward_aegis_qualifying_day": age1_day_key() if qualifies else aegis_day,
+            "updated_at": now_iso(),
+            "age1_reward_day": age1_day_key(),
+            "age1_reward_units": (int(player.get("age1_reward_units", 0)) if player.get("age1_reward_day") == age1_day_key() else 0) + (1 if reward_eligible else 0),
+            "ward_defense_reward_day": reward_day,
+            "ward_defense_reward_claims": reward_claims + (1 if reward_eligible else 0),
+            "player_level": player_level_from_xp(int(player.get("xp", 0)) + xp),
+            "ward_defense_rotation": {
+                **(player.get("ward_defense_rotation") or {}),
+                "rotationCompletedIds": list(dict.fromkeys(((player.get("ward_defense_rotation") or {}).get("rotationCompletedIds") or []) + ([scenario_id] if cleared else []))),
+                "dailyKey": age1_day_key(),
+                "dailyClaimed": True,
+            },
+        },
+    }
+    if increments:
+        update["$inc"] = increments
+    write = await db.players.update_one(
+        {"id": player_id, "updated_at": player.get("updated_at")},
+        update,
+    )
+    if write.modified_count != 1:
+        raise HTTPException(status_code=409, detail="Ward Defense completion changed; retry")
+    consumed = await db.ward_defense_runs.update_one(
+        {"id": payload.run_id, "player_id": player_id, "status": "active"},
+        {"$set": {"status": "claimed", "completed_at": now_iso()}},
+    )
+    if consumed.modified_count != 1:
+        raise HTTPException(status_code=409, detail="Ward Defense run was already settled")
+    refreshed = await db.players.find_one({"id": player_id}, {"_id": 0})
+    return {
+        "player": Player(**refreshed).model_dump(), "already_claimed": False,
+        "granted": granted, "stars": stars, "aegis_fragment": aegis_fragment, "reward_eligible": reward_eligible,
+    }
+
+
+@api_router.post("/player/{player_id}/ward-defense/exchange", response_model=Dict[str, Any])
+async def purchase_ward_exchange(
+    player_id: str,
+    payload: WardExchangeRequest,
+    x_clinica_session: Optional[str] = Header(default=None),
+):
+    row = WARD_EXCHANGE.get(payload.item_id)
+    if not row:
+        raise HTTPException(status_code=422, detail="unknown Ward Supply Exchange item")
+    player = await db.players.find_one({"id": player_id}, {"_id": 0})
+    if not player:
+        raise HTTPException(status_code=404, detail="player not found")
+    if not player_access_ok(player, player_id, x_clinica_session, None):
+        raise HTTPException(status_code=401, detail="invalid player session")
+    period = age1_week_key() if row["period"] == "week" else "lifetime"
+    purchases = dict(player.get("ward_exchange_purchases") or {})
+    purchase = purchases.get(payload.item_id) or {"count": 0, "period": period}
+    count = int(purchase.get("count", 0)) if purchase.get("period") == period else 0
+    if count >= row["limit"]:
+        raise HTTPException(status_code=409, detail="purchase limit reached")
+    if int(player.get("ward_sigils", 0)) < row["cost"]:
+        raise HTTPException(status_code=409, detail="not enough Ward Sigils")
+    inventory = dict(player.get("inventory") or {})
+    for item, quantity in row.get("inventory", {}).items():
+        inventory[item] = int(inventory.get(item, 0)) + quantity
+    update_set: Dict[str, Any] = {
+        "inventory": inventory, "ward_exchange_purchases": {**purchases, payload.item_id: {"count": count + 1, "period": period}},
+        "updated_at": now_iso(),
+    }
+    if row.get("title"):
+        update_set["owned_titles"] = list(dict.fromkeys((player.get("owned_titles") or []) + [row["title"]]))
+    write = await db.players.update_one({"id": player_id, "updated_at": player.get("updated_at")}, {"$inc": {"ward_sigils": -row["cost"]}, "$set": update_set})
+    if write.modified_count != 1:
+        raise HTTPException(status_code=409, detail="Ward Supply Exchange changed; retry")
+    refreshed = await db.players.find_one({"id": player_id}, {"_id": 0})
+    return {"player": Player(**refreshed).model_dump(), "granted": row.get("inventory", {}), "purchase_count": count + 1}
+
+
+@api_router.post("/player/{player_id}/ward-defense/assemble-aegis", response_model=Dict[str, Any])
+async def assemble_ward_aegis(
+    player_id: str,
+    x_clinica_session: Optional[str] = Header(default=None),
+):
+    player = await db.players.find_one({"id": player_id}, {"_id": 0})
+    if not player:
+        raise HTTPException(status_code=404, detail="player not found")
+    if not player_access_ok(player, player_id, x_clinica_session, None):
+        raise HTTPException(status_code=401, detail="invalid player session")
+    inventory = dict(player.get("inventory") or {})
+    if int(inventory.get(WARD_AEGIS_FRAGMENT, 0)) < 5:
+        raise HTTPException(status_code=409, detail="five Ward Aegis Fragments are required")
+    inventory[WARD_AEGIS_FRAGMENT] -= 5
+    inventory[WARD_AEGIS_IMPRINT] = int(inventory.get(WARD_AEGIS_IMPRINT, 0)) + 1
+    write = await db.players.update_one(
+        {"id": player_id, "updated_at": player.get("updated_at"), f"inventory.{WARD_AEGIS_FRAGMENT}": {"$gte": 5}},
+        {"$set": {"inventory": inventory, "updated_at": now_iso()}},
+    )
+    if write.modified_count != 1:
+        raise HTTPException(status_code=409, detail="Aegis assembly changed; retry")
+    refreshed = await db.players.find_one({"id": player_id}, {"_id": 0})
+    return {"player": Player(**refreshed).model_dump(), "assembled": True}
+
+
+@api_router.post("/player/{player_id}/ward-defense/aegis-sidegrade", response_model=Dict[str, Any])
+async def purchase_ward_aegis_sidegrade(
+    player_id: str,
+    payload: WardAegisSidegradeRequest,
+    x_clinica_session: Optional[str] = Header(default=None),
+):
+    """Atomically consume one Ward Aegis Imprint for an authored sidegrade."""
+    player = await db.players.find_one({"id": player_id}, {"_id": 0})
+    if not player:
+        raise HTTPException(status_code=404, detail="player not found")
+    if not player_access_ok(player, player_id, x_clinica_session, None):
+        raise HTTPException(status_code=401, detail="invalid player session")
+    upgrades = dict(player.get("hero_skill_upgrades") or {})
+    if upgrades.get(payload.upgrade_id, 0) >= 1:
+        raise HTTPException(status_code=409, detail="Aegis sidegrade already unlocked")
+    inventory = dict(player.get("inventory") or {})
+    if int(inventory.get(WARD_AEGIS_IMPRINT, 0)) < 1:
+        raise HTTPException(status_code=409, detail="one Ward Aegis Imprint is required")
+    inventory[WARD_AEGIS_IMPRINT] -= 1
+    result = await db.players.update_one(
+        {"id": player_id, "updated_at": player.get("updated_at"), f"inventory.{WARD_AEGIS_IMPRINT}": {"$gte": 1}, f"hero_skill_upgrades.{payload.upgrade_id}": {"$exists": False}},
+        {"$set": {"inventory": inventory, "hero_skill_upgrades": {**upgrades, payload.upgrade_id: 1}, "updated_at": now_iso()}},
+    )
+    if result.modified_count != 1:
+        raise HTTPException(status_code=409, detail="Aegis sidegrade changed; retry")
+    refreshed = await db.players.find_one({"id": player_id}, {"_id": 0})
+    return {"player": Player(**refreshed).model_dump(), "unlocked": payload.upgrade_id}
 
 
 @api_router.post("/player/{player_id}/university-practice/complete")

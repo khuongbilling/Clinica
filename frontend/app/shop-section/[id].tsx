@@ -13,7 +13,7 @@ import { FeatureLockedView } from "@/src/components/FeatureGate";
 import { buildGateContext, checkFeatureGate } from "@/src/game/progression";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 import { ITEMS } from "@/src/game/items";
-import { SKINS, UPGRADES, WARD_BOOSTS, STAMINA_PACKS } from "@/src/game/shop";
+import { SKINS, UPGRADES, WARD_BOOSTS, STAMINA_PACKS, WARD_SUPPLY_EXCHANGE } from "@/src/game/shop";
 import { regen, maxStaminaForPlayer } from "@/src/game/stamina";
 import {
   WARD_UNIT_IDS, WARD_UNIT_META, GACHA_COST, MASTERY_LEVEL_CAP,
@@ -31,6 +31,7 @@ import { findShopSection, ShopGroupId } from "@/src/game/shopHub";
 const GROUP_LABEL: Record<ShopGroupId, string> = {
   consumables: "Consumables",
   ward: "Ward Defense Boosts",
+  ward_exchange: "Ward Supply Exchange",
   refills: "Stamina Refills",
   recruit: "Recruit Healers",
   upgrades: "Permanent Upgrades",
@@ -43,7 +44,7 @@ export default function ShopSection() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const section = findShopSection(Array.isArray(id) ? id[0] : id);
 
-  const { player, purchaseItem, purchaseSkin, equipSkin, purchaseUpgrade, refillStamina, pullGacha, upgradeUnitMastery, exchangeInsightCrystals } = usePlayer();
+  const { player, purchaseItem, purchaseSkin, equipSkin, purchaseUpgrade, refillStamina, pullGacha, upgradeUnitMastery, exchangeInsightCrystals, purchaseWardExchange, assembleWardAegis } = usePlayer();
   const [banner, setBanner] = useState<{ ok: boolean; msg: string } | null>(null);
   const bannerTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [infoUnitId, setInfoUnitId] = useState<string | null>(null);
@@ -199,6 +200,39 @@ export default function ShopSection() {
                         onPress={async () => { const r = await purchaseItem(w.name, w.price); flash(r.ok, r.message); }}
                         testID={`shop-buy-${w.id}`}
                       />
+                    </View>
+                  );
+                })}
+              </>
+            )}
+
+            {g === "ward_exchange" && (
+              <>
+                <Text style={styles.blurb}>Spend server-authoritative Ward Sigils on bounded tactical blueprints and cosmetics. These purchases never create a repeatable material farm.</Text>
+                <Text style={styles.collectionLabel}>WARD SIGILS · {player.ward_sigils || 0}</Text>
+                <View style={styles.card}>
+                  <View style={[styles.iconBadge, { borderColor: COLORS.runeGold }]}><Ionicons name="construct-outline" size={20} color={COLORS.runeGold} /></View>
+                  <View style={styles.cardMain}><Text style={styles.cardName}>Assemble Aegis Imprint</Text><Text style={styles.cardDesc}>Convert five Ward Aegis Fragments into one Skill Academy Imprint.</Text></View>
+                  <Pressable style={[styles.equipBtn, (player.inventory?.ward_defense_aegis_fragment || 0) < 5 && { opacity: 0.45 }]} disabled={(player.inventory?.ward_defense_aegis_fragment || 0) < 5} onPress={async () => { const r = await assembleWardAegis(); flash(r.ok, r.message); }}><Text style={styles.equipBtnTxt}>Assemble</Text></Pressable>
+                </View>
+                {WARD_SUPPLY_EXCHANGE.map((item) => {
+                  const existing = player.ward_exchange_purchases?.[item.id];
+                  const now = new Date(); const iso = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate() + 3 - ((now.getDay() + 6) % 7))); const period = item.period === "week" ? `${iso.getUTCFullYear()}-W${String(1 + Math.round(((iso.getTime() - Date.UTC(iso.getUTCFullYear(), 0, 4)) / 86400000 - 3 + ((new Date(Date.UTC(iso.getUTCFullYear(), 0, 4)).getUTCDay() + 6) % 7)) / 7)).padStart(2, "0")}` : "lifetime";
+                  const used = existing?.period === period || item.period === "lifetime" ? (existing?.count || 0) : 0;
+                  const disabled = (player.ward_sigils || 0) < item.sigilCost || used >= item.limit;
+                  return (
+                    <View key={item.id} style={styles.card} testID={`ward-exchange-${item.id}`}>
+                      <View style={[styles.iconBadge, { borderColor: COLORS.runeGold }]}>
+                        <Ionicons name="shield-checkmark-outline" size={20} color={COLORS.runeGold} />
+                      </View>
+                      <View style={styles.cardMain}>
+                        <Text style={styles.cardName}>{item.name}</Text>
+                        <Text style={[styles.cardEffect, { color: COLORS.runeGold }]}>{item.sigilCost} Sigils · {used}/{item.limit} {item.period}</Text>
+                        <Text style={styles.cardDesc}>{item.description}</Text>
+                      </View>
+                      <Pressable style={[styles.equipBtn, disabled && { opacity: 0.45 }]} disabled={disabled} onPress={async () => { const r = await purchaseWardExchange(item.id); flash(r.ok, r.message); }}>
+                        <Text style={styles.equipBtnTxt}>{used >= item.limit ? "Capped" : "Exchange"}</Text>
+                      </Pressable>
                     </View>
                   );
                 })}

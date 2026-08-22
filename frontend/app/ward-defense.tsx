@@ -51,6 +51,7 @@ const ENEMY_PORTRAITS: Record<string, any> = {
 };
 
 import { usePlayer } from "@/src/game/store";
+import { api } from "@/src/api/client";
 import { useTutorial } from "@/src/game/tutorialStore";
 import { useBlockBack } from "@/src/hooks/useBlockBack";
 import { useClearTutorialOnExit } from "@/src/hooks/useClearTutorialOnExit";
@@ -59,6 +60,10 @@ import { PlayerHeader } from "@/src/components/PlayerHeader";
 import { RewardPreview } from "@/src/components/RewardPreview";
 import { WARD_BOOSTS, findWardBoost, findSkin } from "@/src/game/shop";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
+import {
+  WARD_SCENARIOS, WardClinicalQuestion, WardScenario,
+  selectWardClinicalChecks, shuffledChoices, wardMatchQuality,
+} from "@/src/game/wardDefense";
 
 /* ── Tick speed ── */
 const TICK_MS          = 500;
@@ -114,6 +119,9 @@ const PATH_WPS: [number, number][] = [
   [0.825, 0.13],  /*  9  Vital Lantern exit                               */
 ];
 const N_SEGS = PATH_WPS.length - 1;
+// Assigned at run start from the Ward-only registry. Journey map geometry is
+// never read or modified by this animated board.
+let activePath: readonly (readonly [number, number])[] = PATH_WPS;
 
 /* ── Air-lane constants — spore_drift floats DIRECTLY from gate to lantern ── */
 const AIR_LANE_FROM: [number, number] = [0.122, 0.13];
@@ -167,6 +175,7 @@ const DEPLOY_TILES: [number, number][] = [
   [0.345, 0.493], [0.510, 0.493], [0.675, 0.493],
   [0.345, 0.626], [0.510, 0.626], [0.675, 0.626],
 ];
+let activeDeployPads: readonly (readonly [number, number])[] = DEPLOY_TILES;
 
 /* ═══════════════════════════════════════════════════════════════════
    CLINICAL WEAKNESS TYPES — the "clinical problem" each enemy embodies.
@@ -556,7 +565,7 @@ type Feedback = {
   quality: "strong" | "partial" | "weak" | "bonus"; ticks: number;
 };
 
-type Phase = "lobby" | "playing" | "wave_pause" | "won" | "lost";
+type Phase = "lobby" | "playing" | "wave_pause" | "overtime_offer" | "overtime" | "won" | "lost";
 type EnemyMasteryEntry = { defeated: boolean; correctDefeated: boolean };
 type LearningStats = {
   priorityActions: number;
@@ -597,6 +606,7 @@ type GS = {
   codeBlueActive: boolean;  /* speed surge when 5+ enemies reach center zone */
   codeBlueTicks: number;
   priorityTargetUid: string | null; /* triage-tapped enemy uid */
+  overtimeWave: number;
 };
 
 /* ═══════════════════════════════════════════════════════════════════
@@ -630,14 +640,14 @@ function freshState(
     cueBonusReady: false,
     corruption: 0, stabilityPulse: 0, corruptionPulse: 0, shieldTicks: startShieldTicks,
     abilityCooldowns: {}, stabilizeUsesThisWave: 0, treatmentFieldTicks: 0,
-    corruptedTiles: {}, codeBlueActive: false, codeBlueTicks: 0, priorityTargetUid: null,
+    corruptedTiles: {}, codeBlueActive: false, codeBlueTicks: 0, priorityTargetUid: null, overtimeWave: 0,
   };
 }
 
-function beginWave(gs: GS, waveIdx: number): GS {
+function beginWave(gs: GS, waveIdx: number, waves = WAVES, phase: Phase = "playing"): GS {
   return {
-    ...gs, wave: waveIdx, phase: "playing",
-    spawnQueue: [...WAVES[waveIdx].spawns],
+    ...gs, wave: waveIdx, phase,
+    spawnQueue: [...waves[waveIdx].spawns],
     spawnTimer: 0, enemies: [], projectiles: [],
     feedbacks: [], wavePauseTicks: 0,
     stabilizeUsesThisWave: 0,
@@ -663,13 +673,14 @@ function getEnemyPosFrac(e: ActiveEnemy): { x: number; y: number } {
     const t = cl(e.airProgress ?? 0, 0, 1);
     return { x: lp(AIR_LANE_FROM[0], AIR_LANE_TO[0], t), y: lp(AIR_LANE_FROM[1], AIR_LANE_TO[1], t) };
   }
-  const pi = cl(e.pathIndex, 0, N_SEGS - 1);
-  const from = PATH_WPS[pi], to = PATH_WPS[pi + 1];
+  const pi = cl(e.pathIndex, 0, activePath.length - 2);
+  const from = activePath[pi], to = activePath[pi + 1];
   return { x: lp(from[0], to[0], e.pathProgress), y: lp(from[1], to[1], e.pathProgress) };
 }
 
 function getUnitPosFrac(tileIdx: number): { x: number; y: number } {
-  return { x: DEPLOY_TILES[tileIdx][0], y: DEPLOY_TILES[tileIdx][1] };
+  const point = activeDeployPads[tileIdx] ?? activeDeployPads[0];
+  return { x: point[0], y: point[1] };
 }
 
 function distFrac(a: { x: number; y: number }, b: { x: number; y: number }): number {
@@ -677,10 +688,7 @@ function distFrac(a: { x: number; y: number }, b: { x: number; y: number }): num
 }
 
 function getMatchQuality(unitTypeId: string, enemyTypeId: string): "strong" | "partial" | "weak" {
-  const u = UNIT_DATA[unitTypeId];
-  if (u.strong.includes(enemyTypeId)) return "strong";
-  if (u.weak.includes(enemyTypeId))   return "weak";
-  return "partial";
+  return wardMatchQuality(unitTypeId, enemyTypeId);
 }
 
 function applyDmg(base: number, q: "strong" | "partial" | "weak"): number {
@@ -2530,7 +2538,7 @@ function WavePauseOverlay({ wave }: { wave: number }) {
    ═══════════════════════════════════════════════════════════════════ */
 export default function WardDefense() {
   const router = useRouter();
-  const { player, applyRewards, recordWardWaves, syncInventory, setWardLoadout } = usePlayer();
+  const { player, completeWardDefense, recordWardWaves, syncInventory, setWardLoadout, updateState } = usePlayer();
   const { isCompleted, startTutorial, onRequiredAction } = useTutorial();
 
   const wardBackdrop = useMemo(() => {
@@ -2538,6 +2546,12 @@ export default function WardDefense() {
     return skin?.wardBackdrop ?? null;
   }, [player?.equipped_ward_skin]);
   const [pendingBoosts, setPendingBoosts] = useState<string[]>([]);
+  const [scenario, setScenario] = useState<WardScenario>(WARD_SCENARIOS[0]);
+  const [runQuestions, setRunQuestions] = useState<WardClinicalQuestion[]>([]);
+  const [wardRunId, setWardRunId] = useState<string | null>(null);
+  const [authoritativeGrant, setAuthoritativeGrant] = useState<Record<string, number> | null>(null);
+  const [completionError, setCompletionError] = useState<string | null>(null);
+  const [completionAttempt, setCompletionAttempt] = useState(0);
 
   // Back navigation is blocked for the whole mode (lobby, live board, result)
   // — the back buttons are deliberate exits and use forward replaces below.
@@ -2562,9 +2576,22 @@ export default function WardDefense() {
   const [handMode, setHandMode] = useState<"deploy" | "abilities">("deploy");
   const [speedMul, setSpeedMul] = useState(1);   /* 1× or 2× game speed */
   const [selectedUnit, setSelectedUnit] = useState("ward_scout");
-  const [cqAnswered, setCqAnswered] = useState<{ wave: number; correct: boolean } | null>(null);
-  const [cqCueChoice, setCqCueChoice] = useState<{ wave: number; choice: "empower" | "stabilize" } | null>(null);
+  const [cqAnswered, setCqAnswered] = useState<Record<number, boolean>>({});
+  const [cqCueChoice, setCqCueChoice] = useState<Record<number, "empower" | "stabilize">>({});
   const [cqDismissedWave, setCqDismissedWave] = useState<number | null>(null);
+  const clinicalCheckForWave = (wave: number) => wave === 0 ? 0 : wave === 2 ? 1 : wave === 6 ? 2 : -1;
+  const activeClinicalQuestion = () => {
+    const index = clinicalCheckForWave(gs.wave + 1);
+    const question = runQuestions[index];
+    if (!question) return null;
+    const choices = shuffledChoices(question, `${scenario.id}:${gs.wave}`);
+    return {
+      q: question.prompt,
+      opts: choices.map((choice) => choice.text),
+      correct: choices.findIndex((choice) => choice.id === question.correctChoiceId),
+      rationale: `${question.rationale} ${question.clinicalPearl}`,
+    };
+  };
 
   /* First-entry tutorial */
   useEffect(() => {
@@ -2586,10 +2613,11 @@ export default function WardDefense() {
 
   /* ── Clinical question AP bonus — shown during wave prep pauses ── */
   function answerClinQ(optIdx: number) {
-    if (cqAnswered?.wave === gs.wave) return;
-    const q = CLINICAL_QUESTIONS[gs.wave % CLINICAL_QUESTIONS.length];
+    if (cqAnswered[gs.wave] !== undefined) return;
+    const q = activeClinicalQuestion();
+    if (!q) return;
     const correct = optIdx === q.correct;
-    setCqAnswered({ wave: gs.wave, correct });
+    setCqAnswered((answers) => ({ ...answers, [gs.wave]: correct }));
     const s = gsRef.current;
     if (correct) {
       set({ ...s, ap: Math.min(s.ap + PREWAVE_AP_BONUS, MAX_AP),
@@ -2602,8 +2630,8 @@ export default function WardDefense() {
 
   /* ── Clinical Cue tactical choice — player picks the reward for a correct answer ── */
   function chooseCueTactic(choice: "empower" | "stabilize") {
-    if (cqCueChoice?.wave === gs.wave) return;
-    setCqCueChoice({ wave: gs.wave, choice });
+    if (cqCueChoice[gs.wave]) return;
+    setCqCueChoice((choices) => ({ ...choices, [gs.wave]: choice }));
     const s = gsRef.current;
     if (choice === "empower") {
       set({ ...s, cueBonusReady: true,
@@ -2625,13 +2653,14 @@ export default function WardDefense() {
         const pt = s.wavePauseTicks - 1;
         if (pt <= 0) {
           const nw = s.wave + 1;
-          if (nw >= WAVES.length) set({ ...s, phase: "won" });
-          else set(beginWave(s, nw));
+          const waves = [...scenario.normalWaves, scenario.boss];
+          if (nw >= waves.length) set({ ...s, phase: "overtime_offer" });
+          else set(beginWave(s, nw, waves));
         } else set({ ...s, wavePauseTicks: pt });
         return;
       }
 
-      if (s.phase !== "playing") return;
+      if (s.phase !== "playing" && s.phase !== "overtime") return;
 
       /* AP regen */
       let ap = s.ap;
@@ -2699,8 +2728,8 @@ export default function WardDefense() {
           const burst = eDef.speedBurstChance && Math.random() < eDef.speedBurstChance ? 2.0 : 1.0;
           const spd = eDef.speed * ENEMY_SPEED_BOOST * (e.slowTicks > 0 ? 0.45 : 1.0) * burst * codeBlueMul;
           let pi = e.pathIndex, pp = e.pathProgress + spd;
-          while (pp >= 1.0 && pi < N_SEGS) { pp -= 1.0; pi++; }
-          if (pi >= N_SEGS) reachedLantern.push(e);
+          while (pp >= 1.0 && pi < activePath.length - 1) { pp -= 1.0; pi++; }
+          if (pi >= activePath.length - 1) reachedLantern.push(e);
           else {
             const moved: ActiveEnemy = { ...e, hp, pathIndex: pi, pathProgress: pp, slowTicks: sl, hitFlash: hf, chainFlash: cf };
             movedEnemies.push(moved);
@@ -2757,9 +2786,9 @@ export default function WardDefense() {
         const alreadyCorrupted = new Set(Object.keys(corruptedTiles).map(Number));
         const ePos = getEnemyPosFrac(e);
         let nearestTile = -1, nearestDist = Infinity;
-        for (let ti = 0; ti < DEPLOY_TILES.length; ti++) {
+        for (let ti = 0; ti < activeDeployPads.length; ti++) {
           if (occupiedTiles.has(ti) || alreadyCorrupted.has(ti)) continue;
-          const td = Math.hypot(DEPLOY_TILES[ti][0] - ePos.x, DEPLOY_TILES[ti][1] - ePos.y);
+          const td = Math.hypot(activeDeployPads[ti][0] - ePos.x, activeDeployPads[ti][1] - ePos.y);
           if (td < nearestDist) { nearestDist = td; nearestTile = ti; }
         }
         if (nearestTile >= 0) {
@@ -2999,52 +3028,71 @@ export default function WardDefense() {
 
       if (ns.stability <= 0) { set({ ...ns, phase: "lost" }); return; }
       if (ns.spawnQueue.length === 0 && ns.enemies.length === 0) {
+        if (s.phase === "overtime") {
+          const overtimeWave = s.overtimeWave + 1;
+          if (overtimeWave >= scenario.overtime.maxRecordWave) { set({ ...ns, overtimeWave, phase: "won" }); return; }
+          const nextBoss = { ...ns, overtimeWave, score: Math.round(ns.score * scenario.overtime.scoreMultiplier), corruption: cl(ns.corruption + scenario.overtime.corruptionPerWave, 0, MAX_CORRUPTION) };
+          set(beginWave(nextBoss, 6, [...scenario.normalWaves, scenario.boss], "overtime"));
+          return;
+        }
         const nw = ns.wave + 1;
-        if (nw >= WAVES.length) { set({ ...ns, phase: "won" }); return; }
-        set({ ...ns, phase: "wave_pause", wavePauseTicks: WAVE_PAUSE_TICKS });
+        if (nw >= 7) { set({ ...ns, phase: "overtime_offer" }); return; }
+        const needsCheck = clinicalCheckForWave(nw);
+        if (needsCheck >= 0) set({ ...ns, phase: "wave_pause", wavePauseTicks: WAVE_PAUSE_TICKS });
+        else set(beginWave(ns, nw, [...scenario.normalWaves, scenario.boss]));
         return;
       }
       set(ns);
     }, TICK_MS / speedMul);
     return () => clearInterval(iv);
-  }, [speedMul]);
+  }, [speedMul, scenario]);
 
   /* ── Bank each cleared Bloom wave into the persisted counter ── */
   useEffect(() => {
     // A wave is fully cleared when the run transitions into the between-wave
     // pause (moving on to the next wave) or into "won" (the final wave cleared).
     // gs.wave still holds the just-cleared wave index at both points.
-    if ((gs.phase === "wave_pause" || gs.phase === "won") && !wavesRecorded.current.has(gs.wave)) {
+    if ((gs.phase === "wave_pause" || gs.phase === "overtime_offer" || gs.phase === "won") && gs.wave >= 0 && !wavesRecorded.current.has(gs.wave)) {
       wavesRecorded.current.add(gs.wave);
       recordWardWaves(1).catch(() => {});
     }
   }, [gs.phase, gs.wave]);
 
-  /* ── Apply rewards on game end ── */
+  /* ── Server-owned completion grant: the result can only show grants derived
+     by this contract, never a client-side reward calculation. */
   useEffect(() => {
-    if ((gs.phase === "won" || gs.phase === "lost") && !rewardsApplied.current && player) {
+    if ((gs.phase === "won" || gs.phase === "lost") && !rewardsApplied.current && player && wardRunId) {
       rewardsApplied.current = true;
-      const r = calcRewards(gs.phase === "won", gs.stability);
-      applyRewards({
-        xp: r.playerXp,
-        codexShards: r.codexShards,
-        // Ward Defense itself remains free to replay; only repeat power
-        // rewards taper once a prior wave has been recorded.
-        repeatable: (player.ward_defense_waves ?? 0) > 0,
-        progressionValue: 1,
-        rewardActivity: 'ward_defense',
-      }).catch(() => {});
+      completeWardDefense({
+        runId: wardRunId, scenarioId: scenario.id, cleared: gs.phase === "won",
+        stability: gs.stability, score: gs.score,
+        clinicalCorrect: Object.values(cqAnswered).filter(Boolean).length, clinicalTotal: 3, overtimeWave: gs.overtimeWave,
+        questionFamilyIds: runQuestions.map((q) => q.familyId),
+        missedFamilyIds: runQuestions.filter((_q, index) => !cqAnswered[[-1, 2, 6][index]]).map((q) => q.familyId),
+      }).then((completion) => setAuthoritativeGrant(completion.granted)).catch((error) => setCompletionError(error?.message || "Ward report could not be settled. Try again."));
       // Unlock defeated enemies in the Clinical Compendium
       const defeatedIds = Object.entries(gs.enemyMastery)
         .filter(([, m]) => m.defeated)
         .map(([id]) => id);
       if (defeatedIds.length > 0) markEnemiesDefeated(defeatedIds).catch(() => {});
     }
-  }, [gs.phase, player]);
+  }, [gs.phase, player, scenario, cqAnswered, runQuestions, wardRunId, completionAttempt]);
 
   /* ── Start / replay ── */
-  function startGame() {
+  async function startGame() {
+    if (!player) return;
+    let issued: { run_id: string; scenario_id: string };
+    try {
+      issued = await api.startWardDefense(player.id, player.economy_token);
+    } catch {
+      return;
+    }
+    const issuedScenario = WARD_SCENARIOS.find((entry) => entry.id === issued.scenario_id);
+    if (!issuedScenario) return;
     rewardsApplied.current = false;
+    setWardRunId(issued.run_id);
+    setAuthoritativeGrant(null);
+    setCompletionError(null);
     wavesRecorded.current = new Set();
     setHandMode("deploy");
 
@@ -3078,10 +3126,20 @@ export default function WardDefense() {
       if (consumedAny) syncInventory(inv).catch(() => {});
     }
     setPendingBoosts([]);
-    setCqAnswered(null);
-    setCqCueChoice(null);
+    setCqAnswered({});
+    setCqCueChoice({});
     setCqDismissedWave(null);
-    set(beginWave(freshState(boostEffect, runLoadout, owned), 0));
+    activePath = issuedScenario.path;
+    activeDeployPads = issuedScenario.deployPads;
+    setScenario(issuedScenario);
+    setRunQuestions(selectWardClinicalChecks(
+      `${player?.id ?? "guest"}:${Date.now()}`,
+      player?.ward_defense_recent_families ?? [],
+      player?.ward_defense_missed_families ?? [],
+    ));
+    // Wave -1 is the distinct briefing/check state before Wave 1. From here,
+    // pauses occur only before Wave 3 and the separate Boss Phase.
+    set({ ...freshState(boostEffect, runLoadout, owned), wave: -1, phase: "wave_pause", wavePauseTicks: WAVE_PAUSE_TICKS });
   }
 
   /* ── Deploy a unit on a tile ── */
@@ -3200,7 +3258,8 @@ export default function WardDefense() {
         break;
       }
       case "emergency_o2": {
-        const restore = Math.max(4, Math.round(15 * Math.pow(STABILIZE_DIMINISH, newStabilizeUses)));
+        const aegisBonus = player?.hero_skill_upgrades?.aegis_clinical_resonance ? 2 : 0;
+        const restore = Math.max(4, Math.round(15 * Math.pow(STABILIZE_DIMINISH, newStabilizeUses))) + aegisBonus;
         newStability = Math.min(MAX_STABILITY, s.stability + restore);
         newStabilizeUses = s.stabilizeUsesThisWave + 1;
         feedbackText = newStabilizeUses > 1
@@ -3211,7 +3270,7 @@ export default function WardDefense() {
       }
       case "positioning_order":
         newEnemies = s.enemies.map(e => ({ ...e, slowTicks: 6 }));
-        newShieldTicks = PROTECT_SHIELD_TICKS;
+        newShieldTicks = PROTECT_SHIELD_TICKS + (player?.hero_skill_upgrades?.aegis_clinical_resonance ? 2 : 0);
         feedbackText = "🛡 Shielded — enemies slowed, Stability loss halved";
         feedbackColor = "#A78BFA";
         break;
@@ -3278,7 +3337,38 @@ export default function WardDefense() {
 
   /* ── Result ── */
   if (gs.phase === "won" || gs.phase === "lost") {
-    const rewards = calcRewards(gs.phase === "won", gs.stability);
+    if (completionError) {
+      return (
+        <SafeAreaView style={s.root} edges={["top", "bottom"]}>
+          <View style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: SPACING.xl, gap: SPACING.md }}>
+            <Ionicons name="alert-circle" size={36} color={COLORS.error} />
+            <Text style={s.resultTitle}>WARD REPORT PENDING</Text>
+            <Text style={s.resultSub}>{completionError}</Text>
+            <Pressable style={{ backgroundColor: COLORS.brand, paddingHorizontal: 18, paddingVertical: 12, borderRadius: RADIUS.md }} onPress={() => { rewardsApplied.current = false; setCompletionError(null); setCompletionAttempt((attempt) => attempt + 1); }}>
+              <Text style={{ color: COLORS.onBrand, fontWeight: "800" }}>RETRY SETTLEMENT</Text>
+            </Pressable>
+          </View>
+        </SafeAreaView>
+      );
+    }
+    if (!authoritativeGrant) {
+      return (
+        <SafeAreaView style={s.root} edges={["top", "bottom"]}>
+          <View style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: SPACING.xl, gap: SPACING.md }}>
+            <Ionicons name="shield-checkmark" size={36} color={COLORS.brand} />
+            <Text style={s.resultTitle}>VERIFYING WARD REPORT…</Text>
+            <Text style={s.resultSub}>Confirming your protected rewards and record with the Ward archive.</Text>
+          </View>
+        </SafeAreaView>
+      );
+    }
+    const rewards = {
+      codexShards: authoritativeGrant.codex_shards ?? 0,
+      playerXp: authoritativeGrant.xp ?? 0,
+      heroXp: 0,
+      airCatalyst: 0,
+      wardSigils: authoritativeGrant.ward_sigils ?? 0,
+    };
     const ls: LearningStats = {
       priorityActions: gs.priorityActions, strongMatches: gs.strongMatches,
       partialMatches: gs.partialMatches, weakMatches: gs.weakMatches,
@@ -3292,10 +3382,34 @@ export default function WardDefense() {
     );
   }
 
+  if (gs.phase === "overtime_offer") {
+    return (
+      <SafeAreaView style={s.root} edges={["top", "bottom"]}>
+        <View style={[StyleSheet.absoluteFillObject, { backgroundColor: "#071522" }]} />
+        <View style={{ flex: 1, justifyContent: "center", padding: SPACING.lg, gap: SPACING.md }}>
+          <Text style={[s.resultTitle, { color: COLORS.runeGold }]}>BOSS PHASE CLEARED</Text>
+          <Text style={s.resultSub}>Optional Overtime is score, record, Codex, mastery, achievement, and cosmetic focused. It grants no additional XP, materials, Aegis rolls, or repeat-clear rewards.</Text>
+          <Text style={s.scoreLine}>Current scenario: {scenario.name} · Overtime record: {gs.overtimeWave}</Text>
+          <Pressable style={s.enterBtn} onPress={() => {
+            const next = { ...gs, overtimeWave: 0, corruption: cl(gs.corruption + scenario.overtime.corruptionPerWave, 0, MAX_CORRUPTION) };
+            set(beginWave(next, 6, [...scenario.normalWaves, scenario.boss], "overtime"));
+          }}>
+            <Ionicons name="infinite" size={18} color={COLORS.onBrand} />
+            <Text style={s.enterBtnTxt}>ENTER OVERTIME</Text>
+          </Pressable>
+          <Pressable style={s.exitBtn} onPress={() => set({ ...gs, phase: "won" })}>
+            <Text style={s.exitBtnTxt}>BANK STANDARD CLEAR</Text>
+          </Pressable>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   /* ── Active game ── */
   const stabilityColor = gs.stability > 60 ? COLORS.success : gs.stability > 30 ? COLORS.warning : COLORS.error;
   const corruptionColor = gs.corruption >= CORRUPTION_DRAIN_START ? "#F87171" : gs.corruption >= 30 ? "#C084FC" : "#7C3AED";
-  const waveDef = WAVES[gs.wave] ?? WAVES[WAVES.length - 1];
+  const scenarioWaves = [...scenario.normalWaves, scenario.boss];
+  const waveDef = scenarioWaves[gs.wave] ?? scenarioWaves[scenarioWaves.length - 1];
 
   return (
     <SafeAreaView style={s.root} edges={["top", "bottom"]}>
@@ -3309,13 +3423,15 @@ export default function WardDefense() {
 
         {/* Ward title + wave */}
         <View style={s.hudWave}>
-          <Text style={s.hudTitle}>Lotus Healing Ward</Text>
+          <Text style={s.hudTitle}>{scenario.name}</Text>
           {gs.phase === "wave_pause" ? (
             <Text style={s.hudWaveTxt}>⚕ Answer to earn AP</Text>
-          ) : waveDef.isBoss ? (
-            <Text style={[s.hudWaveTxt, { color: COLORS.error }]}>⚠ Boss Wave {gs.wave + 1}/{WAVES.length}</Text>
+          ) : gs.phase === "overtime" ? (
+            <Text style={[s.hudWaveTxt, { color: COLORS.runeGold }]}>✦ Overtime {gs.overtimeWave + 1}</Text>
+          ) : gs.wave === 6 ? (
+            <Text style={[s.hudWaveTxt, { color: COLORS.error }]}>⚠ Boss Phase</Text>
           ) : (
-            <Text style={s.hudWaveTxt}>Wave {gs.wave + 1}/{WAVES.length} 💀</Text>
+            <Text style={s.hudWaveTxt}>Wave {gs.wave + 1}/6 💀</Text>
           )}
         </View>
 
@@ -3410,6 +3526,8 @@ export default function WardDefense() {
               onTilePress={deployUnit}
               unitColors={unitColors}
               wardBackdrop={wardBackdrop}
+              path={scenario.path}
+              deployPads={scenario.deployPads}
               onEnemyPress={triageTarget}
               priorityTargetUid={gs.priorityTargetUid}
               corruptedTiles={gs.corruptedTiles}
@@ -3432,16 +3550,16 @@ export default function WardDefense() {
       </View>
 
       {/* Clinical Cue Check — floats OVER everything during the wave pause */}
-      {gs.phase === "wave_pause" && cqDismissedWave !== gs.wave && (
+      {gs.phase === "wave_pause" && activeClinicalQuestion() && cqDismissedWave !== gs.wave && (
         <View style={s.clinicalOverlay}>
           <View style={s.clinicalOverlayCard}>
             <ClinicalQuestionPanel
-              question={CLINICAL_QUESTIONS[gs.wave % CLINICAL_QUESTIONS.length]}
+              question={activeClinicalQuestion()!}
               onAnswer={answerClinQ}
-              answered={cqAnswered?.wave === gs.wave}
-              answeredCorrect={cqAnswered?.wave === gs.wave ? cqAnswered!.correct : null}
+              answered={cqAnswered[gs.wave] !== undefined}
+              answeredCorrect={cqAnswered[gs.wave] ?? null}
               wave={gs.wave}
-              cueChoice={cqCueChoice?.wave === gs.wave ? cqCueChoice!.choice : null}
+              cueChoice={cqCueChoice[gs.wave] ?? null}
               onChooseCue={chooseCueTactic}
               onClose={() => setCqDismissedWave(gs.wave)}
             />
@@ -4133,7 +4251,7 @@ function ResultScreen({
   won, wave, stability, score, rewards, learningStats, onReplay, onBack,
 }: {
   won: boolean; wave: number; stability: number; score: number;
-  rewards: ReturnType<typeof calcRewards>;
+  rewards: { codexShards: number; playerXp: number; heroXp: number; airCatalyst: number; wardSigils?: number };
   learningStats: LearningStats;
   onReplay: () => void; onBack: () => void;
 }) {
@@ -4166,6 +4284,7 @@ function ResultScreen({
             { label: "Player XP",    icon: "⭐", val: rewards.playerXp },
             { label: "Hero XP",      icon: "🦸", val: rewards.heroXp },
             { label: "Air Catalyst", icon: "💨", val: rewards.airCatalyst },
+            { label: "Ward Sigils", icon: "◈", val: rewards.wardSigils ?? 0 },
           ].map(r => (
             <View key={r.label} style={s.rewardRow}>
               <Text style={{ fontSize: 20 }}>{r.icon}</Text>

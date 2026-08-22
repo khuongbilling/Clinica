@@ -305,6 +305,21 @@ export interface PlayerState {
   // Ward Defense: Code Rush waves cleared/survived across all runs. Distinct from
   // runs_completed (whole battles); powers the honest "Perimeter Held" milestone.
   ward_defense_waves: number;
+  // Age 1 Ward Defense expansion. These records are deliberately separate from
+  // normal battle stars: a Ward run measures board stability, score and checks.
+  ward_defense_records?: Record<string, import('./wardDefense').WardRunRecord>;
+  ward_defense_rotation?: import('./wardDefense').WardRotationState;
+  ward_defense_claimed_run_ids?: string[];
+  ward_defense_recent_families?: string[];
+  ward_defense_missed_families?: string[];
+  ward_exchange_purchases?: Record<string, { count: number; period: string }>;
+  // Protected Ward-only Aegis bookkeeping. Inventory holds fragments/imprints;
+  // this state only protects pity, weekly ceilings, and the lifetime guarantee.
+  ward_aegis_pity?: number;
+  ward_aegis_lifetime_fragments?: number;
+  ward_aegis_week_key?: string;
+  ward_aegis_weekly_random_drops?: number;
+  ward_aegis_milestone_granted?: boolean;
   bosses_defeated: string[];
   failure_counts: Record<string, number>;
   inventory: Record<string, number>;

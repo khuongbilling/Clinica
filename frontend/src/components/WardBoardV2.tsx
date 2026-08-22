@@ -129,6 +129,9 @@ const UNIT_FX: Record<string, UnitFx> = {
 
 /* ─── Props ─────────────────────────────────────────────────────────────── */
 export interface WardBoardV2Props {
+  /** Authored scenario geometry; omitted props retain the original Triage board. */
+  path?: readonly (readonly [number, number])[];
+  deployPads?: readonly (readonly [number, number])[];
   aw: number; ah: number;
   onLayout: (e: LayoutChangeEvent) => void;
   enemies: any[]; deployedUnits: any[]; projectiles: any[];
@@ -153,14 +156,14 @@ const lp = (a: number, b: number, t: number)   => a + (b - a) * cl(t, 0, 1);
 const AIR_LANE_FROM: [number, number] = [0.122, 0.13];
 const AIR_LANE_TO:   [number, number] = [0.825, 0.13];
 
-function getEnemyFrac(e: { pathIndex: number; pathProgress: number; isAirLane?: boolean; airProgress?: number }): [number, number] {
+function getEnemyFrac(e: { pathIndex: number; pathProgress: number; isAirLane?: boolean; airProgress?: number }, path: readonly (readonly [number, number])[] = PATH_WPS): [number, number] {
   if (e.isAirLane) {
     const t = Math.max(0, Math.min(1, e.airProgress ?? 0));
     return [lp(AIR_LANE_FROM[0], AIR_LANE_TO[0], t), lp(AIR_LANE_FROM[1], AIR_LANE_TO[1], t)];
   }
-  const pi   = cl(e.pathIndex, 0, PATH_WPS.length - 2);
-  const from = PATH_WPS[pi];
-  const to   = PATH_WPS[pi + 1];
+  const pi   = cl(e.pathIndex, 0, path.length - 2);
+  const from = path[pi];
+  const to   = path[pi + 1];
   return [lp(from[0], to[0], e.pathProgress), lp(from[1], to[1], e.pathProgress)];
 }
 
@@ -175,8 +178,8 @@ interface StonePadProps {
   isCorrupted?: boolean; corruptedTicks?: number;
 }
 
-function StonePad({ aw, ah, tileIdx, isMergeCandidate, onPress, isCorrupted, corruptedTicks }: StonePadProps) {
-  const [fx, fy] = DEPLOY_TILES[tileIdx];
+function StonePad({ aw, ah, tileIdx, isMergeCandidate, onPress, isCorrupted, corruptedTicks, deployPads = DEPLOY_TILES }: StonePadProps & { deployPads?: readonly (readonly [number, number])[] }) {
+  const [fx, fy] = deployPads[tileIdx] ?? deployPads[0];
   const cx = fx * aw;
   const cy = fy * ah;
   /* Hit area sized to roughly one drawn platform cell */
@@ -241,9 +244,9 @@ function StonePad({ aw, ah, tileIdx, isMergeCandidate, onPress, isCorrupted, cor
    The gate + lantern art live in the background image; we only overlay the
    live spawn-queue count.
    ═══════════════════════════════════════════════════════════════════════════ */
-function GateBadge({ aw, ah, spawnQueueLen }: { aw: number; ah: number; spawnQueueLen: number }) {
-  const cx = PATH_WPS[0][0] * aw;
-  const cy = PATH_WPS[0][1] * ah;
+function GateBadge({ aw, ah, spawnQueueLen, path = PATH_WPS }: { aw: number; ah: number; spawnQueueLen: number; path?: readonly (readonly [number, number])[] }) {
+  const cx = path[0][0] * aw;
+  const cy = path[0][1] * ah;
   return (
     <View style={[StyleSheet.absoluteFillObject, { zIndex: 22, pointerEvents: "none" }]}>
       <View style={{
@@ -265,9 +268,9 @@ function GateBadge({ aw, ah, spawnQueueLen }: { aw: number; ah: number; spawnQue
    ═══════════════════════════════════════════════════════════════════════════ */
 const HERO_W = 52, HERO_H = 66;
 
-function HeroOnPad({ aw, ah, tileIdx, unit, bobY, unitColors }: {
+function HeroOnPad({ aw, ah, tileIdx, unit, bobY, unitColors, deployPads = DEPLOY_TILES }: {
   aw: number; ah: number; tileIdx: number;
-  unit: any; bobY: Animated.AnimatedInterpolation<number>; unitColors: Record<string, string>;
+  unit: any; bobY: Animated.AnimatedInterpolation<number>; unitColors: Record<string, string>; deployPads?: readonly (readonly [number, number])[];
 }) {
   const lunge = useRef(new Animated.Value(0)).current;
   const isCast = (unit?.castFlash ?? 0) > 0;
@@ -284,7 +287,7 @@ function HeroOnPad({ aw, ah, tileIdx, unit, bobY, unitColors }: {
   }, [isCast, unit?.castFlash, lunge]);
 
   if (!unit) return null;
-  const [fx, fy] = DEPLOY_TILES[tileIdx];
+  const [fx, fy] = deployPads[tileIdx] ?? deployPads[0];
   const cx  = fx * aw;
   const cy  = fy * ah;
   const img = IMG_UNITS[unit.typeId];
@@ -402,11 +405,11 @@ const CONDITION_ICON: Record<string, string> = {
 /* ═══════════════════════════════════════════════════════════════════════════
    LAYER 8 — ENEMY ON LANE
    ═══════════════════════════════════════════════════════════════════════════ */
-function EnemyOnPath({ aw, ah, enemy, isPriority, onPress }: {
+function EnemyOnPath({ aw, ah, enemy, isPriority, onPress, path = PATH_WPS }: {
   aw: number; ah: number; enemy: any;
-  isPriority?: boolean; onPress?: () => void;
+  isPriority?: boolean; onPress?: () => void; path?: readonly (readonly [number, number])[];
 }) {
-  const [fx, fy] = getEnemyFrac(enemy);
+  const [fx, fy] = getEnemyFrac(enemy, path);
   const hpPct  = cl(enemy.hp / enemy.maxHp, 0, 1);
   const barCol = hpPct > 0.6 ? "#22C55E" : hpPct > 0.3 ? "#FACC15" : "#EF4444";
   const isFlash = (enemy.hitFlash ?? 0) > 0;
@@ -453,8 +456,8 @@ function EnemyOnPath({ aw, ah, enemy, isPriority, onPress }: {
   /* Face the direction of travel.
      Air lane enemies always move right (gate→lantern). */
   const faceRight = isAirLane ? true : (() => {
-    const seg   = cl(enemy.pathIndex, 0, PATH_WPS.length - 2);
-    const segDx = PATH_WPS[seg + 1][0] - PATH_WPS[seg][0];
+    const seg   = cl(enemy.pathIndex, 0, path.length - 2);
+    const segDx = path[seg + 1][0] - path[seg][0];
     return segDx > 0.01;
   })();
 
@@ -557,6 +560,7 @@ function EnemyOnPath({ aw, ah, enemy, isPriority, onPress }: {
 export default function WardDefenseV2Screen() { return null; }
 
 export function WardBoardV2({
+  path = PATH_WPS, deployPads = DEPLOY_TILES,
   aw, ah, onLayout,
   enemies, deployedUnits, projectiles,
   stability, phase, wave,
@@ -612,9 +616,10 @@ export function WardBoardV2({
       />
 
       {/* L2: Nine invisible tap targets aligned onto the drawn pedestals */}
-      {W > 20 && DEPLOY_TILES.map((_, i) => (
+      {W > 20 && deployPads.map((_, i) => (
         <StonePad
           key={i} aw={W} ah={H} tileIdx={i}
+          deployPads={deployPads}
           isMergeCandidate={mergeTileSet.has(i)}
           onPress={() => onTilePress(i)}
           isCorrupted={!!(corruptedTiles?.[i])}
@@ -623,13 +628,13 @@ export function WardBoardV2({
       ))}
 
       {/* L4: Spawn-queue badge over the drawn Disease Gate */}
-      {W > 20 && spawnQueueLen > 0 && <GateBadge aw={W} ah={H} spawnQueueLen={spawnQueueLen} />}
+      {W > 20 && spawnQueueLen > 0 && <GateBadge aw={W} ah={H} spawnQueueLen={spawnQueueLen} path={path} />}
 
       {/* L6: Hero sprites */}
-      {W > 20 && DEPLOY_TILES.map((_, i) => (
+      {W > 20 && deployPads.map((_, i) => (
         <HeroOnPad key={i} aw={W} ah={H} tileIdx={i}
           unit={deployedUnits.find((u: any) => u.tileIndex === i)}
-          bobY={bobY} unitColors={unitColors}
+          bobY={bobY} unitColors={unitColors} deployPads={deployPads}
         />
       ))}
 
@@ -642,6 +647,7 @@ export function WardBoardV2({
       {enemies.map((e: any) => (
         <EnemyOnPath
           key={e.uid} aw={W} ah={H} enemy={e}
+          path={path}
           isPriority={priorityTargetUid === e.uid}
           onPress={onEnemyPress ? () => onEnemyPress(e.uid) : undefined}
         />

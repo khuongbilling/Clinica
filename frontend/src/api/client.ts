@@ -125,6 +125,38 @@ export const api = {
       headers: sessionToken ? { 'X-Clinica-Session': sessionToken } : {},
     },
   ),
+  completeWardDefense: (
+    id: string,
+    completion: {
+      run_id: string; cleared: boolean; stability: number; score: number;
+      clinical_correct: number; clinical_total: number; overtime_wave: number;
+      question_family_ids: string[]; missed_family_ids: string[];
+    },
+    sessionToken?: string,
+  ) => http<{ player: PlayerState; already_claimed: boolean; granted: Record<string, number>; stars: number; aegis_fragment: boolean }>(
+    `/player/${id}/ward-defense/complete`,
+    { method: 'POST', body: JSON.stringify(completion), headers: sessionToken ? { 'X-Clinica-Session': sessionToken } : {} },
+  ),
+  startWardDefense: (id: string, sessionToken?: string) =>
+    http<{ run_id: string; scenario_id: string; reused: boolean }>(
+      `/player/${id}/ward-defense/start`,
+      { method: 'POST', body: JSON.stringify({}), headers: sessionToken ? { 'X-Clinica-Session': sessionToken } : {} },
+    ),
+  purchaseWardExchange: (id: string, itemId: string, sessionToken?: string) =>
+    http<{ player: PlayerState; granted: Record<string, number>; purchase_count: number }>(
+      `/player/${id}/ward-defense/exchange`,
+      { method: 'POST', body: JSON.stringify({ item_id: itemId }), headers: sessionToken ? { 'X-Clinica-Session': sessionToken } : {} },
+    ),
+  assembleWardAegis: (id: string, sessionToken?: string) =>
+    http<{ player: PlayerState; assembled: boolean }>(
+      `/player/${id}/ward-defense/assemble-aegis`,
+      { method: 'POST', headers: sessionToken ? { 'X-Clinica-Session': sessionToken } : {} },
+    ),
+  purchaseWardAegisSidegrade: (id: string, upgradeId: string, sessionToken?: string) =>
+    http<{ player: PlayerState; unlocked: string }>(
+      `/player/${id}/ward-defense/aegis-sidegrade`,
+      { method: 'POST', body: JSON.stringify({ upgrade_id: upgradeId }), headers: sessionToken ? { 'X-Clinica-Session': sessionToken } : {} },
+    ),
   completeJourneyChapterBoss: (id: string, runId: string, tileId: string, sessionToken?: string) =>
     http<{ already_completed: boolean; player?: PlayerState; run: unknown; granted: Record<string, number> }>(
       `/player/${id}/journey-runs/${runId}/chapter-boss-completion`,

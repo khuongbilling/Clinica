@@ -9,6 +9,7 @@ export interface SkillUpgradeRequirements {
   lesson_note?: number;
   care_chain_manual?: number;
   hero_training_page?: number;
+  ward_defense_aegis_imprint?: number;
   university_credits: number;
   hero_level: number;
 }
@@ -51,6 +52,7 @@ export const MATERIAL_SOURCE_HINTS: Record<string, string> = {
   lesson_note:       'Complete Lotus Lessons',
   care_chain_manual: 'Complete University Milestones',
   hero_training_page:'Complete University practice (any lab)',
+  ward_defense_aegis_imprint:'Assemble five Ward Defense Aegis Fragments',
   university_credits:'Complete University practice',
 };
 
@@ -61,9 +63,29 @@ export const MATERIAL_LABELS: Record<string, string> = {
   lesson_note:       'Lesson Note',
   care_chain_manual: 'Care Pathway Manual',
   hero_training_page:'Hero Training Page',
+  ward_defense_aegis_imprint:'Ward Aegis Imprint',
 };
 
 export const SKILL_UPGRADES: SkillUpgradeDef[] = [
+  // Ward Defense Aegis sidegrades are intentionally horizontal: they enhance
+  // existing action families, have no XP/level system, and are never required
+  // for the normal Age 1 progression path.
+  {
+    id: 'aegis_clinical_resonance',
+    name: 'Aegis Clinical Resonance',
+    category: 'general',
+    categoryLabel: 'Ward Aegis Sidegrade',
+    description: 'An authored Ward Aegis imprint harmonizes existing clinical responses without raising hero stats.',
+    icon: 'shield-checkmark-outline',
+    accentColor: '#D4AF37',
+    targetActionTypes: ['stabilize', 'shield'],
+    maxRank: 1,
+    ranks: [{
+      rank: 1, label: 'Aegis Clinical Resonance', description: 'Existing stabilize and shield skills gain a modest +2 response value.',
+      battleEffect: '+2 to existing stabilize and shield effects.', effect: { stabilize: 2, shield: 2 },
+      requirements: { ward_defense_aegis_imprint: 1, university_credits: 0, hero_level: 1 },
+    }],
+  },
   // ── 1. Assess / Cue Recognition ──────────────────────────────────────────
   {
     id: 'lantern_of_clues',
@@ -322,6 +344,7 @@ export function canUpgrade(
   if ((inv.lesson_note        ?? 0) < (req.lesson_note        ?? 0)) return { can: false, reason: `Need ${req.lesson_note} Lesson Note(s).` };
   if ((inv.care_chain_manual  ?? 0) < (req.care_chain_manual  ?? 0)) return { can: false, reason: `Need ${req.care_chain_manual} Care Pathway Manual(s).` };
   if ((inv.hero_training_page ?? 0) < (req.hero_training_page ?? 0)) return { can: false, reason: `Need ${req.hero_training_page} Training Page(s).` };
+  if ((inv.ward_defense_aegis_imprint ?? 0) < (req.ward_defense_aegis_imprint ?? 0)) return { can: false, reason: `Need ${req.ward_defense_aegis_imprint} Ward Aegis Imprint(s).` };
   if (uc < req.university_credits)                                    return { can: false, reason: `Need ${req.university_credits} University Credits.` };
 
   return { can: true };
@@ -369,6 +392,7 @@ export function getMissingMaterials(
   check('lesson_note',       req.lesson_note);
   check('care_chain_manual', req.care_chain_manual);
   check('hero_training_page',req.hero_training_page);
+  check('ward_defense_aegis_imprint',req.ward_defense_aegis_imprint);
   check('university_credits',req.university_credits);
 
   const heroLevel = maxHeroLevel(player);

@@ -22,6 +22,7 @@ import { ModeCardDef } from "@/src/game/modeHub";
 export type ShopGroupId =
   | "consumables"
   | "ward"
+  | "ward_exchange"
   | "refills"
   | "recruit"
   | "upgrades"
@@ -100,7 +101,7 @@ export const SHOP_SECTIONS: ShopSectionDef[] = [
     route: "/shop-section/summoning-altar",
     rewardPreview: "Healer Units · Ward Boosts · Unit Shards",
     imageKey: "summoning-altar",
-    groups: ["recruit", "ward"],
+    groups: ["recruit", "ward", "ward_exchange"],
     featureGate: "ward_defense",
     artBrief:
       "A radiant summoning altar with a healer spirit materializing in golden light.",

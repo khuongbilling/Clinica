@@ -158,6 +158,18 @@ function normalizeProgression(p: PlayerState): PlayerState {
   if (!out.cue_topic_progress) {
     out = { ...out, cue_topic_progress: {} };
   }
+  // Board records, rotation history and Aegis protection are independent from
+  // ordinary battle stars and safely backfilled for every legacy save.
+  if (!out.ward_defense_records) out = { ...out, ward_defense_records: {} };
+  if (!out.ward_defense_rotation) out = { ...out, ward_defense_rotation: { bag: [], rotationCompletedIds: [] } };
+  if (!out.ward_defense_claimed_run_ids) out = { ...out, ward_defense_claimed_run_ids: [] };
+  if (!out.ward_defense_recent_families) out = { ...out, ward_defense_recent_families: [] };
+  if (!out.ward_defense_missed_families) out = { ...out, ward_defense_missed_families: [] };
+  if (!out.ward_exchange_purchases) out = { ...out, ward_exchange_purchases: {} };
+  if (out.ward_aegis_pity == null) out = { ...out, ward_aegis_pity: 0 };
+  if (out.ward_aegis_lifetime_fragments == null) out = { ...out, ward_aegis_lifetime_fragments: 0 };
+  if (out.ward_aegis_weekly_random_drops == null) out = { ...out, ward_aegis_weekly_random_drops: 0 };
+  if (out.ward_aegis_milestone_granted == null) out = { ...out, ward_aegis_milestone_granted: false };
   // C3 — backfill battle_stars for existing players who pre-date this field.
   if (!out.battle_stars) {
     out = { ...out, battle_stars: {} };
@@ -501,6 +513,13 @@ type Ctx = {
   // Ward Defense: persist that `count` Bloom waves were cleared/survived this run.
   // Increments the account-wide ward_defense_waves counter (drives ms_3).
   recordWardWaves: (count: number) => Promise<void>;
+  completeWardDefense: (result: {
+    runId: string; scenarioId: string; cleared: boolean; stability: number; score: number;
+    clinicalCorrect: number; clinicalTotal: number; overtimeWave: number;
+    questionFamilyIds: string[]; missedFamilyIds: string[]; dailyBonus?: boolean; rotationBonus?: boolean;
+  }) => Promise<{ alreadyClaimed: boolean; granted: Record<string, number>; stars: number; aegisFragment: boolean }>;
+  purchaseWardExchange: (itemId: string) => Promise<{ ok: boolean; message: string }>;
+  assembleWardAegis: () => Promise<{ ok: boolean; message: string }>;
   purchaseItem: (itemName: string, price: number, qty?: number) => Promise<{ ok: boolean; message: string }>;
   purchaseJourneyMerchant: (runId: string, tileId: string, stockId: string) => Promise<{ ok: boolean; message: string }>;
   assembleCovenantScroll: () => Promise<{ ok: boolean; message: string }>;
@@ -795,6 +814,17 @@ function defaultPlayer(args: CreatePlayerArgs, id: string): PlayerState {
     },
     runs_completed: 0,
     ward_defense_waves: 0,
+    ward_defense_records: {},
+    ward_defense_rotation: { bag: [], rotationCompletedIds: [] },
+    ward_defense_claimed_run_ids: [],
+    ward_defense_recent_families: [],
+    ward_defense_missed_families: [],
+    ward_exchange_purchases: {},
+    ward_aegis_pity: 0,
+    ward_aegis_lifetime_fragments: 0,
+    ward_aegis_week_key: '',
+    ward_aegis_weekly_random_drops: 0,
+    ward_aegis_milestone_granted: false,
     bosses_defeated: [],
     claimed_milestones: [],
     claimed_daily_milestones: [],
@@ -1308,6 +1338,56 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     next = foldDaily(next, 'ward_defense_wave', count);
     await updateState(next);
   }, [player, updateState]);
+
+  const completeWardDefense = useCallback(async (result: {
+    runId: string; scenarioId: string; cleared: boolean; stability: number; score: number;
+    clinicalCorrect: number; clinicalTotal: number; overtimeWave: number;
+    questionFamilyIds: string[]; missedFamilyIds: string[]; dailyBonus?: boolean; rotationBonus?: boolean;
+  }) => {
+    const base = playerRef.current ?? player;
+    if (!base) throw new Error('No player loaded');
+    const response = await api.completeWardDefense(base.id, {
+      run_id: result.runId, cleared: result.cleared,
+      stability: result.stability, score: result.score, clinical_correct: result.clinicalCorrect,
+      clinical_total: result.clinicalTotal, overtime_wave: result.overtimeWave,
+      question_family_ids: result.questionFamilyIds, missed_family_ids: result.missedFamilyIds,
+    }, base.economy_token);
+    const authoritative = normalizeProgression(response.player);
+    playerRef.current = authoritative;
+    setPlayer(authoritative);
+    await saveLocal(authoritative);
+    return { alreadyClaimed: response.already_claimed, granted: response.granted, stars: response.stars, aegisFragment: response.aegis_fragment };
+  }, [player]);
+
+  const purchaseWardExchange = useCallback(async (itemId: string) => {
+    const base = playerRef.current ?? player;
+    if (!base) return { ok: false, message: 'No player loaded.' };
+    try {
+      const response = await api.purchaseWardExchange(base.id, itemId, base.economy_token);
+      const authoritative = normalizeProgression(response.player);
+      playerRef.current = authoritative;
+      setPlayer(authoritative);
+      await saveLocal(authoritative);
+      return { ok: true, message: 'Ward Supply Exchange purchase complete.' };
+    } catch (error: any) {
+      return { ok: false, message: error?.message || 'This Ward Supply Exchange purchase could not be completed.' };
+    }
+  }, [player]);
+
+  const assembleWardAegis = useCallback(async () => {
+    const base = playerRef.current ?? player;
+    if (!base) return { ok: false, message: 'No player loaded.' };
+    try {
+      const response = await api.assembleWardAegis(base.id, base.economy_token);
+      const authoritative = normalizeProgression(response.player);
+      playerRef.current = authoritative;
+      setPlayer(authoritative);
+      await saveLocal(authoritative);
+      return { ok: true, message: response.assembled ? 'Aegis Imprint assembled.' : 'Assembly unavailable.' };
+    } catch (error: any) {
+      return { ok: false, message: error?.message || 'Five Ward Aegis Fragments are required.' };
+    }
+  }, [player]);
 
   const recordFailure = useCallback(async (enemyId: string) => {
     if (!player) return;
@@ -2309,6 +2389,18 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   const upgradeHeroSkill = useCallback(async (upgradeId: string) => {
     const base = playerRef.current;
     if (!base) return { ok: false, message: 'No player loaded.' };
+    if (upgradeId === 'aegis_clinical_resonance') {
+      try {
+        const response = await api.purchaseWardAegisSidegrade(base.id, upgradeId, base.economy_token);
+        const authoritative = normalizeProgression(response.player);
+        playerRef.current = authoritative;
+        setPlayer(authoritative);
+        await saveLocal(authoritative);
+        return { ok: true, message: 'Ward Aegis sidegrade unlocked.' };
+      } catch (error: any) {
+        return { ok: false, message: error?.message || 'A Ward Aegis Imprint is required.' };
+      }
+    }
 
     const { SKILL_UPGRADES, maxHeroLevel } = await import('./heroSkillAcademy');
     const upg = SKILL_UPGRADES.find(u => u.id === upgradeId);
@@ -2335,6 +2427,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     if ((inv.lesson_note        ?? 0) < (req.lesson_note        ?? 0)) return { ok: false, message: `Need ${req.lesson_note} Lesson Note(s).` };
     if ((inv.care_chain_manual  ?? 0) < (req.care_chain_manual  ?? 0)) return { ok: false, message: `Need ${req.care_chain_manual} Care Pathway Manual(s).` };
     if ((inv.hero_training_page ?? 0) < (req.hero_training_page ?? 0)) return { ok: false, message: `Need ${req.hero_training_page} Hero Training Page(s).` };
+    if ((inv.ward_defense_aegis_imprint ?? 0) < (req.ward_defense_aegis_imprint ?? 0)) return { ok: false, message: `Need ${req.ward_defense_aegis_imprint} Ward Aegis Imprint(s).` };
     if (uc < req.university_credits)                                    return { ok: false, message: `Need ${req.university_credits} University Credits.` };
 
     // Deduct materials
@@ -2344,6 +2437,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     if (req.lesson_note)        inv.lesson_note        = (inv.lesson_note        ?? 0) - req.lesson_note;
     if (req.care_chain_manual)  inv.care_chain_manual  = (inv.care_chain_manual  ?? 0) - req.care_chain_manual;
     if (req.hero_training_page) inv.hero_training_page = (inv.hero_training_page ?? 0) - req.hero_training_page;
+    if (req.ward_defense_aegis_imprint) inv.ward_defense_aegis_imprint = (inv.ward_defense_aegis_imprint ?? 0) - req.ward_defense_aegis_imprint;
 
     let next: PlayerState = {
       ...base,
@@ -3304,7 +3398,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
 
   const value = useMemo<Ctx>(() => ({
     player, loading, dailyPulse, openRoundsSignal, requestOpenDailyRounds, createPlayer, applyRewards, claimJourneyChapterBoss, claimJourneyAreaBoss, completeVerdantha, recordWardWaves, purchaseItem, purchaseJourneyMerchant, assembleCovenantScroll, redeemExchangeItem, claimMilestone, setActiveTitle, purchaseSkin, equipSkin, purchaseUpgrade, refillStamina, pullGacha, upgradeUnitMastery, setWardLoadout, setRealmLayout, setRealmAssignment, collectRealmProduction, recordFailure,
-    syncInventory, saveActiveTeam, summonOnce, evolveHero, recruitOnce, freeRecruitOnce, tutorialRecruitOnce, recruitTen, promoteHeroCert, trainHero, toggleHeroLock, toggleHeroFavorite, completeLesson, completeSimulation, completeUniPractice, grantLegacyUniPracticeReward, upgradeHeroSkill, spendStamina, logWellnessActivity, checkInDailyRounds, claimDailyObjective, claimDailyAllComplete, claimWeeklyGoal, claimWeeklyTask, claimWeeklyAllComplete, claimQuestMilestone, claimPracticeModule, markPracticeCurriculumSeen, exchangeInsightCrystals, recordCueTopics, resetPlayer, refresh, setPlayerClass, claimClassTier, completePrologue, completeIdentityRestore, setAvatar, completeDiagnosticIntro, markReminiscenceSeen, markStorySceneSeen, completeLotusLessonNode, applyClassDiagnostic, confirmClassDiagnostic, setLearningProfile, updateBattleStars, performSweep, claimLevelReward, claimChapterChest, claimChapter3Star, claimJourneyNode, markLv2UnlockSeen, markUniversityIntroSeen, updateState,
+    syncInventory, saveActiveTeam, summonOnce, evolveHero, recruitOnce, freeRecruitOnce, tutorialRecruitOnce, recruitTen, promoteHeroCert, trainHero, toggleHeroLock, toggleHeroFavorite, completeLesson, completeSimulation, completeUniPractice, grantLegacyUniPracticeReward, upgradeHeroSkill, spendStamina, logWellnessActivity, checkInDailyRounds, claimDailyObjective, claimDailyAllComplete, claimWeeklyGoal, claimWeeklyTask, claimWeeklyAllComplete, claimQuestMilestone, claimPracticeModule, markPracticeCurriculumSeen, exchangeInsightCrystals, recordCueTopics, resetPlayer, refresh, setPlayerClass, claimClassTier, completePrologue, completeIdentityRestore, setAvatar, completeDiagnosticIntro, markReminiscenceSeen, markStorySceneSeen, completeLotusLessonNode, applyClassDiagnostic, confirmClassDiagnostic, setLearningProfile, updateBattleStars, performSweep, claimLevelReward, claimChapterChest, claimChapter3Star, claimJourneyNode, markLv2UnlockSeen, markUniversityIntroSeen, completeWardDefense, purchaseWardExchange, assembleWardAegis, updateState,
     setEquippedCards, markCardTutorialSeen, markCallTutorialSeen,
     advanceProloguePhase, completePrologueCinematic, claimPrologueRewards,
     confirmIdentityReconstruction,
@@ -3313,7 +3407,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     applyFogMapChapterBossRewards,
     reconcileChapterBossKeys,
     setCanonicalShift,
-  }), [player, loading, dailyPulse, openRoundsSignal, requestOpenDailyRounds, createPlayer, applyRewards, claimJourneyChapterBoss, claimJourneyAreaBoss, completeVerdantha, recordWardWaves, purchaseItem, purchaseJourneyMerchant, assembleCovenantScroll, redeemExchangeItem, claimMilestone, setActiveTitle, purchaseSkin, equipSkin, purchaseUpgrade, refillStamina, pullGacha, upgradeUnitMastery, setWardLoadout, setRealmLayout, setRealmAssignment, collectRealmProduction, recordFailure, syncInventory, saveActiveTeam, summonOnce, evolveHero, recruitOnce, freeRecruitOnce, tutorialRecruitOnce, recruitTen, promoteHeroCert, trainHero, toggleHeroLock, toggleHeroFavorite, completeLesson, completeSimulation, completeUniPractice, grantLegacyUniPracticeReward, upgradeHeroSkill, spendStamina, logWellnessActivity, checkInDailyRounds, claimDailyObjective, claimDailyAllComplete, claimWeeklyGoal, claimWeeklyTask, claimWeeklyAllComplete, claimQuestMilestone, claimPracticeModule, markPracticeCurriculumSeen, exchangeInsightCrystals, recordCueTopics, resetPlayer, refresh, setPlayerClass, claimClassTier, completePrologue, completeIdentityRestore, setAvatar, completeDiagnosticIntro, markReminiscenceSeen, markStorySceneSeen, completeLotusLessonNode, applyClassDiagnostic, confirmClassDiagnostic, setLearningProfile, updateBattleStars, performSweep, claimLevelReward, claimChapterChest, claimChapter3Star, claimJourneyNode, markLv2UnlockSeen, markUniversityIntroSeen, updateState, setEquippedCards, markCardTutorialSeen, markCallTutorialSeen, advanceProloguePhase, completePrologueCinematic, claimPrologueRewards, confirmIdentityReconstruction, equipItem, unequipItem, claimSpecialization, applyFogMapChapterBossRewards, reconcileChapterBossKeys]);
+  }), [player, loading, dailyPulse, openRoundsSignal, requestOpenDailyRounds, createPlayer, applyRewards, claimJourneyChapterBoss, claimJourneyAreaBoss, completeVerdantha, recordWardWaves, purchaseItem, purchaseJourneyMerchant, assembleCovenantScroll, redeemExchangeItem, claimMilestone, setActiveTitle, purchaseSkin, equipSkin, purchaseUpgrade, refillStamina, pullGacha, upgradeUnitMastery, setWardLoadout, setRealmLayout, setRealmAssignment, collectRealmProduction, recordFailure, syncInventory, saveActiveTeam, summonOnce, evolveHero, recruitOnce, freeRecruitOnce, tutorialRecruitOnce, recruitTen, promoteHeroCert, trainHero, toggleHeroLock, toggleHeroFavorite, completeLesson, completeSimulation, completeUniPractice, grantLegacyUniPracticeReward, upgradeHeroSkill, spendStamina, logWellnessActivity, checkInDailyRounds, claimDailyObjective, claimDailyAllComplete, claimWeeklyGoal, claimWeeklyTask, claimWeeklyAllComplete, claimQuestMilestone, claimPracticeModule, markPracticeCurriculumSeen, exchangeInsightCrystals, recordCueTopics, resetPlayer, refresh, setPlayerClass, claimClassTier, completePrologue, completeIdentityRestore, setAvatar, completeDiagnosticIntro, markReminiscenceSeen, markStorySceneSeen, completeLotusLessonNode, applyClassDiagnostic, confirmClassDiagnostic, setLearningProfile, updateBattleStars, performSweep, claimLevelReward, claimChapterChest, claimChapter3Star, claimJourneyNode, markLv2UnlockSeen, markUniversityIntroSeen, completeWardDefense, purchaseWardExchange, assembleWardAegis, updateState, setEquippedCards, markCardTutorialSeen, markCallTutorialSeen, advanceProloguePhase, completePrologueCinematic, claimPrologueRewards, confirmIdentityReconstruction, equipItem, unequipItem, claimSpecialization, applyFogMapChapterBossRewards, reconcileChapterBossKeys]);
 
   return <PlayerContext.Provider value={value}>{children}</PlayerContext.Provider>;
 }

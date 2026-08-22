@@ -249,6 +249,30 @@ export function findWardBoostByName(name: string): WardBoost | undefined {
   return WARD_BOOSTS.find(w => w.name === name);
 }
 
+// ---------- Ward Supply Exchange ----------
+// Ward Sigils are server-authoritative and never substitute for Crowns or Ward
+// Coins. Practical caps make this a sidegrade/cosmetic outlet, not a farm.
+export interface WardExchangeItem {
+  id: string;
+  name: string;
+  description: string;
+  sigilCost: number;
+  limit: number;
+  period: 'week' | 'lifetime';
+  grant: { kind: 'inventory' | 'cosmetic' | 'title'; id: string; quantity?: number };
+}
+
+export const WARD_SUPPLY_EXCHANGE: readonly WardExchangeItem[] = [
+  { id: 'ward_blueprint', name: 'Tactical Blueprint', description: 'One bounded deployment-sidegrade blueprint.', sigilCost: 18, limit: 2, period: 'week', grant: { kind: 'inventory', id: 'Defense Blueprint', quantity: 1 } },
+  { id: 'ward_lantern_core', name: 'Vital Lantern Core', description: 'A capped Ward material for existing crafting surfaces.', sigilCost: 12, limit: 3, period: 'week', grant: { kind: 'inventory', id: 'Vital Lantern Core', quantity: 1 } },
+  { id: 'ward_deployment_fx', name: 'Lotus Deployment Effect', description: 'Cosmetic deployment effect. No combat stats.', sigilCost: 42, limit: 1, period: 'lifetime', grant: { kind: 'inventory', id: 'Lotus Deployment Effect', quantity: 1 } },
+  { id: 'ward_title', name: 'Warden of the Lantern', description: 'A cosmetic profile title.', sigilCost: 60, limit: 1, period: 'lifetime', grant: { kind: 'title', id: 'warden_of_the_lantern' } },
+];
+
+export function findWardExchangeItem(id: string): WardExchangeItem | undefined {
+  return WARD_SUPPLY_EXCHANGE.find((item) => item.id === id);
+}
+
 // ---------- Stamina / Energy Refills ----------
 export interface StaminaPack {
   id: string;
