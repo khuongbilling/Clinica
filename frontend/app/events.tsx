@@ -41,7 +41,8 @@ export default function EventsPage() {
     );
   }
 
-  // World Events: full participation gated at Level 5; Community Health Board visible to all.
+  // World Events: full participation follows the canonical progression ladder;
+  // the Community Health Board remains visible to all.
   const worldEventUnlocked = isFeatureUnlocked("world_event", playerLevelFromXp(player.xp).level);
 
   const worldEventBanner = (

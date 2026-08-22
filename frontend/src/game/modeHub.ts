@@ -13,6 +13,7 @@
 // `artBrief` below is the commissioning brief for that future banner.
 // ────────────────────────────────────────────────────────────
 
+import { getFeatureUnlockLevel } from "./progression";
 
 // Push 5 — Chapter 1-5 are framed as Clinica University simulations rather
 // than disconnected battles: each Ward Shift case belongs to a numbered
@@ -144,7 +145,7 @@ export const CLINICAL_CHALLENGE_MODES: ModeCardDef[] = [
     rewardPreview: "Rare materials, Codex lore",
     imageKey: "boss-ward",
     entryLabel: "Confront the Threat",
-    unlockRequirement: "Reach Player Level 7 to unlock — pass the ward first.",
+    unlockRequirement: `Reach Player Level ${getFeatureUnlockLevel("boss")} to unlock — pass the ward first.`,
     lore:
       "Some pathologies grow too vast for an ordinary case — a convergence of failing systems that threatens the whole kingdom. These are the Boss Wards: rare, dangerous, and unforgettable. Only a prepared team should answer the call.",
     howItWorks: [

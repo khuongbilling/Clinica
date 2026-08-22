@@ -13,7 +13,7 @@ import { InlineNotice, useInlineNotice, MessageDialog } from "@/src/components/W
 import { usePlayer } from "@/src/game/store";
 import { useWebBackToHub } from "@/src/hooks/useWebBackToHub";
 import { playRewardCue } from "@/src/game/cues";
-import { playerLevelFromXp, isFeatureUnlocked, FEATURE_UNLOCKS } from "@/src/game/progression";
+import { getFeatureUnlockLevel, playerLevelFromXp, isFeatureUnlocked } from "@/src/game/progression";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 import { UI } from "@/src/theme/ui";
 import { BOSS_VERDANTHA as BOSS_VERDANTHA_DATA } from "@/src/game/content";
@@ -76,16 +76,17 @@ export default function WorldEventScreen() {
     );
   }
 
-  // World Events (Miasma Bloom) are later-game content — gated at Player Level 10.
+  // World Events use the canonical progression ladder. Deep links below the
+  // requirement remain educational/read-only rather than opening participation.
   // Deep-link / back-nav safety net: if an under-level player reaches this route
   // directly, show a locked card instead of the full event dashboard.
-  const worldEventLevel = FEATURE_UNLOCKS.find((f) => f.id === "world_event")?.level ?? 10;
+  const worldEventLevel = getFeatureUnlockLevel("world_event");
   const worldEventUnlocked = isFeatureUnlocked("world_event", playerLevelFromXp(player.xp).level);
   if (!worldEventUnlocked) {
     // ── B6 — Community Health Board (Level 1–4 read-only view) ──────────────
     // Show rich public health education content instead of a bare lock wall.
     // Epidemic Tokens are NOT shown or spendable here; active participation
-    // unlocks at Level 5 with the full World Event.
+    // unlocks at the canonical World Event level with the full event.
     return (
       <SafeAreaView style={styles.root} edges={["top"]} testID="world-event-locked">
         <PlayerHeader player={player} />

@@ -12,6 +12,7 @@ import { InlineNotice, useInlineNotice } from "@/src/components/WebAlert";
 import { usePlayer } from "@/src/game/store";
 import { useWebBackToHub } from "@/src/hooks/useWebBackToHub";
 import { findMode, MODE_STATUS_LABEL } from "@/src/game/modeHub";
+import { getFeatureUnlockLevel, isFeatureUnlocked, playerLevelFromXp } from "@/src/game/progression";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 
 // ─────────────────────────────────────────────────────────────
@@ -53,8 +54,9 @@ export default function ModeIntroPage() {
     );
   }
 
-  const playerLevel = player.player_level ?? 1;
-  const bossUnlocked = playerLevel >= 7;
+  const playerLevel = player.player_level ?? playerLevelFromXp(player.xp ?? 0).level;
+  const bossUnlockLevel = getFeatureUnlockLevel("boss");
+  const bossUnlocked = isFeatureUnlocked("boss", playerLevel);
   const locked = mode.id === "boss-ward" && !bossUnlocked;
   const playable = mode.status === "active" && !locked && !!mode.route;
   const art = getBannerImage(mode.imageKey);
@@ -62,7 +64,7 @@ export default function ModeIntroPage() {
 
   const begin = () => {
     if (locked) {
-      flashNotice("The Fading Core is Sealed — reach Player Level 7 to unlock this encounter.");
+      flashNotice(`The Fading Core is Sealed — reach Player Level ${bossUnlockLevel} to unlock this encounter.`);
       return;
     }
     if (!playable || !mode.route) {

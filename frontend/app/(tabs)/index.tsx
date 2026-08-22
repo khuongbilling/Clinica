@@ -467,8 +467,8 @@ export default function RunHome() {
   const atHeroCap    = heroLevel >= heroLvCap;
   const heroXpPct    = atHeroCap ? 1 : Math.min(1, heroXpBanked / heroXpNeeded);
 
-  const bossUnlocked = playerLevelInfo.level >= 7;
-  // World Events (Miasma Bloom) are later-game content — gated at Player Level 10.
+  const bossUnlocked = isFeatureUnlocked("boss", playerLevelInfo.level);
+  // World Events use the same canonical progression ladder as the Boss banner.
   const worldEventUnlocked = isFeatureUnlocked("world_event", playerLevelInfo.level);
 
   const scene = ARENA_SCENES[leadHero?.element ?? "River"] ?? FALLBACK_SCENE;

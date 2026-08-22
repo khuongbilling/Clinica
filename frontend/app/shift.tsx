@@ -19,7 +19,7 @@ import { ensureFreshDailyRounds, claimableCount, checkInAvailable } from "@/src/
 import { useTutorial } from "@/src/game/tutorialStore";
 import { useClearTutorialOnExit } from "@/src/hooks/useClearTutorialOnExit";
 import { useWebBackToHub } from "@/src/hooks/useWebBackToHub";
-import { isFeatureUnlocked, playerLevelFromXp, checkFeatureGate, type CompoundGateContext } from "@/src/game/progression";
+import { getFeatureUnlockLevel, isFeatureUnlocked, playerLevelFromXp, checkFeatureGate, type CompoundGateContext } from "@/src/game/progression";
 import {
   CLINICAL_CHALLENGE_MODES, ModeCardDef, nextComingSoonMode,
   UNIVERSITY_HUB_MODE, WARD_SHIFT_MODE, WELLNESS_MODES,
@@ -68,6 +68,7 @@ export default function ShiftPage() {
     && (player?.heroes_owned?.length ?? 0) < 2;
   const wardDefenseUnlocked = isFeatureUnlocked("ward_defense", playerLevel);
   const bossUnlocked        = isFeatureUnlocked("boss", playerLevel);
+  const bossUnlockLevel     = getFeatureUnlockLevel("boss");
 
   useEffect(() => {
     if (!player) return;
@@ -253,9 +254,9 @@ export default function ShiftPage() {
                 <BannerCard
                   key={m.id} mode={m} height={128}
                   locked={locked}
-                  lockLabel={locked ? "Unlocks at Level 9" : undefined}
+                  lockLabel={locked ? `Unlocks at Level ${bossUnlockLevel}` : undefined}
                   onPress={() => {
-                    if (locked) { flashNotice("Boss Encounters unlock at Player Level 9."); return; }
+                    if (locked) { flashNotice(`Boss Encounters unlock at Player Level ${bossUnlockLevel}.`); return; }
                     openIntro(m);
                   }}
                   testID={`mode-${m.id}`}
@@ -273,7 +274,7 @@ export default function ShiftPage() {
               <Ionicons name="skull" size={36} color={COLORS.onSurfaceTertiary} />
               <Text style={styles.lockedTabTitle}>Boss Encounters</Text>
               <Text style={styles.lockedTabSub}>
-                Unlocks at Player Level 9. Continue chapter progression and daily quests to reach this milestone.
+                Unlocks at Player Level {bossUnlockLevel}. Continue chapter progression and daily quests to reach this milestone.
               </Text>
             </View>
           ) : (

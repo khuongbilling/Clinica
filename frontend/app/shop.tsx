@@ -15,8 +15,7 @@ import { usePlayer } from "@/src/game/store";
 import { useTutorial } from "@/src/game/tutorialStore";
 import { useClearTutorialOnExit } from "@/src/hooks/useClearTutorialOnExit";
 import { SHOP_SECTIONS, ShopSectionDef } from "@/src/game/shopHub";
-import { buildGateContext, checkFeatureGate } from "@/src/game/progression";
-import { playerLevelFromXp } from "@/src/game/progression";
+import { buildGateContext, checkFeatureGate, getFeatureUnlockLevel, playerLevelFromXp } from "@/src/game/progression";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 import { UI } from "@/src/theme/ui";
 import { CURRENCIES } from "@/src/game/economy";
@@ -89,8 +88,8 @@ export default function Shop() {
     const featureLabels: Record<string, string> = {
       ward_defense: "Unlocks at Level 4 — Ward Defense",
       realm:        "Unlocks at Level 5 — Realm",
-      world_event:  "Unlocks at Level 7 — World Events",
-      boss:         "Unlocks at Level 9 — Boss Encounters",
+      world_event:  `Unlocks at Level ${getFeatureUnlockLevel("world_event")} — World Events`,
+      boss:         `Unlocks at Level ${getFeatureUnlockLevel("boss")} — Boss Encounters`,
     };
     return featureLabels[s.featureGate] ?? `Locked — ${r.reason ?? "keep progressing"}`;
   }

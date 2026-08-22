@@ -6,7 +6,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { PlayerHeader } from "@/src/components/PlayerHeader";
 import { usePlayer } from "@/src/game/store";
-import { playerLevelFromXp, isFeatureUnlocked, FEATURE_UNLOCKS } from "@/src/game/progression";
+import { getFeatureUnlockLevel, playerLevelFromXp, isFeatureUnlocked } from "@/src/game/progression";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 import { UI } from "@/src/theme/ui";
 
@@ -224,7 +224,7 @@ export default function CommunityBoardScreen() {
   }
 
   const level = player.player_level ?? playerLevelFromXp(player.xp ?? 0).level;
-  const worldEventLevel = FEATURE_UNLOCKS.find((f) => f.id === "world_event")?.level ?? 7;
+  const worldEventLevel = getFeatureUnlockLevel("world_event");
   const active = isFeatureUnlocked("world_event", level);
   const pts    = getCommunityPoints(player);
   const nextMs = REWARD_MILESTONES.find((m) => pts < m.pts);

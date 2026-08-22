@@ -121,8 +121,18 @@ export const FEATURE_UNLOCKS: FeatureUnlock[] = [
   { id: 'advanced_sims',    label: 'Advanced Simulations',               level: 25 },
 ];
 
+/** Returns the canonical unlock definition for a feature, when it is level-gated. */
+export function getFeatureUnlock(id: string): FeatureUnlock | undefined {
+  return FEATURE_UNLOCKS.find((feature) => feature.id === id);
+}
+
+/** Returns the one canonical Player Level required for a feature. */
+export function getFeatureUnlockLevel(id: string): number {
+  return getFeatureUnlock(id)?.level ?? 1;
+}
+
 export function isFeatureUnlocked(id: string, level: number): boolean {
-  const f = FEATURE_UNLOCKS.find((x) => x.id === id);
+  const f = getFeatureUnlock(id);
   if (!f) return true;
   return level >= f.level;
 }
@@ -152,8 +162,7 @@ export interface GateResult {
 
 export function checkFeatureGate(id: string, ctx: CompoundGateContext): GateResult {
   const levelOk = isFeatureUnlocked(id, ctx.level);
-  const f = FEATURE_UNLOCKS.find((x) => x.id === id);
-  const needLevel = f ? f.level : 1;
+  const needLevel = getFeatureUnlockLevel(id);
   if (!levelOk) {
     // P23: action-oriented reason strings — tell the player what to DO, not
     // just what level to reach.
