@@ -1278,11 +1278,142 @@ CLINICAL_SIMULATION_MANIFESTS: Dict[str, Dict[str, Any]] = {
         },
         "initial": {"stability": 58, "oxygenation": 44, "perfusion": 70, "concern": "Recurrent airway distress", "acuity": "high", "hiddenFindings": ["work-of-breathing"], "complications": [], "interventionCount": 0},
         "known": [{"id": "work-of-breathing", "label": "Work of breathing", "value": "She cannot finish a sentence without pausing.", "discoveredAt": "reveal"}],
-        "objectives": {"assess-recurrence": 20, "support-airway": 25, "reassess-response": 20, "adapt-plan": 35},
+        "objectives": {"assess-recurrence": 25, "support-airway": 45, "reassess-response": 20, "adapt-plan": 10},
         "complication": {"id": "recurrent-wheeze", "trigger": "reassess-airway", "prevent": "support-airway-focused", "resolve": "adapt-airway-plan", "announcement": "The wheeze returns — reassess and adapt."},
         "principle": "Safe care is a loop: assess, support, reassess, and adapt.",
     },
 }
+
+# Reviewed catalog expansion. These records intentionally mirror the public
+# presentation manifests in frontend/src/game/clinicalSimulation.ts, while
+# retaining the official action/effect contract on the server.
+CLINICAL_SIMULATION_MANIFESTS.update({
+    "sim-airway-breathless-walk": {
+        "version": 1, "family": "airway-change", "domain": "airway", "difficulty": "standard", "style": "focused", "title": "The Breathless Walk",
+        "actions": {
+            "assess-exertional-breathing": {"group": "assess", "beats": ["assess"], "reveal": ["walking-spo2"], "objectives": ["assess-exertion"], "announcement": "Activity exposes a clinically important oxygenation trend."},
+            "support-exertional-breathing": {"group": "support", "beats": ["prioritize", "intervene"], "delta": {"stability": 16, "oxygenation": 24}, "objectives": ["support-exertion"], "announcement": "Breathing support and rest improve the exertional response."},
+            "continue-walk": {"group": "treat", "beats": ["prioritize", "intervene"], "delta": {"stability": -20, "oxygenation": -18}, "unsafe": True, "announcement": "Continuing activity worsens the breathing change."},
+            "reassess-exertional-breathing": {"group": "reassess", "beats": ["reassess"], "objectives": ["reassess-exertion"], "announcement": "A repeat check confirms whether the patient has recovered safely."},
+            "escalate-exertional-trend": {"group": "escalate", "beats": ["prioritize"], "objectives": ["support-exertion"], "announcement": "The exertional decline is communicated for further review."},
+        },
+        "initial": {"stability": 64, "oxygenation": 55, "perfusion": 72, "concern": "Exertional breathing change", "acuity": "high", "hiddenFindings": ["walking-spo2"], "complications": [], "interventionCount": 0},
+        "known": [{"id": "walking-spo2", "label": "Exertional oxygen trend", "value": "Her SpO₂ falls to 87% while walking and recovers slowly at rest.", "discoveredAt": "reveal"}],
+        "objectives": {"assess-exertion": 25, "support-exertion": 45, "reassess-exertion": 30},
+        "principle": "Compare activity tolerance with the resting picture and respond to the trend.",
+    },
+    "sim-perfusion-cool-hand": {
+        "version": 1, "family": "perfusion-hidden", "domain": "assessment", "difficulty": "introductory", "style": "guided", "title": "The Cool Hand",
+        "actions": {
+            "assess-cool-hand": {"group": "assess", "beats": ["assess"], "reveal": ["capillary-refill"], "objectives": ["assess-cool-hand"], "announcement": "The bedside assessment confirms a meaningful perfusion clue."},
+            "support-cool-hand": {"group": "support", "beats": ["prioritize", "intervene"], "delta": {"stability": 14, "perfusion": 26}, "objectives": ["support-cool-hand"], "announcement": "Circulatory support begins while the concern is communicated."},
+            "ignore-cool-hand": {"group": "treat", "beats": ["prioritize", "intervene"], "delta": {"stability": -18, "perfusion": -18}, "unsafe": True, "announcement": "The perfusion clue is missed while the patient worsens."},
+            "reassess-cool-hand": {"group": "reassess", "beats": ["reassess"], "objectives": ["reassess-cool-hand"], "announcement": "A repeat assessment checks whether circulation is improving."},
+            "escalate-cool-hand": {"group": "escalate", "beats": ["prioritize"], "objectives": ["support-cool-hand"], "announcement": "The circulation concern is handed off clearly."},
+        },
+        "initial": {"stability": 66, "oxygenation": 78, "perfusion": 48, "concern": "Possible reduced perfusion", "acuity": "moderate", "hiddenFindings": ["capillary-refill"], "complications": [], "interventionCount": 0},
+        "known": [{"id": "capillary-refill", "label": "Capillary refill", "value": "Capillary refill is delayed and the cool hand remains pale.", "discoveredAt": "reveal"}],
+        "objectives": {"assess-cool-hand": 25, "support-cool-hand": 45, "reassess-cool-hand": 30},
+        "principle": "Simple bedside findings can reveal a circulation problem before a monitor changes.",
+    },
+    "sim-perfusion-reassuring-monitor": {
+        "version": 1, "family": "perfusion-hidden", "domain": "assessment", "difficulty": "advanced", "style": "focused", "title": "The Reassuring Monitor",
+        "actions": {
+            "assess-monitor-context": {"group": "assess", "beats": ["assess"], "reveal": ["mental-status-trend"], "objectives": ["assess-monitor-context"], "announcement": "The bedside trend confirms that the monitor is not the whole picture."},
+            "support-monitor-context": {"group": "support", "beats": ["prioritize", "intervene"], "delta": {"stability": 24, "perfusion": 28}, "objectives": ["support-monitor-context"], "announcement": "Support begins while the deterioration is escalated."},
+            "anchor-on-monitor": {"group": "treat", "beats": ["prioritize", "intervene"], "delta": {"stability": -24, "perfusion": -20}, "unsafe": True, "announcement": "Anchoring on one value delays a response to deterioration."},
+            "reassess-monitor-context": {"group": "reassess", "beats": ["reassess"], "objectives": ["reassess-monitor-context"], "announcement": "A repeat check tests whether the patient is responding to support."},
+            "adapt-monitor-context": {"group": "escalate", "beats": ["adaptation"], "delta": {"stability": 10}, "objectives": ["adapt-monitor-context"], "announcement": "The changed response is communicated and the plan is adapted."},
+        },
+        "initial": {"stability": 54, "oxygenation": 74, "perfusion": 44, "concern": "Deterioration despite a reassuring monitor", "acuity": "high", "hiddenFindings": ["mental-status-trend"], "complications": [], "interventionCount": 0},
+        "known": [{"id": "mental-status-trend", "label": "Mental status trend", "value": "Her responses have slowed over the last 20 minutes.", "discoveredAt": "reveal"}],
+        "objectives": {"assess-monitor-context": 30, "support-monitor-context": 40, "reassess-monitor-context": 20, "adapt-monitor-context": 10},
+        "complication": {"id": "slower-responses", "trigger": "reassess-monitor-context", "prevent": "support-monitor-context", "resolve": "adapt-monitor-context", "announcement": "Her responses slow further — reassess and adapt."},
+        "principle": "Reassess the whole patient when the bedside picture and a monitor value conflict.",
+    },
+    "sim-stabilization-first-response": {
+        "version": 1, "family": "stabilization-sequence", "domain": "stabilization", "difficulty": "introductory", "style": "guided", "title": "The First Response",
+        "actions": {
+            "assess-first-response": {"group": "assess", "beats": ["assess"], "reveal": ["orthostatic-symptoms"], "objectives": ["assess-first-response"], "announcement": "The position change helps explain the immediate instability."},
+            "stabilize-first-response": {"group": "support", "beats": ["prioritize", "intervene"], "delta": {"stability": 26, "perfusion": 18}, "objectives": ["stabilize-first-response"], "announcement": "Safety measures and support help the patient recover."},
+            "rush-first-response": {"group": "treat", "beats": ["prioritize", "intervene"], "delta": {"stability": -24, "perfusion": -14}, "unsafe": True, "announcement": "The unsafe activity worsens his instability."},
+            "reassess-first-response": {"group": "reassess", "beats": ["reassess"], "objectives": ["reassess-first-response"], "announcement": "A repeat check confirms whether it is safe to continue care."},
+        },
+        "initial": {"stability": 62, "oxygenation": 80, "perfusion": 54, "concern": "Acute faintness and instability", "acuity": "moderate", "hiddenFindings": ["orthostatic-symptoms"], "complications": [], "interventionCount": 0},
+        "known": [{"id": "orthostatic-symptoms", "label": "Position change", "value": "Symptoms began immediately after standing and improve when he lies back.", "discoveredAt": "reveal"}],
+        "objectives": {"assess-first-response": 25, "stabilize-first-response": 45, "reassess-first-response": 30},
+        "principle": "Start with safety, support the immediate concern, then verify the response.",
+    },
+    "sim-stabilization-repeat-check": {
+        "version": 1, "family": "stabilization-sequence", "domain": "stabilization", "difficulty": "standard", "style": "focused", "title": "The Repeat Check",
+        "actions": {
+            "assess-repeat-check": {"group": "assess", "beats": ["assess"], "reveal": ["persistent-dizziness"], "objectives": ["assess-repeat-check"], "announcement": "The symptom returns with position change, showing the response is incomplete."},
+            "stabilize-repeat-check": {"group": "support", "beats": ["prioritize", "intervene"], "delta": {"stability": 24, "perfusion": 18}, "objectives": ["stabilize-repeat-check"], "announcement": "Continued support reduces the immediate safety risk."},
+            "skip-repeat-check": {"group": "treat", "beats": ["prioritize", "intervene"], "delta": {"stability": -18, "perfusion": -14}, "unsafe": True, "announcement": "Moving on without reassessment misses the ongoing safety risk."},
+            "reassess-repeat-check": {"group": "reassess", "beats": ["reassess"], "objectives": ["reassess-repeat-check"], "announcement": "A repeat check confirms whether the support plan is working."},
+        },
+        "initial": {"stability": 60, "oxygenation": 79, "perfusion": 56, "concern": "Incomplete response after support", "acuity": "moderate", "hiddenFindings": ["persistent-dizziness"], "complications": [], "interventionCount": 0},
+        "known": [{"id": "persistent-dizziness", "label": "Ongoing symptom", "value": "Her dizziness returns as soon as she changes position.", "discoveredAt": "reveal"}],
+        "objectives": {"assess-repeat-check": 25, "stabilize-repeat-check": 45, "reassess-repeat-check": 30},
+        "principle": "Stabilization includes reassessment; a partial response is still information.",
+    },
+    "sim-stabilization-plan-slips": {
+        "version": 1, "family": "stabilization-sequence", "domain": "stabilization", "difficulty": "advanced", "style": "transfer", "title": "When the Plan Slips",
+        "actions": {
+            "assess-plan-slips": {"group": "assess", "beats": ["assess"], "reveal": ["recurrent-unsteadiness"], "objectives": ["assess-plan-slips"], "announcement": "The recurrence shows the first improvement was not a complete resolution."},
+            "stabilize-plan-slips": {"group": "support", "beats": ["prioritize", "intervene"], "delta": {"stability": 25, "perfusion": 22}, "objectives": ["stabilize-plan-slips"], "announcement": "Focused support addresses the immediate safety concern."},
+            "minimize-plan-slips": {"group": "treat", "beats": ["prioritize", "intervene"], "delta": {"stability": -26, "perfusion": -16}, "unsafe": True, "announcement": "The recurring instability creates an avoidable safety event."},
+            "reassess-plan-slips": {"group": "reassess", "beats": ["reassess"], "objectives": ["reassess-plan-slips"], "announcement": "The reassessment identifies whether the patient is truly ready to progress."},
+            "adapt-plan-slips": {"group": "escalate", "beats": ["adaptation"], "delta": {"stability": 12}, "objectives": ["adapt-plan-slips"], "announcement": "The changing pattern is communicated and the support plan is adapted."},
+        },
+        "initial": {"stability": 56, "oxygenation": 77, "perfusion": 50, "concern": "Recurring instability", "acuity": "high", "hiddenFindings": ["recurrent-unsteadiness"], "complications": [], "interventionCount": 0},
+        "known": [{"id": "recurrent-unsteadiness", "label": "Repeat change", "value": "The unsteadiness returns after the first apparent improvement.", "discoveredAt": "reveal"}],
+        "objectives": {"assess-plan-slips": 30, "stabilize-plan-slips": 40, "reassess-plan-slips": 20, "adapt-plan-slips": 10},
+        "complication": {"id": "repeat-instability", "trigger": "reassess-plan-slips", "prevent": "stabilize-plan-slips", "resolve": "adapt-plan-slips", "announcement": "The unsteadiness returns — adapt the safety plan."},
+        "principle": "A recurring problem is a cue to reassess and adapt, not simply repeat the first plan.",
+    },
+    "sim-systems-handoff-detail": {
+        "version": 1, "family": "systems-handoff", "domain": "systems", "difficulty": "introductory", "style": "guided", "title": "The Handoff Detail",
+        "actions": {
+            "assess-handoff-detail": {"group": "assess", "beats": ["assess"], "reveal": ["medication-timing"], "objectives": ["assess-handoff-detail"], "announcement": "The timing links the new symptom to information the next team needs."},
+            "support-handoff-detail": {"group": "support", "beats": ["prioritize", "intervene"], "delta": {"stability": 18, "perfusion": 10}, "objectives": ["support-handoff-detail"], "announcement": "A clear handoff keeps the current concern visible during transfer."},
+            "omit-handoff-detail": {"group": "treat", "beats": ["prioritize", "intervene"], "delta": {"stability": -18}, "unsafe": True, "announcement": "The missing detail leaves the receiving team without a relevant warning."},
+            "reassess-handoff-detail": {"group": "reassess", "beats": ["reassess"], "objectives": ["reassess-handoff-detail"], "announcement": "A closed-loop check confirms the concern was understood."},
+        },
+        "initial": {"stability": 68, "oxygenation": 82, "perfusion": 62, "concern": "Transfer with a recent clinical change", "acuity": "moderate", "hiddenFindings": ["medication-timing"], "complications": [], "interventionCount": 0},
+        "known": [{"id": "medication-timing", "label": "Medication timing", "value": "Symptoms began shortly after the new medication was given.", "discoveredAt": "reveal"}],
+        "objectives": {"assess-handoff-detail": 25, "support-handoff-detail": 45, "reassess-handoff-detail": 30},
+        "principle": "A safe handoff carries forward the change, current concern, and next check.",
+    },
+    "sim-systems-delayed-escalation": {
+        "version": 1, "family": "systems-handoff", "domain": "systems", "difficulty": "standard", "style": "focused", "title": "The Delayed Escalation",
+        "actions": {
+            "assess-delayed-escalation": {"group": "assess", "beats": ["assess"], "reveal": ["baseline-comparison"], "objectives": ["assess-delayed-escalation"], "announcement": "The baseline comparison confirms a significant change in status."},
+            "support-delayed-escalation": {"group": "support", "beats": ["prioritize", "intervene"], "delta": {"stability": 20, "perfusion": 12}, "objectives": ["support-delayed-escalation"], "announcement": "The change is documented and shared so the response can begin."},
+            "delay-delayed-escalation": {"group": "treat", "beats": ["prioritize", "intervene"], "delta": {"stability": -22, "perfusion": -12}, "unsafe": True, "announcement": "Waiting delays attention to a significant change in status."},
+            "reassess-delayed-escalation": {"group": "reassess", "beats": ["reassess"], "objectives": ["reassess-delayed-escalation"], "announcement": "A follow-up check confirms whether the coordinated response is helping."},
+        },
+        "initial": {"stability": 58, "oxygenation": 76, "perfusion": 57, "concern": "Uncommunicated change in mental status", "acuity": "high", "hiddenFindings": ["baseline-comparison"], "complications": [], "interventionCount": 0},
+        "known": [{"id": "baseline-comparison", "label": "Baseline comparison", "value": "He was oriented at shift start and is now unsure where he is.", "discoveredAt": "reveal"}],
+        "objectives": {"assess-delayed-escalation": 25, "support-delayed-escalation": 45, "reassess-delayed-escalation": 30},
+        "principle": "Shared observations become safe care only when they are documented, escalated, and followed through.",
+    },
+    "sim-systems-across-teams": {
+        "version": 1, "family": "systems-handoff", "domain": "systems", "difficulty": "advanced", "style": "transfer", "title": "Across the Teams",
+        "actions": {
+            "assess-across-teams": {"group": "assess", "beats": ["assess"], "reveal": ["unresolved-order"], "objectives": ["assess-across-teams"], "announcement": "The assessment identifies a time-sensitive task without a clear owner."},
+            "support-across-teams": {"group": "support", "beats": ["prioritize", "intervene"], "delta": {"stability": 26, "perfusion": 20}, "objectives": ["support-across-teams"], "announcement": "The immediate plan is coordinated with a named next action."},
+            "assume-across-teams": {"group": "treat", "beats": ["prioritize", "intervene"], "delta": {"stability": -25, "perfusion": -18}, "unsafe": True, "announcement": "The unowned task delays a response to deterioration."},
+            "reassess-across-teams": {"group": "reassess", "beats": ["reassess"], "objectives": ["reassess-across-teams"], "announcement": "The follow-up confirms whether the time-sensitive plan is being carried forward."},
+            "adapt-across-teams": {"group": "escalate", "beats": ["adaptation"], "delta": {"stability": 12}, "objectives": ["adapt-across-teams"], "announcement": "The changing situation is escalated through one coordinated pathway."},
+        },
+        "initial": {"stability": 52, "oxygenation": 75, "perfusion": 49, "concern": "Deterioration across a care transition", "acuity": "high", "hiddenFindings": ["unresolved-order"], "complications": [], "interventionCount": 0},
+        "known": [{"id": "unresolved-order", "label": "Unresolved order", "value": "A time-sensitive reassessment order has not yet been acknowledged by the receiving team.", "discoveredAt": "reveal"}],
+        "objectives": {"assess-across-teams": 30, "support-across-teams": 40, "reassess-across-teams": 20, "adapt-across-teams": 10},
+        "complication": {"id": "handoff-gap", "trigger": "reassess-across-teams", "prevent": "support-across-teams", "resolve": "adapt-across-teams", "announcement": "The reassessment order was missed — unify the response."},
+        "principle": "Across team boundaries, safe care requires a named owner, a shared next action, and a closed-loop check.",
+    },
+})
 CLINICAL_SIMULATION_ADVANCED_LEVEL_GATE = 25
 
 

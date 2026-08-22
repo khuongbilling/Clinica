@@ -40,6 +40,59 @@ const fixedB = createSimulationAttempt(quiet, 'branch-b', config, 9876);
 assert(fixedA.branchId === fixedB.branchId && fixedA.branchId === seededBranch(9876, quiet.variantFamilyId), 'fixed seeds preserve a branch across resume/retry');
 assert(JSON.stringify(fixedA.patient) === JSON.stringify(fixedB.patient), 'attempt initialization does not depend on wall clock');
 
+const expectedFamilies = new Map([
+  ['airway-change', 3],
+  ['perfusion-hidden', 3],
+  ['stabilization-sequence', 3],
+  ['systems-handoff', 3],
+]);
+assert(CLINICAL_SIMULATIONS.length === 12, 'the reviewed Push 2 catalog contains twelve cases');
+assert(new Set(CLINICAL_SIMULATIONS.map((simulation) => simulation.id)).size === CLINICAL_SIMULATIONS.length, 'every reviewed simulation id is unique');
+for (const [familyId, expectedCount] of expectedFamilies) {
+  assert(
+    CLINICAL_SIMULATIONS.filter((simulation) => simulation.variantFamilyId === familyId).length === expectedCount,
+    `${familyId} has three reviewed deterministic variations`,
+  );
+}
+
+for (const simulation of CLINICAL_SIMULATIONS) {
+  assert(simulation.reviewed && simulation.version === 1, `${simulation.id} is a versioned reviewed case`);
+  assert(simulation.actions.some((action) => action.group === 'assess'), `${simulation.id} has an assessment action`);
+  assert(simulation.actions.some((action) => action.group === 'reassess'), `${simulation.id} has a reassessment action`);
+  assert(simulation.actions.some((action) => action.unsafe), `${simulation.id} has an authored unsafe path`);
+
+  const caseConfig = {
+    difficulty: simulation.difficulty,
+    style: simulation.style,
+    assistance: 'coach' as const,
+    complicationId: simulation.complications[0]?.id,
+  };
+  let safePath = createSimulationAttempt(simulation, `${simulation.id}-safe`, caseConfig, 24680);
+  safePath = { ...safePath, beat: 'assess' };
+  while (safePath.status === 'active') {
+    const legal = simulation.actions.filter((action) => action.beats.includes(safePath.beat) && !safePath.actionIds.includes(action.id) && !action.unsafe);
+    const chosen = legal.find((action) => action.group === 'support') ?? legal[0];
+    assert(chosen, `${simulation.id} exposes a safe action during ${safePath.beat}`);
+    safePath = applySimulationAction(safePath, simulation, chosen.id);
+  }
+  const safeCaseDebrief = evaluateSimulation(simulation, safePath);
+  assert(safeCaseDebrief.outcome === 'stabilized' && safeCaseDebrief.safety === 'safe', `${simulation.id} safe path stabilizes the patient`);
+
+  let unsafePath = createSimulationAttempt(simulation, `${simulation.id}-unsafe`, caseConfig, 24680);
+  unsafePath = { ...unsafePath, beat: 'assess' };
+  let unsafeAction = simulation.actions.find((action) => action.unsafe && action.beats.includes(unsafePath.beat));
+  while (!unsafeAction && unsafePath.status === 'active') {
+    const legal = simulation.actions.filter((action) => action.beats.includes(unsafePath.beat) && !unsafePath.actionIds.includes(action.id) && !action.unsafe);
+    const chosen = legal.find((action) => action.group === 'support') ?? legal[0];
+    assert(chosen, `${simulation.id} can advance to its authored unsafe choice`);
+    unsafePath = applySimulationAction(unsafePath, simulation, chosen.id);
+    unsafeAction = simulation.actions.find((action) => action.unsafe && action.beats.includes(unsafePath.beat));
+  }
+  assert(unsafeAction, `${simulation.id} unsafe option is legal after assessment`);
+  unsafePath = applySimulationAction(unsafePath, simulation, unsafeAction.id);
+  assert(unsafePath.safety === 'unsafe', `${simulation.id} unsafe route records a permanent safety concern`);
+}
+
 let advanced = CLINICAL_SIMULATIONS.find((simulation) => simulation.id === 'sim-adaptive-airway')!;
 let complication = createSimulationAttempt(advanced, 'complication-attempt', {
   difficulty: advanced.difficulty, style: advanced.style, assistance: 'coach', complicationId: 'recurrent-wheeze',
