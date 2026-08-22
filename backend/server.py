@@ -1414,6 +1414,49 @@ CLINICAL_SIMULATION_MANIFESTS.update({
         "principle": "Across team boundaries, safe care requires a named owner, a shared next action, and a closed-loop check.",
     },
 })
+
+
+def reviewed_core_simulation(
+    simulation_id: str, family: str, title: str, domain: str, difficulty: str, style: str,
+    initial: Dict[str, Any], finding_label: str, finding_value: str, focus: str,
+    support_label: str, safe_delta: Dict[str, int], principle: str,
+) -> Dict[str, Any]:
+    """Build the fixed reviewed assess → support → reassess variation contract."""
+    finding_id = f"{simulation_id}-finding"
+    return {
+        "version": 1, "family": family, "domain": domain, "difficulty": difficulty, "style": style, "title": title,
+        "actions": {
+            f"{simulation_id}-assess": {"group": "assess", "beats": ["assess"], "reveal": [finding_id], "objectives": [f"{simulation_id}-assessed"], "announcement": f"Assessment reveals the key {focus} change."},
+            f"{simulation_id}-support": {"group": "support", "beats": ["prioritize", "intervene"], "delta": safe_delta, "objectives": [f"{simulation_id}-supported"], "announcement": f"{support_label} improves the immediate concern."},
+            f"{simulation_id}-unsafe": {"group": "treat", "beats": ["prioritize", "intervene"], "delta": {"stability": -20}, "unsafe": True, "announcement": "The concern is deferred and the patient deteriorates."},
+            f"{simulation_id}-reassess": {"group": "reassess", "beats": ["reassess"], "objectives": [f"{simulation_id}-reassessed"], "announcement": "A repeat assessment confirms whether the response is working."},
+        },
+        "initial": {**initial, "hiddenFindings": [finding_id], "complications": [], "interventionCount": 0},
+        "known": [{"id": finding_id, "label": finding_label, "value": finding_value, "discoveredAt": "reveal"}],
+        "objectives": {f"{simulation_id}-assessed": 25, f"{simulation_id}-supported": 35, f"{simulation_id}-reassessed": 40},
+        "principle": principle,
+    }
+
+
+# Completes the reviewed 24-case catalog without duplicating the incoming
+# bespoke airway, perfusion, stabilization, and systems families above.
+CORE_SIMULATION_VARIATIONS = (
+    ("sim-assessment-new-confusion", "deterioration-recognition", "The Different Answer", "assessment", "introductory", "guided", {"stability": 63, "oxygenation": 70, "perfusion": 66, "concern": "New confusion", "acuity": "moderate"}, "Baseline comparison", "Family confirms this level of confusion is new today.", "mental-status change", "Protect safety and escalate the new change", {"stability": 18, "perfusion": 12}, "Compare behavior to baseline; a new mental-status change requires attention."),
+    ("sim-assessment-fever-trend", "deterioration-recognition", "The Rising Line", "assessment", "standard", "transfer", {"stability": 61, "oxygenation": 74, "perfusion": 58, "concern": "Rising temperature trend", "acuity": "moderate"}, "Temperature trend", "Temperature has risen at three consecutive observations.", "temperature trend", "Support comfort and escalate the trend", {"stability": 19, "perfusion": 14}, "Trend recognition prevents a changing condition from being hidden by one familiar number."),
+    ("sim-assessment-post-op-pain", "deterioration-recognition", "Pain That Changed", "judgment", "advanced", "focused", {"stability": 58, "oxygenation": 76, "perfusion": 57, "concern": "Changing postoperative pain", "acuity": "high"}, "Pain pattern", "The pain is new in location and does not match the earlier pattern.", "new pain pattern", "Support comfort and urgently communicate the change", {"stability": 20, "perfusion": 16}, "A changing symptom pattern calls for reassessment and escalation, not autopilot."),
+    ("sim-medication-identity", "medication-safety", "The Name Mismatch", "pharmacology", "introductory", "guided", {"stability": 72, "oxygenation": 82, "perfusion": 76, "concern": "Medication identity mismatch", "acuity": "low"}, "Identity check", "The second identifier does not match the prepared record.", "medication identity", "Pause the medication and verify identity", {"stability": 12, "perfusion": 10}, "A mismatch is a stop signal: verify before proceeding."),
+    ("sim-medication-renal-dose", "medication-safety", "The Changed Clearance", "pharmacology", "standard", "focused", {"stability": 66, "oxygenation": 80, "perfusion": 62, "concern": "Medication context changed", "acuity": "moderate"}, "New context", "A new result changes the safety context for the scheduled medication.", "medication safety context", "Hold and clarify the changed medication plan", {"stability": 16, "perfusion": 18}, "Medication safety depends on the current patient context, not only the routine schedule."),
+    ("sim-medication-sedation-check", "medication-safety", "Before the Next Dose", "pharmacology", "advanced", "transfer", {"stability": 57, "oxygenation": 58, "perfusion": 68, "concern": "Increasing drowsiness", "acuity": "high"}, "Sedation trend", "He needs repeated prompting to stay awake during conversation.", "sedation change", "Pause, support breathing, and escalate review", {"stability": 22, "oxygenation": 25}, "A new sedation change is a reason to pause, assess, and communicate before another dose."),
+    ("sim-judgment-prioritize-fall", "escalation-handoff", "The Unsteady Call", "judgment", "introductory", "guided", {"stability": 65, "oxygenation": 80, "perfusion": 57, "concern": "Immediate fall risk", "acuity": "moderate"}, "Mobility change", "He is more unsteady than during the earlier assisted walk.", "fall-risk change", "Protect safety and communicate the mobility change", {"stability": 18, "perfusion": 20}, "A changing mobility risk requires immediate protection and a shared plan."),
+    ("sim-judgment-call-rapid-response", "escalation-handoff", "The Whole Picture", "judgment", "standard", "focused", {"stability": 50, "oxygenation": 51, "perfusion": 55, "concern": "Multiple worsening cues", "acuity": "critical"}, "Combined trend", "Breathing, responsiveness, and circulation cues are worsening together.", "combined deterioration", "Start support and call for urgent review", {"stability": 30, "oxygenation": 29, "perfusion": 17}, "Escalate when the whole pattern signals deterioration, even if each cue alone seems modest."),
+    ("sim-judgment-change-plan", "escalation-handoff", "When the Plan Stops Working", "judgment", "advanced", "transfer", {"stability": 55, "oxygenation": 59, "perfusion": 60, "concern": "Incomplete response", "acuity": "high"}, "Response check", "The expected improvement has not appeared at reassessment.", "incomplete response", "Adapt support and communicate the failed response", {"stability": 27, "oxygenation": 25, "perfusion": 17}, "Reassessment changes the plan when the first response is incomplete."),
+    ("sim-sepsis-subtle-trend", "sepsis-pattern", "The Subtle Shift", "assessment", "introductory", "guided", {"stability": 60, "oxygenation": 72, "perfusion": 56, "concern": "Possible infection trend", "acuity": "moderate"}, "Clustered changes", "Several small changes have appeared together since the earlier assessment.", "clustered infection cues", "Support the patient and communicate the trend", {"stability": 20, "perfusion": 25}, "Clustered changes deserve assessment and escalation before they become a crisis."),
+    ("sim-sepsis-source-control", "sepsis-pattern", "The New Drainage", "assessment", "standard", "transfer", {"stability": 57, "oxygenation": 74, "perfusion": 53, "concern": "New local and systemic cues", "acuity": "high"}, "New local finding", "The drainage is new and accompanies a broader change in how she feels.", "new drainage finding", "Support the patient and escalate the new finding", {"stability": 24, "perfusion": 29}, "Link local changes with the patient’s overall trend instead of treating them in isolation."),
+    ("sim-sepsis-escalation", "sepsis-pattern", "The Escalation Window", "judgment", "advanced", "focused", {"stability": 49, "oxygenation": 66, "perfusion": 42, "concern": "Escalating systemic concern", "acuity": "critical"}, "Escalation pattern", "Output, responsiveness, and overall appearance have worsened together.", "escalation pattern", "Begin support and escalate urgent review", {"stability": 32, "oxygenation": 20, "perfusion": 34}, "Escalate early when multiple worsening cues point to a changing systemic condition."),
+)
+for _core_variation in CORE_SIMULATION_VARIATIONS:
+    CLINICAL_SIMULATION_MANIFESTS[_core_variation[0]] = reviewed_core_simulation(*_core_variation)
+
 CLINICAL_SIMULATION_ADVANCED_LEVEL_GATE = 25
 
 

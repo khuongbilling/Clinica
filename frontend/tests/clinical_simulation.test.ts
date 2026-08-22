@@ -2,6 +2,7 @@ import {
   applySimulationAction,
   CLINICAL_SIMULATIONS,
   createSimulationAttempt,
+  EXPANDED_SIMULATION_IDS,
   evaluateSimulation,
   seededBranch,
 } from '../src/game/clinicalSimulation';
@@ -45,8 +46,12 @@ const expectedFamilies = new Map([
   ['perfusion-hidden', 3],
   ['stabilization-sequence', 3],
   ['systems-handoff', 3],
+  ['deterioration-recognition', 3],
+  ['medication-safety', 3],
+  ['escalation-handoff', 3],
+  ['sepsis-pattern', 3],
 ]);
-assert(CLINICAL_SIMULATIONS.length === 12, 'the reviewed Push 2 catalog contains twelve cases');
+assert(CLINICAL_SIMULATIONS.length === 24, 'the reviewed catalog contains the planned 24 core cases');
 assert(new Set(CLINICAL_SIMULATIONS.map((simulation) => simulation.id)).size === CLINICAL_SIMULATIONS.length, 'every reviewed simulation id is unique');
 for (const [familyId, expectedCount] of expectedFamilies) {
   assert(
@@ -107,6 +112,51 @@ assert(complication.complicationTriggered && complication.beat === 'adaptation',
 complication = applySimulationAction(complication, advanced, 'adapt-airway-plan');
 assert(complication.status === 'completed', 'the authored adaptation resolves the complication route');
 
+assert(CLINICAL_SIMULATIONS.length === 24, 'the reviewed early catalog contains all 24 core simulations');
+const families = new Map<string, number>();
+for (const simulation of CLINICAL_SIMULATIONS) {
+  families.set(simulation.variantFamilyId, (families.get(simulation.variantFamilyId) ?? 0) + 1);
+  assert(simulation.reviewed, `${simulation.id} is explicitly reviewed`);
+  assert(simulation.actions.some((action) => action.unsafe), `${simulation.id} includes an authored unsafe route`);
+}
+assert(families.size === 8, 'the catalog groups transfer practice into eight core families');
+for (const [family, count] of families) {
+  assert(count >= 2 && count <= 3, `${family} has two or three deterministic variations`);
+}
+for (const domain of ['airway', 'assessment', 'stabilization', 'pharmacology', 'judgment', 'systems']) {
+  assert(CLINICAL_SIMULATIONS.some((simulation) => simulation.domain === domain), `${domain} has reviewed coverage`);
+}
+for (const style of ['guided', 'focused', 'transfer']) {
+  assert(CLINICAL_SIMULATIONS.some((simulation) => simulation.style === style), `${style} has reviewed coverage`);
+}
+
+for (const simulationId of EXPANDED_SIMULATION_IDS) {
+  const simulation = CLINICAL_SIMULATIONS.find((candidate) => candidate.id === simulationId);
+  assert(simulation, `${simulationId} is registered in the reviewed catalog`);
+  const caseConfig = {
+    difficulty: simulation.difficulty,
+    style: simulation.style,
+    assistance: 'coach' as const,
+  };
+  const actionFor = (group: 'assess' | 'support' | 'reassess' | 'treat') =>
+    simulation.actions.find((action) => action.group === group)!;
+
+  let caseSafe = createSimulationAttempt(simulation, `${simulationId}-safe`, caseConfig, 4001);
+  caseSafe = { ...caseSafe, beat: 'assess' };
+  caseSafe = applySimulationAction(caseSafe, simulation, actionFor('assess').id);
+  assert(caseSafe.known.length === 1 && caseSafe.patient.hiddenFindings.length === 0, `${simulationId} reveals only its authored finding`);
+  caseSafe = applySimulationAction(caseSafe, simulation, actionFor('support').id);
+  caseSafe = applySimulationAction(caseSafe, simulation, actionFor('reassess').id);
+  const caseDebrief = evaluateSimulation(simulation, caseSafe);
+  assert(caseSafe.status === 'completed' && caseDebrief.outcome === 'stabilized', `${simulationId} safe path reaches a stable outcome`);
+
+  let caseUnsafe = createSimulationAttempt(simulation, `${simulationId}-unsafe`, caseConfig, 4001);
+  caseUnsafe = { ...caseUnsafe, beat: 'assess' };
+  caseUnsafe = applySimulationAction(caseUnsafe, simulation, actionFor('assess').id);
+  caseUnsafe = applySimulationAction(caseUnsafe, simulation, actionFor('treat').id);
+  assert(caseUnsafe.safety === 'unsafe' && caseUnsafe.patient.stability < simulation.initialState.stability, `${simulationId} unsafe path stays visibly unsafe`);
+}
+
 for (const legacySimulation of SIMULATIONS) {
   assert(resolveSimulationRoute(legacySimulation.id) === 'legacy', `${legacySimulation.id} preserves the legacy Department completion flow`);
 }
@@ -115,4 +165,4 @@ for (const clinicalSimulation of CLINICAL_SIMULATIONS) {
 }
 assert(resolveSimulationRoute('missing-simulation') === 'unknown', 'unknown IDs never fall back to a different simulation');
 
-console.log('clinical_simulation: deterministic state, route ownership, hidden data, safety, branch identity, and completion passed');
+console.log('clinical_simulation: deterministic state, 24 reviewed cases, safe/unsafe paths, route ownership, hidden data, safety, branch identity, and completion passed');

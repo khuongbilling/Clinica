@@ -291,6 +291,71 @@ const makeManifest = (partial: Omit<SimulationManifest, 'version' | 'reviewed' |
   ...partial, version: 1, reviewed: true, estimatedMinutes: 5,
 });
 
+type CoreVariation = {
+  id: string;
+  variantFamilyId: string;
+  title: string;
+  subtitle: string;
+  domain: SimulationDomain;
+  difficulty: SimulationDifficulty;
+  style: SimulationStyle;
+  patientName: string;
+  patientAge: number;
+  handoff: string;
+  initialState: Omit<PatientState, 'hiddenFindings' | 'complications' | 'interventionCount'>;
+  findingLabel: string;
+  findingValue: string;
+  focus: string;
+  supportLabel: string;
+  unsafeLabel: string;
+  safeDelta: Pick<SimulationEffect, 'stability' | 'oxygenation' | 'perfusion'>;
+  clinicalPrinciple: string;
+  relatedPractice: string[];
+};
+
+const makeCoreVariation = (caseData: CoreVariation): SimulationManifest => {
+  const findingId = `${caseData.id}-finding`;
+  return makeManifest({
+    ...caseData,
+    initialState: { ...caseData.initialState, hiddenFindings: [findingId], complications: [], interventionCount: 0 },
+    knownInformation: commonKnown([[findingId, caseData.findingLabel, caseData.findingValue, 'reveal']]),
+    objectives: [
+      { id: `${caseData.id}-assessed`, label: `Assess ${caseData.focus}`, weight: 25 },
+      { id: `${caseData.id}-supported`, label: caseData.supportLabel, weight: 35 },
+      { id: `${caseData.id}-reassessed`, label: 'Reassess the response', weight: 40 },
+    ],
+    actions: [
+      { id: `${caseData.id}-assess`, label: `Assess ${caseData.focus}`, group: 'assess', beats: ['assess'], effects: { reveal: [findingId], objectiveIds: [`${caseData.id}-assessed`], announcement: `Assessment reveals the key ${caseData.focus} change.` }, rationale: 'A focused assessment turns a concerning handoff into an observable clinical trend.' },
+      { id: `${caseData.id}-support`, label: caseData.supportLabel, group: 'support', beats: ['prioritize', 'intervene'], effects: { ...caseData.safeDelta, objectiveIds: [`${caseData.id}-supported`], announcement: `${caseData.supportLabel} improves the immediate concern.` }, rationale: 'Address the immediate concern before returning to lower-priority work.' },
+      { id: `${caseData.id}-unsafe`, label: caseData.unsafeLabel, group: 'treat', beats: ['prioritize', 'intervene'], unsafe: true, effects: { stability: -20, safety: 'unsafe', announcement: 'The concern is deferred and the patient deteriorates.' }, rationale: 'A concerning change needs a deliberate response, not delay.' },
+      { id: `${caseData.id}-reassess`, label: 'Reassess the response', group: 'reassess', beats: ['reassess'], effects: { objectiveIds: [`${caseData.id}-reassessed`], announcement: 'A repeat assessment confirms whether the response is working.' }, rationale: 'Interventions must be checked rather than assumed to be effective.' },
+    ],
+    complications: [],
+  });
+};
+
+export const EXPANDED_SIMULATION_IDS = [
+  'sim-assessment-new-confusion', 'sim-assessment-fever-trend', 'sim-assessment-post-op-pain',
+  'sim-medication-identity', 'sim-medication-renal-dose', 'sim-medication-sedation-check',
+  'sim-judgment-prioritize-fall', 'sim-judgment-call-rapid-response', 'sim-judgment-change-plan',
+  'sim-sepsis-subtle-trend', 'sim-sepsis-source-control', 'sim-sepsis-escalation',
+] as const;
+
+const CORE_VARIATIONS: CoreVariation[] = [
+  { id: 'sim-assessment-new-confusion', variantFamilyId: 'deterioration-recognition', title: 'The Different Answer', subtitle: 'A subtle change in attention can be an early change in condition.', domain: 'assessment', difficulty: 'introductory', style: 'guided', patientName: 'Mrs. Ortiz', patientAge: 78, handoff: 'Mrs. Ortiz usually follows every conversation, but today she asks the same question twice.', initialState: { stability: 63, oxygenation: 70, perfusion: 66, concern: 'New confusion', acuity: 'moderate' }, findingLabel: 'Baseline comparison', findingValue: 'Family confirms this level of confusion is new today.', focus: 'mental-status change', supportLabel: 'Protect safety and escalate the new change', unsafeLabel: 'Assume this is her usual behavior', safeDelta: { stability: 18, perfusion: 12 }, clinicalPrinciple: 'Compare behavior to baseline; a new mental-status change requires attention.', relatedPractice: ['Clinical Cue Lab', 'Rapid Triage Hall'] },
+  { id: 'sim-assessment-fever-trend', variantFamilyId: 'deterioration-recognition', title: 'The Rising Line', subtitle: 'A trend across observations matters more than a single isolated result.', domain: 'assessment', difficulty: 'standard', style: 'transfer', patientName: 'Mr. Flynn', patientAge: 52, handoff: 'Mr. Flynn reports chills, and his temperature has risen at each check this shift.', initialState: { stability: 61, oxygenation: 74, perfusion: 58, concern: 'Rising temperature trend', acuity: 'moderate' }, findingLabel: 'Temperature trend', findingValue: 'Temperature has risen at three consecutive observations.', focus: 'temperature trend', supportLabel: 'Support comfort and escalate the trend', unsafeLabel: 'Wait for the next routine vital set', safeDelta: { stability: 19, perfusion: 14 }, clinicalPrinciple: 'Trend recognition prevents a changing condition from being hidden by one familiar number.', relatedPractice: ['Clinical Cue Lab', 'Stabilize Stack Lab'] },
+  { id: 'sim-assessment-post-op-pain', variantFamilyId: 'deterioration-recognition', title: 'Pain That Changed', subtitle: 'A new pattern deserves reassessment instead of an automatic repeat of the old plan.', domain: 'judgment', difficulty: 'advanced', style: 'focused', patientName: 'Ms. Imani', patientAge: 39, handoff: 'Ms. Imani has a new, sharper pain pattern after initially recovering comfortably.', initialState: { stability: 58, oxygenation: 76, perfusion: 57, concern: 'Changing postoperative pain', acuity: 'high' }, findingLabel: 'Pain pattern', findingValue: 'The pain is new in location and does not match the earlier pattern.', focus: 'new pain pattern', supportLabel: 'Support comfort and urgently communicate the change', unsafeLabel: 'Repeat the earlier plan without assessment', safeDelta: { stability: 20, perfusion: 16 }, clinicalPrinciple: 'A changing symptom pattern calls for reassessment and escalation, not autopilot.', relatedPractice: ['Rapid Triage Hall', 'Clinical Cue Lab'] },
+  { id: 'sim-medication-identity', variantFamilyId: 'medication-safety', title: 'The Name Mismatch', subtitle: 'A familiar task becomes unsafe when one identifier does not match.', domain: 'pharmacology', difficulty: 'introductory', style: 'guided', patientName: 'Mr. Wells', patientAge: 67, handoff: 'A medication is ready, but the name on the prepared record does not match the patient at bedside.', initialState: { stability: 72, oxygenation: 82, perfusion: 76, concern: 'Medication identity mismatch', acuity: 'low' }, findingLabel: 'Identity check', findingValue: 'The second identifier does not match the prepared record.', focus: 'medication identity', supportLabel: 'Pause the medication and verify identity', unsafeLabel: 'Give it because the room number matches', safeDelta: { stability: 12, perfusion: 10 }, clinicalPrinciple: 'A mismatch is a stop signal: verify before proceeding.', relatedPractice: ['Clinical Cue Lab', 'Rapid Triage Hall'] },
+  { id: 'sim-medication-renal-dose', variantFamilyId: 'medication-safety', title: 'The Changed Clearance', subtitle: 'A current medication list does not replace checking a changing patient context.', domain: 'pharmacology', difficulty: 'standard', style: 'focused', patientName: 'Mrs. Kapoor', patientAge: 74, handoff: 'Mrs. Kapoor has a new lab result relevant to the medication scheduled this morning.', initialState: { stability: 66, oxygenation: 80, perfusion: 62, concern: 'Medication context changed', acuity: 'moderate' }, findingLabel: 'New context', findingValue: 'A new result changes the safety context for the scheduled medication.', focus: 'medication safety context', supportLabel: 'Hold and clarify the changed medication plan', unsafeLabel: 'Give the scheduled dose without review', safeDelta: { stability: 16, perfusion: 18 }, clinicalPrinciple: 'Medication safety depends on the current patient context, not only the routine schedule.', relatedPractice: ['Clinical Cue Lab', 'Stabilize Stack Lab'] },
+  { id: 'sim-medication-sedation-check', variantFamilyId: 'medication-safety', title: 'Before the Next Dose', subtitle: 'A drowsier patient needs a current assessment before another sedating step.', domain: 'pharmacology', difficulty: 'advanced', style: 'transfer', patientName: 'Mr. Okafor', patientAge: 61, handoff: 'Mr. Okafor is noticeably drowsier than at the prior check and has another dose scheduled.', initialState: { stability: 57, oxygenation: 58, perfusion: 68, concern: 'Increasing drowsiness', acuity: 'high' }, findingLabel: 'Sedation trend', findingValue: 'He needs repeated prompting to stay awake during conversation.', focus: 'sedation change', supportLabel: 'Pause, support breathing, and escalate review', unsafeLabel: 'Give the next sedating dose on schedule', safeDelta: { stability: 22, oxygenation: 25 }, clinicalPrinciple: 'A new sedation change is a reason to pause, assess, and communicate before another dose.', relatedPractice: ['Rapid Triage Hall', 'Clinical Cue Lab'] },
+  { id: 'sim-judgment-prioritize-fall', variantFamilyId: 'escalation-handoff', title: 'The Unsteady Call', subtitle: 'A near-fall is a safety cue that needs a current plan, not blame.', domain: 'judgment', difficulty: 'introductory', style: 'guided', patientName: 'Mr. Diaz', patientAge: 81, handoff: 'Mr. Diaz nearly falls while trying to stand without assistance.', initialState: { stability: 65, oxygenation: 80, perfusion: 57, concern: 'Immediate fall risk', acuity: 'moderate' }, findingLabel: 'Mobility change', findingValue: 'He is more unsteady than during the earlier assisted walk.', focus: 'fall-risk change', supportLabel: 'Protect safety and communicate the mobility change', unsafeLabel: 'Tell him to try again alone', safeDelta: { stability: 18, perfusion: 20 }, clinicalPrinciple: 'A changing mobility risk requires immediate protection and a shared plan.', relatedPractice: ['Rapid Triage Hall', 'Clinical Cue Lab'] },
+  { id: 'sim-judgment-call-rapid-response', variantFamilyId: 'escalation-handoff', title: 'The Whole Picture', subtitle: 'Several modest changes can add up to a need for urgent help.', domain: 'judgment', difficulty: 'standard', style: 'focused', patientName: 'Ms. Thomas', patientAge: 63, handoff: 'Ms. Thomas has become more breathless, less responsive, and harder to rouse over the last hour.', initialState: { stability: 50, oxygenation: 51, perfusion: 55, concern: 'Multiple worsening cues', acuity: 'critical' }, findingLabel: 'Combined trend', findingValue: 'Breathing, responsiveness, and circulation cues are worsening together.', focus: 'combined deterioration', supportLabel: 'Start support and call for urgent review', unsafeLabel: 'Address one sign and ignore the rest', safeDelta: { stability: 30, oxygenation: 29, perfusion: 17 }, clinicalPrinciple: 'Escalate when the whole pattern signals deterioration, even if each cue alone seems modest.', relatedPractice: ['Rapid Triage Hall', 'Stabilize Stack Lab'] },
+  { id: 'sim-judgment-change-plan', variantFamilyId: 'escalation-handoff', title: 'When the Plan Stops Working', subtitle: 'Repeating an ineffective plan can delay the adaptation a patient needs.', domain: 'judgment', difficulty: 'advanced', style: 'transfer', patientName: 'Mr. Njeri', patientAge: 45, handoff: 'Mr. Njeri has not improved after the expected first response and now appears more fatigued.', initialState: { stability: 55, oxygenation: 59, perfusion: 60, concern: 'Incomplete response', acuity: 'high' }, findingLabel: 'Response check', findingValue: 'The expected improvement has not appeared at reassessment.', focus: 'incomplete response', supportLabel: 'Adapt support and communicate the failed response', unsafeLabel: 'Repeat the same plan without review', safeDelta: { stability: 27, oxygenation: 25, perfusion: 17 }, clinicalPrinciple: 'Reassessment changes the plan when the first response is incomplete.', relatedPractice: ['Rapid Triage Hall', 'Clinical Cue Lab'] },
+  { id: 'sim-sepsis-subtle-trend', variantFamilyId: 'sepsis-pattern', title: 'The Subtle Shift', subtitle: 'New chills, fatigue, and a changing trend should be read together.', domain: 'assessment', difficulty: 'introductory', style: 'guided', patientName: 'Mr. Allen', patientAge: 62, handoff: 'Mr. Allen reports chills and seems more tired than he did at the last conversation.', initialState: { stability: 60, oxygenation: 72, perfusion: 56, concern: 'Possible infection trend', acuity: 'moderate' }, findingLabel: 'Clustered changes', findingValue: 'Several small changes have appeared together since the earlier assessment.', focus: 'clustered infection cues', supportLabel: 'Support the patient and communicate the trend', unsafeLabel: 'Treat each small change as unrelated', safeDelta: { stability: 20, perfusion: 25 }, clinicalPrinciple: 'Clustered changes deserve assessment and escalation before they become a crisis.', relatedPractice: ['Clinical Cue Lab', 'Rapid Triage Hall'] },
+  { id: 'sim-sepsis-source-control', variantFamilyId: 'sepsis-pattern', title: 'The New Drainage', subtitle: 'A new local change can matter when the whole patient is becoming less well.', domain: 'assessment', difficulty: 'standard', style: 'transfer', patientName: 'Ms. Lewis', patientAge: 48, handoff: 'Ms. Lewis has new drainage at a healing site and says she feels increasingly unwell.', initialState: { stability: 57, oxygenation: 74, perfusion: 53, concern: 'New local and systemic cues', acuity: 'high' }, findingLabel: 'New local finding', findingValue: 'The drainage is new and accompanies a broader change in how she feels.', focus: 'new drainage finding', supportLabel: 'Support the patient and escalate the new finding', unsafeLabel: 'Cover the finding and wait for the next check', safeDelta: { stability: 24, perfusion: 29 }, clinicalPrinciple: 'Link local changes with the patient’s overall trend instead of treating them in isolation.', relatedPractice: ['Clinical Cue Lab', 'Stabilize Stack Lab'] },
+  { id: 'sim-sepsis-escalation', variantFamilyId: 'sepsis-pattern', title: 'The Escalation Window', subtitle: 'When several responses are not enough, early escalation protects the patient.', domain: 'judgment', difficulty: 'advanced', style: 'focused', patientName: 'Mr. Huang', patientAge: 73, handoff: 'Mr. Huang has worsening fatigue, lower output, and a new change in responsiveness.', initialState: { stability: 49, oxygenation: 66, perfusion: 42, concern: 'Escalating systemic concern', acuity: 'critical' }, findingLabel: 'Escalation pattern', findingValue: 'Output, responsiveness, and overall appearance have worsened together.', focus: 'escalation pattern', supportLabel: 'Begin support and escalate urgent review', unsafeLabel: 'Continue routine observations without escalation', safeDelta: { stability: 32, oxygenation: 20, perfusion: 34 }, clinicalPrinciple: 'Escalate early when multiple worsening cues point to a changing systemic condition.', relatedPractice: ['Rapid Triage Hall', 'Stabilize Stack Lab'] },
+];
+
 export const CLINICAL_SIMULATIONS: SimulationManifest[] = [
   makeManifest({
     id: 'sim-airway-quiet-change', variantFamilyId: 'airway-change', title: 'The Quiet Change',
@@ -571,6 +636,7 @@ export const CLINICAL_SIMULATIONS: SimulationManifest[] = [
     }],
     clinicalPrinciple: 'Across team boundaries, safe care requires a named owner, a shared next action, and a closed-loop check.', relatedPractice: ['Rapid Triage Hall', 'Stabilize Stack Lab'],
   }),
+  ...CORE_VARIATIONS.map(makeCoreVariation),
 ];
 
 export function getClinicalSimulation(id: string): SimulationManifest | undefined {
