@@ -143,7 +143,7 @@ export const api = {
     activity: 'cue_lab' | 'triage' | 'stack',
     difficulty: 'beginner' | 'standard' | 'advanced',
     sessionToken?: string,
-  ) => http<{ player: PlayerState; multiplier: number; granted: Record<string, number> }>(
+  ) => http<{ player: PlayerState; multiplier: number; granted: Record<string, number>; first_completion: boolean }>(
     `/player/${id}/university-practice/complete`,
     {
       method: 'POST',

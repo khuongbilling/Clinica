@@ -47,7 +47,7 @@ interface ChainGameDef {
 
 const CHAIN_GAME_DEFS: Record<"cueHunt" | "triage" | "stabilize" | "done", ChainGameDef> = {
   cueHunt: {
-    kicker: "CUE HUNT · STEP 1 OF 3", title: "The Fading Apprentice",
+    kicker: "TUTORIAL CASE CHAIN · STEP 1 OF 3", title: "The Fading Apprentice",
     sub: "Find what others missed — spot the clinical cues.",
     badge: "START HERE", badgeIcon: "eye-outline",
     ctaLabel: "Start Cue Hunt", accentColor: "#2DD4BF",
@@ -55,7 +55,7 @@ const CHAIN_GAME_DEFS: Record<"cueHunt" | "triage" | "stabilize" | "done", Chain
     testID: "university-banner-cue-hunt",
   },
   triage: {
-    kicker: "RAPID TRIAGE · STEP 2 OF 3", title: "The Fading Apprentice",
+    kicker: "TUTORIAL CASE CHAIN · STEP 2 OF 3", title: "The Fading Apprentice",
     sub: "Cue Hunt complete ✓ — now sort patients by urgency.",
     badge: "NEXT IN CHAIN", badgeIcon: "flash-outline",
     ctaLabel: "Start Rapid Triage", accentColor: "#F59E0B",
@@ -63,7 +63,7 @@ const CHAIN_GAME_DEFS: Record<"cueHunt" | "triage" | "stabilize" | "done", Chain
     testID: "university-banner-rapid-triage",
   },
   stabilize: {
-    kicker: "STABILIZE STACK · STEP 3 OF 3", title: "The Fading Apprentice",
+    kicker: "TUTORIAL CASE CHAIN · STEP 3 OF 3", title: "The Fading Apprentice",
     sub: "Triage complete ✓ — build the care sequence to save Wei.",
     badge: "FINAL STEP", badgeIcon: "layers-outline",
     ctaLabel: "Start Stabilize Stack", accentColor: "#22D3EE",
@@ -71,7 +71,7 @@ const CHAIN_GAME_DEFS: Record<"cueHunt" | "triage" | "stabilize" | "done", Chain
     testID: "university-banner-stabilize",
   },
   done: {
-    kicker: "CASE CHAIN COMPLETE", title: "The Fading Apprentice",
+    kicker: "TUTORIAL CASE CHAIN COMPLETE", title: "The Fading Apprentice",
     sub: "You guided the Apprentice through every phase of care.",
     badge: "COMPLETE ✓", badgeIcon: "ribbon-outline",
     ctaLabel: "Review Chain", accentColor: "#D4AF37",

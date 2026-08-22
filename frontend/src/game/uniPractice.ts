@@ -9,6 +9,8 @@
  *   care_chain_manual · hero_training_page · sim_pass
  */
 
+import { getDailyPracticeCircuit } from './practiceCurriculum';
+
 // ── Types ──────────────────────────────────────────────────────────────────
 
 export type PracticeDifficulty = 'beginner' | 'standard' | 'advanced';
@@ -61,38 +63,38 @@ export interface UniShopItem {
 
 export const PRACTICE_REWARDS: Record<PracticeActivityType, Record<PracticeDifficulty, PracticeRewardDef>> = {
   cue_lab: {
-    beginner: { playerXp: 10, heroXp: 5,  universityCredits: 15, scrollKey: 'cue_scroll', scrollCount: 1 },
-    standard: { playerXp: 15, heroXp: 10, universityCredits: 25, scrollKey: 'cue_scroll', scrollCount: 2, bonusItemKey: 'hero_training_page', bonusItemCount: 1 },
-    advanced:  { playerXp: 20, heroXp: 15, universityCredits: 35, scrollKey: 'cue_scroll', scrollCount: 2, bonusItemKey: 'lesson_note', bonusItemCount: 1 },
+    beginner: { playerXp: 10, heroXp: 0, universityCredits: 15, scrollKey: 'cue_scroll', scrollCount: 1 },
+    standard: { playerXp: 15, heroXp: 0, universityCredits: 25, scrollKey: 'cue_scroll', scrollCount: 2 },
+    advanced:  { playerXp: 20, heroXp: 0, universityCredits: 35, scrollKey: 'cue_scroll', scrollCount: 2 },
   },
   triage: {
-    beginner: { playerXp: 10, heroXp: 5,  universityCredits: 15, scrollKey: 'triage_scroll', scrollCount: 1 },
-    standard: { playerXp: 15, heroXp: 10, universityCredits: 25, scrollKey: 'triage_scroll', scrollCount: 2, bonusItemKey: 'hero_training_page', bonusItemCount: 1 },
-    advanced:  { playerXp: 20, heroXp: 15, universityCredits: 35, scrollKey: 'triage_scroll', scrollCount: 2, bonusItemKey: 'care_chain_manual', bonusItemCount: 1 },
+    beginner: { playerXp: 10, heroXp: 0, universityCredits: 15, scrollKey: 'triage_scroll', scrollCount: 1 },
+    standard: { playerXp: 15, heroXp: 0, universityCredits: 25, scrollKey: 'triage_scroll', scrollCount: 2 },
+    advanced:  { playerXp: 20, heroXp: 0, universityCredits: 35, scrollKey: 'triage_scroll', scrollCount: 2 },
   },
   stack: {
-    beginner: { playerXp: 10, heroXp: 5,  universityCredits: 15, scrollKey: 'stab_scroll', scrollCount: 1 },
-    standard: { playerXp: 15, heroXp: 10, universityCredits: 25, scrollKey: 'stab_scroll', scrollCount: 2, bonusItemKey: 'hero_training_page', bonusItemCount: 1 },
-    advanced:  { playerXp: 20, heroXp: 15, universityCredits: 35, scrollKey: 'stab_scroll', scrollCount: 2, bonusItemKey: 'care_chain_manual', bonusItemCount: 1 },
+    beginner: { playerXp: 10, heroXp: 0, universityCredits: 15, scrollKey: 'stab_scroll', scrollCount: 1 },
+    standard: { playerXp: 15, heroXp: 0, universityCredits: 25, scrollKey: 'stab_scroll', scrollCount: 2 },
+    advanced:  { playerXp: 20, heroXp: 0, universityCredits: 35, scrollKey: 'stab_scroll', scrollCount: 2 },
   },
 };
 
 // Repeat rewards are smaller so farming is not profitable
 export const PRACTICE_REPEAT_REWARDS: Record<PracticeActivityType, Record<PracticeDifficulty, PracticeRewardDef>> = {
   cue_lab: {
-    beginner: { playerXp: 5, heroXp: 2,  universityCredits: 8,  scrollKey: 'cue_scroll', scrollCount: 1 },
-    standard: { playerXp: 8, heroXp: 4,  universityCredits: 12, scrollKey: 'cue_scroll', scrollCount: 1 },
-    advanced:  { playerXp: 10, heroXp: 7, universityCredits: 15, scrollKey: 'cue_scroll', scrollCount: 2, bonusItemKey: 'hero_training_page', bonusItemCount: 1 },
+    beginner: { playerXp: 5, heroXp: 0, universityCredits: 8,  scrollKey: 'cue_scroll', scrollCount: 1 },
+    standard: { playerXp: 8, heroXp: 0, universityCredits: 12, scrollKey: 'cue_scroll', scrollCount: 1 },
+    advanced:  { playerXp: 10, heroXp: 0, universityCredits: 15, scrollKey: 'cue_scroll', scrollCount: 2 },
   },
   triage: {
-    beginner: { playerXp: 5, heroXp: 2,  universityCredits: 8,  scrollKey: 'triage_scroll', scrollCount: 1 },
-    standard: { playerXp: 8, heroXp: 4,  universityCredits: 12, scrollKey: 'triage_scroll', scrollCount: 1 },
-    advanced:  { playerXp: 10, heroXp: 7, universityCredits: 15, scrollKey: 'triage_scroll', scrollCount: 2, bonusItemKey: 'hero_training_page', bonusItemCount: 1 },
+    beginner: { playerXp: 5, heroXp: 0, universityCredits: 8,  scrollKey: 'triage_scroll', scrollCount: 1 },
+    standard: { playerXp: 8, heroXp: 0, universityCredits: 12, scrollKey: 'triage_scroll', scrollCount: 1 },
+    advanced:  { playerXp: 10, heroXp: 0, universityCredits: 15, scrollKey: 'triage_scroll', scrollCount: 2 },
   },
   stack: {
-    beginner: { playerXp: 5, heroXp: 2,  universityCredits: 8,  scrollKey: 'stab_scroll', scrollCount: 1 },
-    standard: { playerXp: 8, heroXp: 4,  universityCredits: 12, scrollKey: 'stab_scroll', scrollCount: 1 },
-    advanced:  { playerXp: 10, heroXp: 7, universityCredits: 15, scrollKey: 'stab_scroll', scrollCount: 2, bonusItemKey: 'hero_training_page', bonusItemCount: 1 },
+    beginner: { playerXp: 5, heroXp: 0, universityCredits: 8,  scrollKey: 'stab_scroll', scrollCount: 1 },
+    standard: { playerXp: 8, heroXp: 0, universityCredits: 12, scrollKey: 'stab_scroll', scrollCount: 1 },
+    advanced:  { playerXp: 10, heroXp: 0, universityCredits: 15, scrollKey: 'stab_scroll', scrollCount: 2 },
   },
 };
 
@@ -275,6 +277,45 @@ export const CUE_SCENARIOS: CueScenario[] = [
     explanation: 'The antibiotic itch is a distractor. Vital signs are actually normal. The key clinical cue is unilateral (one-sided) calf pain in a post-operative patient — a red flag for deep vein thrombosis (DVT). Distractors are common in clinical settings.',
     keyLearning: 'New unilateral calf pain post-op = DVT red flag; do not let distractors hide it.',
   },
+  {
+    id: 'cue_b4', difficulty: 'beginner', title: 'Quiet Oxygen Change',
+    context: 'Mr. Luo, 64yo, is resting after pneumonia treatment. He is quieter than usual and his lips look slightly blue when he speaks.',
+    question: 'Which cue should you act on first?',
+    options: [
+      { id: 'a', text: 'He is resting quietly', isCorrect: false },
+      { id: 'b', text: 'His lips look blue while he speaks', isCorrect: true },
+      { id: 'c', text: 'He has already received his treatment', isCorrect: false },
+      { id: 'd', text: 'He prefers not to talk much', isCorrect: false },
+    ],
+    explanation: 'A blue tinge to the lips can indicate inadequate oxygenation. A new colour change deserves prompt assessment even when treatment has already been given.',
+    keyLearning: 'New cyanosis or blue lips = assess oxygenation promptly.',
+  },
+  {
+    id: 'cue_s4', difficulty: 'standard', title: 'The Trend Matters',
+    context: 'Ms. Qiao has been recovering from an infection. Her temperature rose from 37.4°C to 38.1°C and her heart rate rose from 86 to 104 bpm over two checks.',
+    question: 'What makes this change clinically important?',
+    options: [
+      { id: 'a', text: 'The temperature is the only relevant measurement', isCorrect: false },
+      { id: 'b', text: 'The heart rate is always higher after a meal', isCorrect: false },
+      { id: 'c', text: 'Both temperature and heart rate are rising over time', isCorrect: true },
+      { id: 'd', text: 'A single mildly elevated temperature is expected', isCorrect: false },
+    ],
+    explanation: 'A worsening trend across related observations is more concerning than one isolated value. Rising temperature with tachycardia may indicate an infection is becoming more active.',
+    keyLearning: 'A deteriorating trend can be more important than one isolated vital sign.',
+  },
+  {
+    id: 'cue_a3', difficulty: 'advanced', title: 'Hidden Perfusion Signal',
+    context: 'Mr. Sato, 70yo, is being monitored after blood loss. His blood pressure is 108/70, but he is increasingly restless, pale, and producing only 15mL of urine per hour.',
+    question: 'Which pattern should trigger the most urgent concern?',
+    options: [
+      { id: 'a', text: 'His blood pressure is not severely low', isCorrect: false },
+      { id: 'b', text: 'Restlessness + pallor + very low urine output after blood loss', isCorrect: true },
+      { id: 'c', text: 'He is probably uncomfortable in the bed', isCorrect: false },
+      { id: 'd', text: 'Urine output is unrelated to circulation', isCorrect: false },
+    ],
+    explanation: 'Restlessness, pallor, and oliguria can be early signs of poor perfusion, even before blood pressure falls dramatically. The pattern matters more than one reassuring number.',
+    keyLearning: 'Early hypoperfusion may appear as restlessness, pallor, and oliguria before hypotension.',
+  },
 ];
 
 // ── Rapid Triage Hall scenarios ────────────────────────────────────────────
@@ -387,6 +428,41 @@ export const TRIAGE_SCENARIOS: TriageScenario[] = [
     correctPatientId: 'a',
     explanation: 'Faintness with hypotension (92/58 mmHg) in an 82yo is urgent — could be orthostatic hypotension, early sepsis, or cardiac compromise. Mr. Wei\'s 2-day mild discomfort also needs follow-up but is not acutely changing. Ms. Bai\'s request is manageable.',
     keyLearning: 'Faintness + hypotension in an elderly patient = urgent investigation needed.',
+  },
+  {
+    id: 'tri_b4', difficulty: 'beginner', title: 'Breathing Comes First',
+    instruction: 'Two patients need you at the same moment. Who is the priority?',
+    patients: [
+      { id: 'a', name: 'Ms. Qiao, 39yo', age: 39, situation: 'Would like help choosing tomorrow’s breakfast.' },
+      { id: 'b', name: 'Mr. Luo, 63yo', age: 63, situation: 'Breathing faster and unable to finish a sentence.' },
+    ],
+    correctPatientId: 'b',
+    explanation: 'Rapid breathing and difficulty speaking can signal respiratory compromise and require immediate assessment. A meal preference can wait.',
+    keyLearning: 'Difficulty speaking with fast breathing is an immediate priority.',
+  },
+  {
+    id: 'tri_s4', difficulty: 'standard', title: 'A New Neuro Sign',
+    instruction: 'Three patients call together. Who should you see first?',
+    patients: [
+      { id: 'a', name: 'Mrs. Sato, 70yo', age: 70, situation: 'Needs help opening a food container.' },
+      { id: 'b', name: 'Mr. Luo, 58yo', age: 58, situation: 'Sudden facial droop and new difficulty finding words.' },
+      { id: 'c', name: 'Ms. Qiao, 42yo', age: 42, situation: 'Reports nausea that has been unchanged since yesterday.' },
+    ],
+    correctPatientId: 'b',
+    explanation: 'A sudden facial droop with language difficulty is an acute neurological change. It needs immediate evaluation, ahead of a stable symptom or a comfort request.',
+    keyLearning: 'Sudden facial droop or speech change = urgent neurological priority.',
+  },
+  {
+    id: 'tri_a3', difficulty: 'advanced', title: 'Competing Risks',
+    instruction: 'These patients all have concerns. Which one cannot safely wait?',
+    patients: [
+      { id: 'a', name: 'Ms. Ren, 47yo', age: 47, situation: 'Post-op pain 6/10, unchanged after the last check. Vitals stable.' },
+      { id: 'b', name: 'Mr. Qiao, 81yo', age: 81, situation: 'Newly drowsy, clammy, and difficult to wake compared with 20 minutes ago.' },
+      { id: 'c', name: 'Mrs. Luo, 50yo', age: 50, situation: 'Asks whether her routine dressing change can happen after lunch.' },
+    ],
+    correctPatientId: 'b',
+    explanation: 'A sudden change in alertness with clammy skin is an acute deterioration. Stable pain and a flexible routine request are lower priority while this patient is assessed.',
+    keyLearning: 'Sudden reduced responsiveness plus clamminess is an acute deterioration.',
   },
 ];
 
@@ -503,9 +579,67 @@ export const STACK_SCENARIOS: StackScenario[] = [
     correctOrder: ['abc', 'iv_check', 'site', 'pain', 'safety', 'discharge'],
     teachingNote: 'ABC → IV → Surgical site → Pain → Safety environment → Teaching. Never teach before the patient is clinically stable.',
   },
+  {
+    id: 'stack_b4', difficulty: 'beginner', title: 'Safe Medication Check',
+    context: 'You are preparing a routine medication for a patient. Arrange these 3 steps in the safest order.',
+    steps: [
+      { id: 'identity', text: 'Check patient identity', explanation: 'Use two identifiers before preparing to administer any medication.' },
+      { id: 'rights', text: 'Check medication and the 5 rights', explanation: 'Confirm the medication, dose, route, time, and patient before administration.' },
+      { id: 'document', text: 'Document after administration', explanation: 'Record the medication after it is given so the chart reflects what actually happened.' },
+    ],
+    correctOrder: ['identity', 'rights', 'document'],
+    teachingNote: 'Identity → 5 Rights → Document. Verification must happen before administration, and documentation follows the action.',
+  },
+  {
+    id: 'stack_s4', difficulty: 'standard', title: 'New Confusion',
+    context: 'An older patient becomes suddenly confused. Arrange these 4 response steps in priority order.',
+    steps: [
+      { id: 'safety', text: 'Stay with the patient and prevent falls', explanation: 'Immediate safety comes first while the sudden change is assessed.' },
+      { id: 'vitals', text: 'Check vital signs and glucose', explanation: 'Look for common reversible causes and gather objective information.' },
+      { id: 'notify', text: 'Notify the care team of the acute change', explanation: 'Report the time of onset and findings so the patient can be evaluated promptly.' },
+      { id: 'document', text: 'Document the change and response', explanation: 'Record the baseline, new findings, and actions taken for continuity of care.' },
+    ],
+    correctOrder: ['safety', 'vitals', 'notify', 'document'],
+    teachingNote: 'Safety → Gather data → Escalate → Document. Sudden confusion is a change in status, not simply a behaviour problem.',
+  },
+  {
+    id: 'stack_a3', difficulty: 'advanced', title: 'Deteriorating Patient',
+    context: 'A patient is becoming pale and less responsive. Arrange these urgent actions in the correct order.',
+    steps: [
+      { id: 'call', text: 'Call for urgent assistance', explanation: 'Bring help early when a patient shows signs of acute deterioration.' },
+      { id: 'abcde', text: 'Perform a rapid ABCDE assessment', explanation: 'Use a structured assessment to identify the immediate threat.' },
+      { id: 'oxygen', text: 'Support airway and breathing as indicated', explanation: 'Treat any immediate airway or breathing compromise while help arrives.' },
+      { id: 'handoff', text: 'Give a focused handover with vital trends', explanation: 'Share the situation, background, assessment, and response so the team can act.' },
+      { id: 'menu', text: 'Update tomorrow’s meal menu', explanation: 'Useful later, but unrelated to the immediate deterioration.', isDistractor: true },
+    ],
+    correctOrder: ['call', 'abcde', 'oxygen', 'handoff', 'menu'],
+    teachingNote: 'Call for help → ABCDE → Support immediate threats → Handover. Routine tasks wait until the patient is safe.',
+  },
 ];
 
 // ── Helpers ────────────────────────────────────────────────────────────────
+
+function shuffled<T>(items: T[]): T[] {
+  const result = [...items];
+  for (let i = result.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [result[i], result[j]] = [result[j], result[i]];
+  }
+  return result;
+}
+
+/**
+ * Return a fresh presentation copy. Authored answer IDs and correct values
+ * never change, but answer order does, so replay tests recognition rather
+ * than memorising "option B" or the first patient in the list.
+ */
+function prepareScenario(
+  scenario: CueScenario | TriageScenario | StackScenario,
+): CueScenario | TriageScenario | StackScenario {
+  if ('options' in scenario) return { ...scenario, options: shuffled(scenario.options) };
+  if ('patients' in scenario) return { ...scenario, patients: shuffled(scenario.patients) };
+  return { ...scenario, steps: [...scenario.steps] };
+}
 
 /** Pick a random scenario of the given type and difficulty. */
 export function pickRandomScenario(
@@ -523,9 +657,44 @@ export function pickRandomScenario(
   if (!filtered.length) {
     const fallback = pool.filter((s) => s.difficulty === difficulty);
     if (!fallback.length) return null;
-    return fallback[Math.floor(Math.random() * fallback.length)];
+    return prepareScenario(fallback[Math.floor(Math.random() * fallback.length)]);
   }
-  return filtered[Math.floor(Math.random() * filtered.length)];
+  return prepareScenario(filtered[Math.floor(Math.random() * filtered.length)]);
+}
+
+/**
+ * Start the activity with today's circuit focus when the chosen difficulty
+ * matches it. Other difficulties remain available for free practice, and
+ * Play Again excludes the current scenario so the pool keeps moving.
+ */
+export function pickDailyPracticeScenario(
+  activityType: PracticeActivityType,
+  difficulty: PracticeDifficulty,
+  excludeId?: string,
+  date: Date = new Date(),
+): CueScenario | TriageScenario | StackScenario | null {
+  const focus = getDailyPracticeCircuit(date).find(
+    (entry) => entry.kind === activityType && entry.difficulty === difficulty,
+  );
+  if (!focus) return pickRandomScenario(activityType, difficulty, excludeId);
+
+  const pool =
+    activityType === 'cue_lab' ? CUE_SCENARIOS :
+    activityType === 'triage' ? TRIAGE_SCENARIOS :
+    STACK_SCENARIOS;
+  const candidates = pool.filter((scenario) => scenario.difficulty === difficulty && scenario.id !== excludeId);
+  if (!candidates.length) return pickRandomScenario(activityType, difficulty, excludeId);
+
+  // The rotation is deterministic for the day, but answer order is prepared
+  // afresh on every launch. This makes the focus recognizable without making
+  // a replay a memorization exercise.
+  const activityOffset = activityType === 'cue_lab' ? 0 : activityType === 'triage' ? 1 : 2;
+  const scenario = candidates[Math.abs(localPracticeDay(date) + activityOffset) % candidates.length];
+  return prepareScenario(scenario);
+}
+
+function localPracticeDay(date: Date): number {
+  return Math.floor(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()) / 86_400_000);
 }
 
 /** Return which practice milestones just crossed threshold for this activity. */

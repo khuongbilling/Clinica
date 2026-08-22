@@ -2276,40 +2276,25 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     const countKey = activityType === 'cue_lab' ? 'uni_cue_lab_count' as const
       : activityType === 'triage'  ? 'uni_triage_count' as const
       : 'uni_stack_count' as const;
-    const currentCount = base[countKey] ?? 0;
-    const newCount = currentCount + 1;
-    const isFirstComplete = currentCount === 0;
-    const rawRewardDef = (isFirstComplete ? PRACTICE_REWARDS : PRACTICE_REPEAT_REWARDS)[activityType][difficulty];
-    const rewardInventory: Record<string, number> = { [rawRewardDef.scrollKey]: rawRewardDef.scrollCount };
-    if (rawRewardDef.bonusItemKey && rawRewardDef.bonusItemCount) {
-      rewardInventory[rawRewardDef.bonusItemKey] = rawRewardDef.bonusItemCount;
-    }
-    const teamIds = (base.active_team || []).filter(Boolean);
-    const heroPool = teamIds.length > 0 ? teamIds : (base.heroes_owned || []).slice(0, 3);
-    const heroXp = heroPool.length > 0 && rawRewardDef.heroXp > 0
-      ? Object.fromEntries(heroPool.map(id => [id, Math.max(1, Math.round(rawRewardDef.heroXp / heroPool.length))]))
-      : undefined;
     // Practice remains freely playable; its fixed-table power grant is
-    // atomically tapered and persisted by the University service.
+    // atomically classified, tapered, and persisted by the University service.
     const grant = await api.completeUniversityPractice(
       base.id, activityType, difficulty, base.economy_token,
     );
     const budget = { state: normalizeProgression(grant.player), multiplier: grant.multiplier };
+    const isFirstComplete = grant.first_completion;
+    const rawRewardDef = (isFirstComplete ? PRACTICE_REWARDS : PRACTICE_REPEAT_REWARDS)[activityType][difficulty];
     const rewardDef = {
       ...rawRewardDef,
-      playerXp: scaledAge1Reward(rawRewardDef.playerXp, budget.multiplier),
-      heroXp: scaledAge1Reward(rawRewardDef.heroXp, budget.multiplier),
-      universityCredits: scaledAge1Reward(rawRewardDef.universityCredits, budget.multiplier),
-      scrollCount: scaledAge1Reward(rawRewardDef.scrollCount, budget.multiplier),
-      bonusItemCount: rawRewardDef.bonusItemCount
-        ? scaledAge1Reward(rawRewardDef.bonusItemCount, budget.multiplier)
-        : undefined,
+      playerXp: grant.granted.xp ?? 0,
+      heroXp: 0,
+      universityCredits: grant.granted.university_credits ?? 0,
+      scrollCount: grant.granted[`inventory.${rawRewardDef.scrollKey}`] ?? 0,
+      bonusItemCount: undefined,
     };
 
     let next = budget.state;
-
-    // Increment activity counter
-    next = { ...next, [countKey]: newCount };
+    const newCount = next[countKey] ?? ((base[countKey] ?? 0) + 1);
 
     // Each meaningful lab can offer one small educational Stamina recovery per
     // calendar day. Replays still record scores, but cannot repeatedly refill.

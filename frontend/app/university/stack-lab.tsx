@@ -1,18 +1,19 @@
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useMemo, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { goBack } from "@/src/utils/navigation";
 import { usePlayer } from "@/src/game/store";
 import {
-  StackScenario, StackStep, PracticeDifficulty,
+  StackScenario, PracticeDifficulty,
   DIFFICULTY_LABEL, DIFFICULTY_COLOR, ACTIVITY_META,
-  PRACTICE_REWARDS, pickRandomScenario, scrollLabel, itemLabel,
+  PRACTICE_REWARDS, PRACTICE_REPEAT_REWARDS, pickDailyPracticeScenario, scrollLabel, itemLabel,
   STACK_SCENARIOS,
 } from "@/src/game/uniPractice";
+import { getDailyPracticeCircuit } from "@/src/game/practiceCurriculum";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 
 const META = ACTIVITY_META.stack;
@@ -44,9 +45,13 @@ export default function StackLabScreen() {
   const [result, setResult]         = useState<Awaited<ReturnType<typeof completeUniPractice>> | null>(null);
   const [newMilestones, setNewMilestones] = useState<string[]>([]);
   const [retryCount, setRetryCount] = useState(0);
+  const dailyFocus = useMemo(
+    () => getDailyPracticeCircuit().find((entry) => entry.kind === 'stack'),
+    [],
+  );
 
   function startPlay(diff: PracticeDifficulty) {
-    const s = pickRandomScenario('stack', diff) as StackScenario | null;
+    const s = pickDailyPracticeScenario('stack', diff) as StackScenario | null;
     if (!s) return;
     setDifficulty(diff);
     setScenario(s);
@@ -60,7 +65,7 @@ export default function StackLabScreen() {
   }
 
   function playAgain() {
-    const s = pickRandomScenario('stack', difficulty, scenario?.id) as StackScenario | null;
+    const s = pickDailyPracticeScenario('stack', difficulty, scenario?.id) as StackScenario | null;
     if (!s) return;
     setScenario(s);
     setPool(shuffle(s.steps.map((st) => st.id)));
@@ -110,6 +115,8 @@ export default function StackLabScreen() {
 
   // ── Pick Difficulty ──────────────────────────────────────────────────────
   if (phase === 'pick') {
+    const isRepeat = (player.uni_stack_count ?? 0) > 0;
+    const rewardTable = isRepeat ? PRACTICE_REPEAT_REWARDS.stack : PRACTICE_REWARDS.stack;
     return (
       <SafeAreaView style={styles.container} edges={["top"]}>
         <View style={styles.hero}>
@@ -130,9 +137,19 @@ export default function StackLabScreen() {
             <Ionicons name="information-circle-outline" size={14} color={COLORS.onSurfaceTertiary} />
             <Text style={styles.safetyTxt}>General wellness education only — not personal clinical advice. {META.battleRecommend}</Text>
           </View>
-          <Text style={styles.sectionLabel}>CHOOSE DIFFICULTY</Text>
+           {dailyFocus && (
+             <View style={styles.rotationBox}>
+               <Ionicons name="sparkles-outline" size={15} color={META.accent} />
+               <View style={{ flex: 1 }}>
+                  <Text style={styles.rotationKicker}>TODAY’S CIRCUIT FOCUS</Text>
+                 <Text style={styles.rotationTxt}>{dailyFocus.label} · {DIFFICULTY_LABEL[dailyFocus.difficulty]}</Text>
+                 <Text style={styles.rotationSub}>One of three rotating practice stops — replay any difficulty whenever you like.</Text>
+               </View>
+             </View>
+           )}
+           <Text style={styles.sectionLabel}>{isRepeat ? 'REPEAT REWARDS · DAILY TAPER APPLIES' : 'CHOOSE DIFFICULTY'}</Text>
           {(['beginner', 'standard', 'advanced'] as PracticeDifficulty[]).map((diff) => {
-            const r = PRACTICE_REWARDS.stack[diff];
+             const r = rewardTable[diff];
             const color = DIFFICULTY_COLOR[diff];
             const count = STACK_SCENARIOS.filter((s) => s.difficulty === diff).length;
             return (
@@ -389,6 +406,10 @@ const styles = StyleSheet.create({
   scroll: { padding: SPACING.lg, gap: SPACING.md, paddingBottom: 60 },
   safetyBox: { flexDirection: 'row', gap: SPACING.sm, alignItems: 'flex-start', backgroundColor: COLORS.surfaceTertiary, borderRadius: RADIUS.sm, padding: SPACING.sm },
   safetyTxt: { color: COLORS.onSurfaceTertiary, fontSize: 11, flex: 1, lineHeight: 16 },
+  rotationBox: { flexDirection: 'row', gap: SPACING.sm, alignItems: 'flex-start', backgroundColor: META.accent + '10', borderRadius: RADIUS.sm, borderWidth: 1, borderColor: META.accent + '30', padding: SPACING.sm },
+  rotationKicker: { color: META.accent, fontSize: 9, fontWeight: '800', letterSpacing: 1.2 },
+  rotationTxt: { color: COLORS.onSurface, fontSize: 12, fontWeight: '700', marginTop: 2 },
+  rotationSub: { color: COLORS.onSurfaceTertiary, fontSize: 10, lineHeight: 14, marginTop: 2 },
   sectionLabel: { color: COLORS.onSurfaceTertiary, fontSize: 10, letterSpacing: 2, fontWeight: '700', marginTop: SPACING.xs },
   diffCard: { backgroundColor: COLORS.surfaceSecondary, borderRadius: RADIUS.md, borderWidth: 1, padding: SPACING.md, gap: SPACING.sm },
   badge: { flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start', borderRadius: RADIUS.pill, paddingHorizontal: 8, paddingVertical: 3 },

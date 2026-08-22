@@ -1,7 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
-import React, { useCallback, useMemo, useState } from "react";
+import React, { useMemo, useState } from "react";
 import {
   Pressable, ScrollView, StyleSheet, Text, View,
 } from "react-native";
@@ -12,9 +12,10 @@ import { usePlayer } from "@/src/game/store";
 import {
   CueScenario, PracticeDifficulty,
   DIFFICULTY_LABEL, DIFFICULTY_COLOR, ACTIVITY_META,
-  PRACTICE_REWARDS, pickRandomScenario, scrollLabel, itemLabel,
+  PRACTICE_REWARDS, PRACTICE_REPEAT_REWARDS, pickDailyPracticeScenario, scrollLabel, itemLabel,
   CUE_SCENARIOS,
 } from "@/src/game/uniPractice";
+import { getDailyPracticeCircuit } from "@/src/game/practiceCurriculum";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 
 const META = ACTIVITY_META.cue_lab;
@@ -34,11 +35,13 @@ export default function CueLabScreen() {
   const [claimed, setClaimed]     = useState(false);
   const [result, setResult]       = useState<Awaited<ReturnType<typeof completeUniPractice>> | null>(null);
   const [newMilestones, setNewMilestones] = useState<string[]>([]);
-
-  const rewardDef = PRACTICE_REWARDS.cue_lab[difficulty];
+  const dailyFocus = useMemo(
+    () => getDailyPracticeCircuit().find((entry) => entry.kind === 'cue_lab'),
+    [],
+  );
 
   function startPlay(diff: PracticeDifficulty) {
-    const s = pickRandomScenario('cue_lab', diff) as CueScenario | null;
+    const s = pickDailyPracticeScenario('cue_lab', diff) as CueScenario | null;
     if (!s) return;
     setDifficulty(diff);
     setScenario(s);
@@ -51,7 +54,7 @@ export default function CueLabScreen() {
   }
 
   function playAgain() {
-    const s = pickRandomScenario('cue_lab', difficulty, scenario?.id) as CueScenario | null;
+    const s = pickDailyPracticeScenario('cue_lab', difficulty, scenario?.id) as CueScenario | null;
     if (!s) return;
     setScenario(s);
     setSelected(null);
@@ -85,6 +88,8 @@ export default function CueLabScreen() {
 
   // ── Phase: Pick Difficulty ──────────────────────────────────────────────
   if (phase === 'pick') {
+    const isRepeat = (player.uni_cue_lab_count ?? 0) > 0;
+    const rewardTable = isRepeat ? PRACTICE_REPEAT_REWARDS.cue_lab : PRACTICE_REWARDS.cue_lab;
     return (
       <SafeAreaView style={styles.container} edges={["top"]}>
         <View style={styles.hero}>
@@ -107,11 +112,21 @@ export default function CueLabScreen() {
               General wellness education only — not personal clinical advice. {META.battleRecommend}
             </Text>
           </View>
+           {dailyFocus && (
+             <View style={styles.rotationBox}>
+               <Ionicons name="sparkles-outline" size={15} color={META.accent} />
+               <View style={{ flex: 1 }}>
+                  <Text style={styles.rotationKicker}>TODAY’S CIRCUIT FOCUS</Text>
+                 <Text style={styles.rotationTxt}>{dailyFocus.label} · {DIFFICULTY_LABEL[dailyFocus.difficulty]}</Text>
+                 <Text style={styles.rotationSub}>One of three rotating practice stops — replay any difficulty whenever you like.</Text>
+               </View>
+             </View>
+           )}
 
-          <Text style={styles.sectionLabel}>CHOOSE DIFFICULTY</Text>
+           <Text style={styles.sectionLabel}>{isRepeat ? 'REPEAT REWARDS · DAILY TAPER APPLIES' : 'CHOOSE DIFFICULTY'}</Text>
 
           {(['beginner', 'standard', 'advanced'] as PracticeDifficulty[]).map((diff) => {
-            const r = PRACTICE_REWARDS.cue_lab[diff];
+             const r = rewardTable[diff];
             const color = DIFFICULTY_COLOR[diff];
             const scenarios = CUE_SCENARIOS.filter((s) => s.difficulty === diff);
             return (
@@ -255,7 +270,7 @@ export default function CueLabScreen() {
           <Ionicons name="ribbon" size={36} color={META.accent} style={{ marginBottom: 8 }} />
           <Text style={styles.resultTitle}>Cue Lab Complete!</Text>
           <Text style={styles.resultSub}>
-            {DIFFICULTY_LABEL[difficulty]} difficulty · {scenario?.title}
+             {DIFFICULTY_LABEL[difficulty]} difficulty · {scenario?.title} · {selected === scenario?.options.find((o) => o.isCorrect)?.id ? 'Correct' : 'Review complete'}
           </Text>
         </View>
 
@@ -330,6 +345,10 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.surfaceTertiary, borderRadius: RADIUS.sm, padding: SPACING.sm,
   },
   safetyTxt: { color: COLORS.onSurfaceTertiary, fontSize: 11, flex: 1, lineHeight: 16 },
+  rotationBox: { flexDirection: 'row', gap: SPACING.sm, alignItems: 'flex-start', backgroundColor: META.accent + '10', borderRadius: RADIUS.sm, borderWidth: 1, borderColor: META.accent + '30', padding: SPACING.sm },
+  rotationKicker: { color: META.accent, fontSize: 9, fontWeight: '800', letterSpacing: 1.2 },
+  rotationTxt: { color: COLORS.onSurface, fontSize: 12, fontWeight: '700', marginTop: 2 },
+  rotationSub: { color: COLORS.onSurfaceTertiary, fontSize: 10, lineHeight: 14, marginTop: 2 },
   sectionLabel: { color: COLORS.onSurfaceTertiary, fontSize: 10, letterSpacing: 2, fontWeight: '700', marginTop: SPACING.xs },
 
   // Difficulty cards

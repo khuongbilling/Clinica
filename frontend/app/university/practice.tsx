@@ -34,16 +34,15 @@ import {
   getActivityCount,
   getNextRecommendedModule,
   getTrackProgress,
+  getDailyPracticeCircuit,
   isModuleComplete,
   isModuleReadyToClaim,
   ALL_CURRICULUM_MODULES,
 } from "@/src/game/practiceCurriculum";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 
-// ── helper ────────────────────────────────────────────────────────────────────
-
-function diffLabel(kind: string): string {
-  return kind === "cue_lab" ? "Cue Lab" : kind === "triage" ? "Triage Hall" : "Stack Lab";
+function difficultyLabel(difficulty: string): string {
+  return difficulty.charAt(0).toUpperCase() + difficulty.slice(1);
 }
 
 // ── sub-components ────────────────────────────────────────────────────────────
@@ -294,7 +293,7 @@ export default function PracticeCurriculumScreen() {
       if (player && !player.seen_practice_curriculum) {
         setShowIntro(true);
       }
-    }, [player?.seen_practice_curriculum]),
+    }, [player]),
   );
 
   const dismissIntro = useCallback(async () => {
@@ -334,6 +333,7 @@ export default function PracticeCurriculumScreen() {
   const totalDone = countCompletedModules(player);
   const totalModules = ALL_CURRICULUM_MODULES.length;
   const nextModule = getNextRecommendedModule(player);
+  const dailyCircuit = getDailyPracticeCircuit();
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
@@ -395,6 +395,40 @@ export default function PracticeCurriculumScreen() {
         )}
 
         <InlineNotice notice={notice} icon="checkmark-circle-outline" testID="practice-notice" />
+
+        <View style={styles.circuitCard}>
+          <View style={styles.circuitHeader}>
+            <View style={styles.circuitIcon}>
+              <Ionicons name="sync-outline" size={16} color={COLORS.brand} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.circuitKicker}>TODAY’S ROTATING CURRICULUM</Text>
+              <Text style={styles.circuitTitle}>Daily Practice Circuit</Text>
+              <Text style={styles.circuitSub}>One cue, triage, and stabilization focus — refreshed tomorrow.</Text>
+            </View>
+          </View>
+          <View style={styles.circuitList}>
+            {dailyCircuit.map((entry, index) => (
+              <Pressable
+                key={entry.kind}
+                style={[styles.circuitRow, { borderColor: entry.accentColor + "36" }]}
+                onPress={() => handlePlay(entry.route)}
+                testID={`practice-circuit-${entry.kind}`}
+              >
+                <View style={[styles.circuitStep, { backgroundColor: entry.accentColor + "18" }]}>
+                  <Text style={[styles.circuitStepTxt, { color: entry.accentColor }]}>{index + 1}</Text>
+                </View>
+                <Ionicons name={entry.icon as any} size={15} color={entry.accentColor} />
+                <Text style={styles.circuitRowTitle}>{entry.label}</Text>
+                <View style={[styles.circuitDifficulty, { backgroundColor: entry.accentColor + "18" }]}>
+                  <Text style={[styles.circuitDifficultyTxt, { color: entry.accentColor }]}>{difficultyLabel(entry.difficulty)}</Text>
+                </View>
+                <Ionicons name="arrow-forward" size={13} color={COLORS.onSurfaceTertiary} />
+              </Pressable>
+            ))}
+          </View>
+          <Text style={styles.circuitFootnote}>First completion earns the full lab reward. Replays use reduced rewards and the existing daily taper.</Text>
+        </View>
 
         {/* "Next recommended" highlight strip */}
         {nextModule && !isModuleComplete(player, nextModule) && (
@@ -474,6 +508,32 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.border, overflow: "hidden",
   },
   overallFill: { height: 4, backgroundColor: "#D4AF37", borderRadius: 2 },
+
+  // Daily circuit
+  circuitCard: {
+    backgroundColor: COLORS.surfaceSecondary,
+    borderRadius: RADIUS.md, borderWidth: 1, borderColor: COLORS.brand + "38",
+    padding: SPACING.md, gap: SPACING.sm,
+  },
+  circuitHeader: { flexDirection: "row", gap: SPACING.sm, alignItems: "flex-start" },
+  circuitIcon: {
+    width: 32, height: 32, borderRadius: 16, backgroundColor: COLORS.brand + "18",
+    alignItems: "center", justifyContent: "center",
+  },
+  circuitKicker: { color: COLORS.brand, fontSize: 9, fontWeight: "800", letterSpacing: 1.2 },
+  circuitTitle: { color: COLORS.onSurface, fontSize: 15, fontWeight: "800", marginTop: 1 },
+  circuitSub: { color: COLORS.onSurfaceTertiary, fontSize: 11, lineHeight: 15, marginTop: 2 },
+  circuitList: { gap: SPACING.xs },
+  circuitRow: {
+    flexDirection: "row", alignItems: "center", gap: 7,
+    backgroundColor: COLORS.surface, borderWidth: 1, borderRadius: RADIUS.sm, padding: 8,
+  },
+  circuitStep: { width: 19, height: 19, borderRadius: 10, alignItems: "center", justifyContent: "center" },
+  circuitStepTxt: { fontSize: 10, fontWeight: "800" },
+  circuitRowTitle: { flex: 1, color: COLORS.onSurface, fontSize: 12, fontWeight: "700" },
+  circuitDifficulty: { borderRadius: RADIUS.pill, paddingHorizontal: 6, paddingVertical: 3 },
+  circuitDifficultyTxt: { fontSize: 9, fontWeight: "800", letterSpacing: 0.4 },
+  circuitFootnote: { color: COLORS.onSurfaceTertiary, fontSize: 10, lineHeight: 14 },
 
   // Next recommended strip
   nextStrip: {

@@ -394,6 +394,20 @@ UNIVERSITY_PRACTICE_REWARDS = {
         "advanced": (20, 35, "stab_scroll", 2),
     },
 }
+UNIVERSITY_PRACTICE_REPEAT_REWARDS = {
+    "cue_lab": {
+        "beginner": (5, 8, "cue_scroll", 1), "standard": (8, 12, "cue_scroll", 1),
+        "advanced": (10, 15, "cue_scroll", 2),
+    },
+    "triage": {
+        "beginner": (5, 8, "triage_scroll", 1), "standard": (8, 12, "triage_scroll", 1),
+        "advanced": (10, 15, "triage_scroll", 2),
+    },
+    "stack": {
+        "beginner": (5, 8, "stab_scroll", 1), "standard": (8, 12, "stab_scroll", 1),
+        "advanced": (10, 15, "stab_scroll", 2),
+    },
+}
 REWARD_CAPS = {
     "clinical_battle":  {"xp": 250, "crowns": 250, "codex_shards": 100, "epidemic_tokens": 25, "university_credits": 100},
     "journey_treasure": {"xp": 100, "crowns": 100, "codex_shards": 50, "epidemic_tokens": 0, "university_credits": 50},
@@ -479,9 +493,6 @@ class PlayerUpdate(BaseModel):
     chapter_progress: Optional[int] = None
     class_trainees: Optional[Dict[str, int]] = None
     university_credits: Optional[int] = None
-    uni_cue_lab_count: Optional[int] = None
-    uni_triage_count: Optional[int] = None
-    uni_stack_count: Optional[int] = None
     uni_practice_milestones_claimed: Optional[List[str]] = None
     # Legacy Academy ranks remain writable through their established material
     # purchase flow; the Ward Aegis sidegrade is stripped in update_player and
@@ -988,6 +999,10 @@ async def update_player(
         "age1_stamina_bonus_week", "age1_refill_day", "age1_refill_amount",
         "xp", "player_level", "mastery", "hero_progression", "inventory",
         "codex_shards", "crowns", "epidemic_tokens", "university_credits",
+        # The University completion endpoint owns these counters. Never accept
+        # them from a snapshot or a stale client could turn repeat rewards back
+        # into first-clear rewards.
+        "uni_cue_lab_count", "uni_triage_count", "uni_stack_count",
         "bosses_defeated", "claimed_milestones", "owned_titles", "owned_skins",
         # Chapter readiness and Journey key/node claims are server-authoritative
         # so a client snapshot cannot unlock a chapter by fabricating progress.
@@ -1543,7 +1558,15 @@ async def complete_university_practice(
         raise HTTPException(status_code=404, detail="player not found")
     if not player_access_ok(player, player_id, x_clinica_session, None):
         raise HTTPException(status_code=401, detail="invalid player session")
-    xp, credits, item, quantity = UNIVERSITY_PRACTICE_REWARDS[payload.activity][payload.difficulty]
+    count_key = {
+        "cue_lab": "uni_cue_lab_count",
+        "triage": "uni_triage_count",
+        "stack": "uni_stack_count",
+    }[payload.activity]
+    current_count = int(player.get(count_key, 0))
+    is_first_completion = current_count == 0
+    rewards = UNIVERSITY_PRACTICE_REWARDS if is_first_completion else UNIVERSITY_PRACTICE_REPEAT_REWARDS
+    xp, credits, item, quantity = rewards[payload.activity][payload.difficulty]
     day = age1_day_key()
     used = int(player.get("age1_reward_units", 0)) if player.get("age1_reward_day") == day else 0
     multiplier = age1_reward_multiplier(used, 1)
@@ -1551,6 +1574,7 @@ async def complete_university_practice(
         "xp": int(round(xp * multiplier)),
         "university_credits": int(round(credits * multiplier)),
         f"inventory.{item}": int(round(quantity * multiplier)),
+        count_key: 1,
     }
     increments = {key: value for key, value in increments.items() if value}
     next_xp = int(player.get("xp", 0)) + increments.get("xp", 0)
@@ -1564,7 +1588,12 @@ async def complete_university_practice(
     if updated.modified_count != 1:
         raise HTTPException(status_code=409, detail="University reward state changed; retry")
     current = await db.players.find_one({"id": player_id}, {"_id": 0})
-    return {"player": Player(**current).model_dump(), "multiplier": multiplier, "granted": increments}
+    return {
+        "player": Player(**current).model_dump(),
+        "multiplier": multiplier,
+        "granted": increments,
+        "first_completion": is_first_completion,
+    }
 
 
 @api_router.post("/player/{player_id}/activity-attempts/{activity}", response_model=Dict[str, Any])

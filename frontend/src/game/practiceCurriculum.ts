@@ -14,6 +14,49 @@ import { PlayerState } from './types';
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 export type PracticeActivityKind = 'cue_lab' | 'triage' | 'stack';
+export type PracticeDifficulty = 'beginner' | 'standard' | 'advanced';
+
+/**
+ * The repeatable circuit is deliberately separate from the one-time module
+ * rewards below. It gives the University a small, legible "what should I do
+ * today?" route without creating another progression or currency system.
+ */
+export interface DailyPracticeCircuitEntry {
+  kind: PracticeActivityKind;
+  difficulty: PracticeDifficulty;
+  label: string;
+  route: string;
+  accentColor: string;
+  icon: string;
+}
+
+const DAILY_CIRCUIT_KINDS: readonly PracticeActivityKind[] = ['cue_lab', 'triage', 'stack'];
+const DAILY_CIRCUIT_DIFFICULTIES: readonly PracticeDifficulty[] = ['beginner', 'standard', 'advanced'];
+
+function localDayOrdinal(date: Date): number {
+  return Math.floor(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()) / 86_400_000);
+}
+
+/**
+ * Return the same three-part practice circuit for the whole local calendar
+ * day. The order and difficulty pairing rotate tomorrow, while every circuit
+ * still includes Cue, Triage, and Stabilization.
+ */
+export function getDailyPracticeCircuit(date: Date = new Date()): DailyPracticeCircuitEntry[] {
+  const day = localDayOrdinal(date);
+  const entries: DailyPracticeCircuitEntry[] = [];
+  for (let slot = 0; slot < DAILY_CIRCUIT_KINDS.length; slot += 1) {
+    const kind = DAILY_CIRCUIT_KINDS[(day + slot) % DAILY_CIRCUIT_KINDS.length];
+    const difficulty = DAILY_CIRCUIT_DIFFICULTIES[(day + (slot * 2)) % DAILY_CIRCUIT_DIFFICULTIES.length];
+    const meta = kind === 'cue_lab'
+      ? { label: 'Clinical Cue Lab', route: '/university/cue-lab', accentColor: '#2DD4BF', icon: 'eye-outline' }
+      : kind === 'triage'
+        ? { label: 'Rapid Triage Hall', route: '/university/triage-hall', accentColor: '#F59E0B', icon: 'flash-outline' }
+        : { label: 'Stabilize Stack Lab', route: '/university/stack-lab', accentColor: '#22D3EE', icon: 'layers-outline' };
+    entries.push({ kind, difficulty, ...meta });
+  }
+  return entries;
+}
 
 export interface CurriculumActivity {
   kind: PracticeActivityKind;
