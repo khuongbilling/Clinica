@@ -192,6 +192,11 @@ class DailyRoundsState(BaseModel):
     weekly_days_completed: int = 0
     weekly_claimed: bool = False
     weekly_credited_dates: List[str] = Field(default_factory=list)
+    # Fix 9 weekly task fields are retained in the server snapshot so an
+    # authoritative Simulation completion cannot strip client progress.
+    weekly_tasks: List[Dict[str, Any]] = Field(default_factory=list)
+    weekly_all_complete_claimed: bool = False
+    weekly_material_earned: int = 0
 
 
 class Player(BaseModel):
@@ -321,6 +326,15 @@ class Player(BaseModel):
     age1_refill_amount: int = 0
     wellness: WellnessState = Field(default_factory=WellnessState)
     daily_rounds: DailyRoundsState = Field(default_factory=DailyRoundsState)
+    # Clinical Simulation Lab receipts are server-owned. A compact summary is
+    # exposed to clients for discovery/debrief, while action logs live in the
+    # separate clinical_simulation_attempts collection.
+    clinical_simulation_history: List[Dict[str, Any]] = Field(default_factory=list)
+    clinical_simulation_achievements: List[str] = Field(default_factory=list)
+    clinical_simulation_active_attempt_id: Optional[str] = None
+    clinical_simulation_first_clear_claims: Dict[str, str] = Field(default_factory=dict)
+    clinical_simulation_family_bests: Dict[str, int] = Field(default_factory=dict)
+    clinical_simulation_daily_event_ids: List[str] = Field(default_factory=list)
     realm_layout: Dict[str, str] = Field(default_factory=dict)
     realm_decor: Dict[str, str] = Field(default_factory=dict)
     realm_assignments: Dict[str, List[str]] = Field(default_factory=dict)
@@ -1185,6 +1199,24 @@ class UniversityPracticeAttemptRequest(BaseModel):
     challenge_version: int = 1
 
 
+class ClinicalSimulationConfig(BaseModel):
+    difficulty: Literal["introductory", "standard", "advanced", "expert"]
+    style: Literal["guided", "focused", "transfer"]
+    complicationId: Optional[str] = None
+    assistance: Literal["none", "coach", "guided"] = "coach"
+
+
+class ClinicalSimulationStartRequest(BaseModel):
+    simulation_id: str
+    config: ClinicalSimulationConfig
+    retry_mode: Literal["same_branch", "new_variation", "similar_case", "guided"] = "new_variation"
+    prior_attempt_id: Optional[str] = None
+
+
+class ClinicalSimulationActionRequest(BaseModel):
+    action_id: str
+
+
 # This is deliberately small, explicit, and server-owned. The frontend may
 # shuffle presentations, but it cannot invent a valid id/version/activity pair
 # or attach unrelated mastery tags to a rewardable receipt.
@@ -1200,6 +1232,94 @@ for _activity, _ids, _domains, _topic in (
             "activity": _activity, "difficulty": _difficulty, "version": 1,
             "family": _id.rsplit("_", 1)[0], "domains": list(_domains), "topics": [_topic],
         }
+
+# Clinical Simulation Lab content is declarative and server-owned. The client
+# may render it, but it never supplies a legal action, effect, score, branch,
+# or reward. Keep this concise server mirror in step with the reviewed client
+# catalog in clinicalSimulation.ts.
+CLINICAL_SIMULATION_MANIFESTS: Dict[str, Dict[str, Any]] = {
+    "sim-airway-quiet-change": {
+        "version": 1, "family": "airway-change", "domain": "airway", "difficulty": "introductory", "style": "guided", "title": "The Quiet Change",
+        "actions": {
+            "assess-respiratory": {"group": "assess", "beats": ["assess"], "reveal": ["spo2-trend"], "objectives": ["assess-breathing"], "announcement": "You pause to assess the new breathing change."},
+            "support-oxygen": {"group": "support", "beats": ["prioritize", "intervene"], "delta": {"stability": 18, "oxygenation": 28}, "objectives": ["support-airway"], "announcement": "Airway support improves oxygenation."},
+            "wait-and-see": {"group": "treat", "beats": ["prioritize", "intervene"], "delta": {"stability": -20}, "unsafe": True, "announcement": "The delay allows the respiratory concern to worsen."},
+            "reassess-luo": {"group": "reassess", "beats": ["reassess"], "objectives": ["reassess-response"], "announcement": "A repeat check confirms the response to support."},
+            "escalate-respiratory": {"group": "escalate", "beats": ["reassess", "adaptation"], "objectives": ["escalate-concern"], "announcement": "You communicate the worsening trend for further review."},
+        },
+        "initial": {"stability": 68, "oxygenation": 48, "perfusion": 72, "concern": "New breathing change", "acuity": "high", "hiddenFindings": ["spo2-trend"], "complications": [], "interventionCount": 0},
+        "known": [{"id": "spo2-trend", "label": "Oxygen trend", "value": "SpO₂ has fallen from 96% to 89%.", "discoveredAt": "reveal"}],
+        "objectives": {"assess-breathing": 25, "support-airway": 35, "reassess-response": 30, "escalate-concern": 10},
+        "principle": "A new breathing change deserves assessment, support, and reassessment.",
+    },
+    "sim-perfusion-hidden": {
+        "version": 1, "family": "perfusion-hidden", "domain": "assessment", "difficulty": "standard", "style": "transfer", "title": "The Hidden Perfusion Signal",
+        "actions": {
+            "assess-perfusion": {"group": "assess", "beats": ["assess"], "reveal": ["urine-output"], "objectives": ["assess-perfusion"], "announcement": "You look beyond the blood pressure and check perfusion clues."},
+            "prioritize-perfusion": {"group": "escalate", "beats": ["prioritize"], "objectives": ["prioritize-perfusion"], "announcement": "The converging clues make perfusion the priority."},
+            "support-circulation": {"group": "support", "beats": ["prioritize", "intervene"], "delta": {"perfusion": 25, "stability": 12}, "objectives": ["prioritize-perfusion", "support-perfusion"], "announcement": "Support is started while the concern is communicated."},
+            "dismiss-bp": {"group": "treat", "beats": ["prioritize", "intervene"], "delta": {"perfusion": -18, "stability": -15}, "unsafe": True, "announcement": "The early perfusion signals are missed."},
+            "reassess-circulation": {"group": "reassess", "beats": ["reassess"], "objectives": ["reassess-perfusion"], "announcement": "Repeat observations show whether circulation is improving."},
+        },
+        "initial": {"stability": 60, "oxygenation": 76, "perfusion": 42, "concern": "Possible poor perfusion", "acuity": "high", "hiddenFindings": ["urine-output"], "complications": [], "interventionCount": 0},
+        "known": [{"id": "urine-output", "label": "Urine output", "value": "Only 15 mL per hour after blood loss.", "discoveredAt": "reveal"}],
+        "objectives": {"assess-perfusion": 25, "prioritize-perfusion": 25, "support-perfusion": 30, "reassess-perfusion": 20},
+        "principle": "Read converging cues and trends rather than anchoring on one number.",
+    },
+    "sim-adaptive-airway": {
+        "version": 1, "family": "airway-change", "domain": "judgment", "difficulty": "advanced", "style": "focused", "title": "The Returning Wheeze",
+        "actions": {
+            "assess-recurrence": {"group": "assess", "beats": ["assess"], "reveal": ["work-of-breathing"], "objectives": ["assess-recurrence"], "announcement": "The interrupted speech confirms increased work of breathing."},
+            "support-airway-focused": {"group": "support", "beats": ["prioritize", "intervene"], "delta": {"oxygenation": 25, "stability": 15}, "objectives": ["support-airway"], "announcement": "Focused airway support gives the patient room to recover."},
+            "prioritize-airway-response": {"group": "treat", "beats": ["prioritize"], "announcement": "You recognize the recurring respiratory concern needs urgent follow-through."},
+            "reassess-airway": {"group": "reassess", "beats": ["reassess"], "objectives": ["reassess-response"], "announcement": "You check whether speech and breathing have improved."},
+            "adapt-airway-plan": {"group": "escalate", "beats": ["adaptation"], "delta": {"stability": 10}, "objectives": ["adapt-plan"], "announcement": "The recurrence is communicated and the plan is adapted."},
+            "ignore-recurrence": {"group": "treat", "beats": ["reassess", "adaptation"], "delta": {"stability": -25}, "unsafe": True, "announcement": "The recurrence is ignored and the patient worsens."},
+        },
+        "initial": {"stability": 58, "oxygenation": 44, "perfusion": 70, "concern": "Recurrent airway distress", "acuity": "high", "hiddenFindings": ["work-of-breathing"], "complications": [], "interventionCount": 0},
+        "known": [{"id": "work-of-breathing", "label": "Work of breathing", "value": "She cannot finish a sentence without pausing.", "discoveredAt": "reveal"}],
+        "objectives": {"assess-recurrence": 20, "support-airway": 25, "reassess-response": 20, "adapt-plan": 35},
+        "complication": {"id": "recurrent-wheeze", "trigger": "reassess-airway", "prevent": "support-airway-focused", "resolve": "adapt-airway-plan", "announcement": "The wheeze returns — reassess and adapt."},
+        "principle": "Safe care is a loop: assess, support, reassess, and adapt.",
+    },
+}
+CLINICAL_SIMULATION_ADVANCED_LEVEL_GATE = 25
+
+
+def simulation_eligible(player: Dict[str, Any]) -> bool:
+    return bool(player.get("lessons_completed")) and all(
+        int(player.get(key, 0)) >= 1 for key in ("uni_cue_lab_count", "uni_triage_count", "uni_stack_count")
+    )
+
+
+def simulation_branch(seed: int, family: str) -> str:
+    value = int(seed) & 0xffffffff
+    for char in family:
+        value = ((value ^ ord(char)) * 16777619) & 0xffffffff
+    return f"branch-{value:08x}"
+
+
+def simulation_next_beat(attempt: Dict[str, Any], manifest: Dict[str, Any]) -> str:
+    ids = attempt.get("actionIds", [])
+    groups = [manifest["actions"][action_id]["group"] for action_id in ids if action_id in manifest["actions"]]
+    if "assess" not in groups:
+        return "assess"
+    if not any(group in {"support", "treat", "escalate"} for group in groups):
+        return "prioritize"
+    if "reassess" not in groups:
+        return "reassess"
+    complication = manifest.get("complication")
+    if complication and attempt.get("complicationTriggered") and complication["resolve"] not in ids:
+        return "adaptation"
+    return "outcome"
+
+
+def simulation_public_attempt(attempt: Dict[str, Any]) -> Dict[str, Any]:
+    return {key: attempt[key] for key in (
+        "attemptId", "simulationId", "version", "seed", "branchId", "config", "beat",
+        "patient", "known", "completedObjectiveIds", "actionIds", "timeline", "safety",
+        "status", "complicationTriggered",
+    )}
 
 UNIVERSITY_PRACTICE_MILESTONES = (
     ("cue_lab", 3, "cue_3", {"university_credits": 50, "inventory.cue_scroll": 1}),
@@ -1727,6 +1847,298 @@ async def complete_university_practice(
         "first_completion": is_first_completion,
         "milestone_ids": milestone_ids,
         "already_claimed": False,
+    }
+
+
+@api_router.get("/player/{player_id}/clinical-simulations")
+async def list_clinical_simulations(
+    player_id: str,
+    x_clinica_session: Optional[str] = Header(default=None),
+):
+    player = await db.players.find_one({"id": player_id}, {"_id": 0})
+    if not player:
+        raise HTTPException(status_code=404, detail="player not found")
+    if not player_access_ok(player, player_id, x_clinica_session, None):
+        raise HTTPException(status_code=401, detail="invalid player session")
+    eligible = simulation_eligible(player)
+    history = player.get("clinical_simulation_history") or []
+    seen = {entry.get("simulationId") for entry in history}
+    recommended = next((key for key in CLINICAL_SIMULATION_MANIFESTS if key not in seen), next(iter(CLINICAL_SIMULATION_MANIFESTS)))
+    # Catalog records are informational only; action contracts stay private.
+    catalog = [
+        {
+            "id": simulation_id, "version": manifest["version"], "variantFamilyId": manifest["family"],
+            "title": manifest["title"], "domain": manifest["domain"], "difficulty": manifest["difficulty"],
+            "style": manifest["style"], "reviewed": True,
+        }
+        for simulation_id, manifest in CLINICAL_SIMULATION_MANIFESTS.items()
+    ]
+    return {
+        "simulations": catalog, "recommended_id": recommended, "eligible": eligible,
+        "reason": None if eligible else "Complete an introductory lesson and one Cue, Triage, and Stack practice session.",
+    }
+
+
+@api_router.post("/player/{player_id}/clinical-simulations/attempts")
+async def start_clinical_simulation(
+    player_id: str,
+    payload: ClinicalSimulationStartRequest,
+    x_clinica_session: Optional[str] = Header(default=None),
+):
+    player = await db.players.find_one({"id": player_id}, {"_id": 0})
+    if not player:
+        raise HTTPException(status_code=404, detail="player not found")
+    if not player_access_ok(player, player_id, x_clinica_session, None):
+        raise HTTPException(status_code=401, detail="invalid player session")
+    if not simulation_eligible(player):
+        raise HTTPException(status_code=409, detail="Complete the introductory labs before entering Simulation Lab")
+    manifest = CLINICAL_SIMULATION_MANIFESTS.get(payload.simulation_id)
+    if not manifest:
+        raise HTTPException(status_code=422, detail="unknown reviewed simulation")
+    if payload.config.difficulty != manifest["difficulty"] or payload.config.style != manifest["style"]:
+        raise HTTPException(status_code=422, detail="difficulty and style must match the reviewed simulation")
+    level = int(player.get("player_level") or player_level_from_xp(int(player.get("xp", 0))))
+    if payload.config.difficulty in {"advanced", "expert"} and level < CLINICAL_SIMULATION_ADVANCED_LEVEL_GATE:
+        raise HTTPException(status_code=409, detail=f"Player Level {CLINICAL_SIMULATION_ADVANCED_LEVEL_GATE} is required for Advanced and Expert simulations")
+    complication = manifest.get("complication")
+    if payload.config.complicationId:
+        if not complication or payload.config.complicationId != complication["id"]:
+            raise HTTPException(status_code=422, detail="unknown or unavailable complication")
+        if payload.config.difficulty not in {"advanced", "expert"}:
+            raise HTTPException(status_code=422, detail="complications require Advanced or Expert")
+    if payload.retry_mode == "guided":
+        payload.config.assistance = "guided"
+    seed = secrets.randbelow(2_000_000_000) + 1
+    if payload.retry_mode == "same_branch":
+        if not payload.prior_attempt_id:
+            raise HTTPException(status_code=422, detail="same-branch retry requires a prior attempt")
+        prior = await db.clinical_simulation_attempts.find_one({"attemptId": payload.prior_attempt_id, "player_id": player_id}, {"_id": 0})
+        if not prior or prior.get("simulationId") != payload.simulation_id:
+            raise HTTPException(status_code=422, detail="same-branch retry must reference your matching prior attempt")
+        seed = int(prior["seed"])
+    active_attempt_id = player.get("clinical_simulation_active_attempt_id")
+    if active_attempt_id:
+        active_attempt = await db.clinical_simulation_attempts.find_one(
+            {"attemptId": active_attempt_id, "player_id": player_id, "status": "active"}, {"_id": 0, "attemptId": 1}
+        )
+        if active_attempt:
+            raise HTTPException(status_code=409, detail="an active simulation is already in progress; resume it before starting another")
+        await db.players.update_one(
+            {"id": player_id, "clinical_simulation_active_attempt_id": active_attempt_id},
+            {"$set": {"clinical_simulation_active_attempt_id": None, "updated_at": now_iso()}},
+        )
+    attempt = {
+        "attemptId": str(uuid.uuid4()), "player_id": player_id, "simulationId": payload.simulation_id,
+        "version": manifest["version"], "seed": seed, "branchId": simulation_branch(seed, manifest["family"]),
+        "config": payload.config.model_dump(), "beat": "assess", "patient": dict(manifest["initial"]),
+        "known": [], "completedObjectiveIds": [], "actionIds": [], "timeline": [], "safety": "safe",
+        "status": "active", "complicationTriggered": False, "created_at": now_iso(), "updated_at": now_iso(),
+    }
+    await db.clinical_simulation_attempts.insert_one(attempt)
+    await db.players.update_one({"id": player_id}, {"$set": {"clinical_simulation_active_attempt_id": attempt["attemptId"], "updated_at": now_iso()}})
+    return {"attempt": simulation_public_attempt(attempt)}
+
+
+@api_router.get("/player/{player_id}/clinical-simulations/attempts/{attempt_id}")
+async def get_clinical_simulation_attempt(
+    player_id: str, attempt_id: str, x_clinica_session: Optional[str] = Header(default=None),
+):
+    player = await db.players.find_one({"id": player_id}, {"_id": 0})
+    if not player or not player_access_ok(player, player_id, x_clinica_session, None):
+        raise HTTPException(status_code=401, detail="invalid player session")
+    attempt = await db.clinical_simulation_attempts.find_one({"attemptId": attempt_id, "player_id": player_id}, {"_id": 0})
+    if not attempt:
+        raise HTTPException(status_code=404, detail="simulation attempt not found")
+    return {"attempt": simulation_public_attempt(attempt)}
+
+
+@api_router.post("/player/{player_id}/clinical-simulations/attempts/{attempt_id}/actions")
+async def submit_clinical_simulation_action(
+    player_id: str, attempt_id: str, payload: ClinicalSimulationActionRequest,
+    x_clinica_session: Optional[str] = Header(default=None),
+):
+    player = await db.players.find_one({"id": player_id}, {"_id": 0})
+    if not player or not player_access_ok(player, player_id, x_clinica_session, None):
+        raise HTTPException(status_code=401, detail="invalid player session")
+    attempt = await db.clinical_simulation_attempts.find_one({"attemptId": attempt_id, "player_id": player_id}, {"_id": 0})
+    if not attempt:
+        raise HTTPException(status_code=404, detail="simulation attempt not found")
+    if attempt.get("status") != "active":
+        raise HTTPException(status_code=409, detail="simulation is no longer active")
+    manifest = CLINICAL_SIMULATION_MANIFESTS.get(attempt["simulationId"])
+    action = (manifest or {}).get("actions", {}).get(payload.action_id)
+    if not action:
+        raise HTTPException(status_code=422, detail="unknown simulation action")
+    if payload.action_id in attempt.get("actionIds", []):
+        raise HTTPException(status_code=409, detail="duplicate simulation action")
+    if attempt.get("beat") not in action["beats"]:
+        raise HTTPException(status_code=422, detail=f"action is not legal during {attempt.get('beat')}")
+    before = dict(attempt["patient"])
+    patient = dict(before)
+    for key, value in action.get("delta", {}).items():
+        patient[key] = max(0, min(100, int(patient.get(key, 0)) + int(value)))
+    if action["group"] not in {"assess", "reassess"}:
+        patient["interventionCount"] = int(patient.get("interventionCount", 0)) + 1
+    revealed = [item for item in action.get("reveal", []) if item in patient.get("hiddenFindings", [])]
+    patient["hiddenFindings"] = [item for item in patient.get("hiddenFindings", []) if item not in revealed]
+    known_ids = {item.get("id") for item in attempt.get("known", [])}
+    known = [*attempt.get("known", []), *[item for item in manifest.get("known", []) if item["id"] in revealed and item["id"] not in known_ids]]
+    action_ids = [*attempt.get("actionIds", []), payload.action_id]
+    objectives = list(dict.fromkeys([*attempt.get("completedObjectiveIds", []), *action.get("objectives", [])]))
+    complication = manifest.get("complication")
+    triggered = bool(
+        complication
+        and attempt.get("config", {}).get("complicationId") == complication["id"]
+        and not attempt.get("complicationTriggered")
+        and payload.action_id == complication["trigger"]
+        and complication["prevent"] not in action_ids
+    )
+    if triggered:
+        patient["complications"] = [*patient.get("complications", []), complication["id"]]
+        patient["acuity"] = "high"
+    safety = "unsafe" if action.get("unsafe") else attempt.get("safety", "safe")
+    draft = {**attempt, "patient": patient, "known": known, "actionIds": action_ids, "completedObjectiveIds": objectives, "complicationTriggered": bool(attempt.get("complicationTriggered") or triggered)}
+    beat = simulation_next_beat(draft, manifest)
+    timeline = [*attempt.get("timeline", []), {
+        "actionId": payload.action_id, "beat": attempt.get("beat"), "announcement": action["announcement"],
+        "stateDelta": "state updated", "knownIds": revealed,
+    }]
+    next_attempt = {**draft, "beat": beat, "timeline": timeline, "safety": safety, "status": "completed" if beat == "outcome" else "active", "updated_at": now_iso()}
+    write = await db.clinical_simulation_attempts.update_one(
+        {"attemptId": attempt_id, "player_id": player_id, "status": "active", "actionIds": attempt.get("actionIds", [])},
+        {"$set": next_attempt},
+    )
+    if write.modified_count != 1:
+        raise HTTPException(status_code=409, detail="simulation action order changed; reload the attempt")
+    return {"attempt": simulation_public_attempt(next_attempt)}
+
+
+@api_router.post("/player/{player_id}/clinical-simulations/attempts/{attempt_id}/complete")
+async def complete_clinical_simulation(
+    player_id: str, attempt_id: str, x_clinica_session: Optional[str] = Header(default=None),
+):
+    player = await db.players.find_one({"id": player_id}, {"_id": 0})
+    if not player or not player_access_ok(player, player_id, x_clinica_session, None):
+        raise HTTPException(status_code=401, detail="invalid player session")
+    attempt = await db.clinical_simulation_attempts.find_one({"attemptId": attempt_id, "player_id": player_id}, {"_id": 0})
+    if not attempt:
+        raise HTTPException(status_code=404, detail="simulation attempt not found")
+    if attempt.get("completion"):
+        return {"player": Player(**player).model_dump(), "debrief": attempt["completion"], "already_completed": True}
+    if attempt.get("status") != "completed" or attempt.get("beat") != "outcome":
+        raise HTTPException(status_code=409, detail="complete the authored clinical beats before debrief")
+    # All requests for one attempt share a deterministic ownership marker.
+    # It is deliberately the attempt ID (not a request nonce): if a process
+    # dies mid-completion, a retry can reconstruct the same first-clear result
+    # and receipt. Parallel callers therefore cannot diverge on firstClear.
+    await db.clinical_simulation_attempts.update_one(
+        {"attemptId": attempt_id, "completion": {"$exists": False}},
+        {"$set": {"completion_owner": attempt_id}},
+    )
+    manifest = CLINICAL_SIMULATION_MANIFESTS[attempt["simulationId"]]
+    objective_total = sum(manifest["objectives"].values())
+    objective_score = sum(manifest["objectives"].get(key, 0) for key in attempt.get("completedObjectiveIds", [])) / max(1, objective_total)
+    patient = attempt["patient"]
+    vital_score = (int(patient["stability"]) + int(patient["oxygenation"]) + int(patient["perfusion"])) / 3
+    unsafe = attempt.get("safety") == "unsafe" or int(patient["stability"]) < 35
+    score = max(0, min(100, round(objective_score * 60 + vital_score * 0.4 - 15 * len(patient.get("complications", [])))))
+    outcome = "unsafe" if unsafe else "stabilized" if score >= 82 else "partially_stabilized" if score >= 55 else "missed"
+    rating = "unsafe" if unsafe else "excellent" if score >= 90 else "strong" if score >= 72 else "developing"
+    history = list(player.get("clinical_simulation_history") or [])
+    # Claim first-clear ownership before calculating its higher reward. The
+    # claim stores its attempt ID, so a retry can finish an interrupted claim
+    # without allowing a parallel attempt to claim the same simulation.
+    first_clear = False
+    if outcome == "stabilized":
+        claim_path = f"clinical_simulation_first_clear_claims.{attempt['simulationId']}"
+        claim = await db.players.update_one(
+            {"id": player_id, claim_path: {"$exists": False}},
+            {"$set": {claim_path: attempt_id}},
+        )
+        if claim.modified_count == 1:
+            first_clear = True
+        else:
+            claimed_player = await db.players.find_one({"id": player_id}, {"_id": 0})
+            first_clear = (claimed_player or {}).get("clinical_simulation_first_clear_claims", {}).get(attempt["simulationId"]) == attempt_id
+    achievements = []
+    if any("support" in action_id or "stabilize" in action_id for action_id in attempt.get("actionIds", [])): achievements.append("first_stabilization")
+    if any("reassess" in action_id for action_id in attempt.get("actionIds", [])): achievements.append("reassessment_matters")
+    if outcome == "stabilized" and not unsafe: achievements += ["safe_hands", "clinical_simulator"]
+    if attempt.get("complicationTriggered") and outcome == "stabilized": achievements.append("adaptive_thinker")
+    families = {row.get("variantFamilyId") for row in history}
+    if manifest["family"] not in families and len(families) >= 2: achievements.append("broad_clinician")
+    debrief = {
+        "outcome": outcome, "rating": rating, "score": score, "safety": "unsafe" if unsafe else attempt.get("safety", "safe"),
+        "domainBreakdown": {domain: max(0, score - (0 if domain == manifest["domain"] else 8)) for domain in ("airway", "assessment", "stabilization", "pharmacology", "judgment", "systems")},
+        "strongDecisions": [entry["announcement"] for entry in attempt.get("timeline", []) if "updated" in entry["stateDelta"]],
+        "missedOpportunities": [key.replace("-", " ") for key in manifest["objectives"] if key not in attempt.get("completedObjectiveIds", [])],
+        "clinicalPrinciple": manifest["principle"], "relatedPractice": ["Clinical Cue Lab", "Rapid Triage Hall", "Stabilize Stack Lab"],
+        "timeline": attempt.get("timeline", []), "firstClear": first_clear, "achievements": achievements,
+    }
+    # Bounded evidence: first family clear receives meaningful XP/credits;
+    # exact replays receive only a small acknowledgement and never a new currency.
+    exact_completions = sum(1 for row in history if row.get("simulationId") == attempt["simulationId"])
+    xp = 15 if first_clear else 3 if exact_completions < 3 else 0
+    credits = 20 if first_clear else 4 if exact_completions < 3 else 0
+    record = {
+        "attemptId": attempt_id, "simulationId": attempt["simulationId"], "variantFamilyId": manifest["family"],
+        "score": score, "outcome": outcome, "safety": debrief["safety"], "completedAt": now_iso(),
+    }
+    # Mongo standalone does not offer a multi-document transaction here. Make
+    # the player mutation itself the idempotency boundary: the attempt ID can
+    # be pushed once only, alongside its XP/credit increments. If the process
+    # dies before the receipt write below, a retry observes the attempt ID,
+    # creates the receipt, and never pays a second time.
+    daily = dict(player.get("daily_rounds") or {})
+    daily_event_ids = list(player.get("clinical_simulation_daily_event_ids") or [])
+    daily_event_new = attempt_id not in daily_event_ids
+    if daily_event_new:
+        for objective in daily.get("objectives", []):
+            if objective.get("event") == "university_lesson":
+                objective["progress"] = min(int(objective.get("target", 0)), int(objective.get("progress", 0)) + 1)
+        for task in daily.get("weekly_tasks", []):
+            if task.get("id") == "w_university":
+                task["progress"] = min(int(task.get("target", 0)), int(task.get("progress", 0)) + 1)
+        daily_event_ids = [*daily_event_ids, attempt_id][-365:]
+    write = await db.players.update_one(
+        {"id": player_id, "clinical_simulation_history.attemptId": {"$ne": attempt_id}},
+        {"$set": {
+            "daily_rounds": daily, "clinical_simulation_daily_event_ids": daily_event_ids, "updated_at": now_iso(),
+        }, "$push": {"clinical_simulation_history": {"$each": [record], "$slice": -60}},
+           "$addToSet": {
+               "clinical_simulation_achievements": {"$each": achievements},
+               "simulations_completed": attempt["simulationId"],
+           },
+           "$max": {f"clinical_simulation_family_bests.{manifest['family']}": score},
+           "$inc": {"xp": xp, "university_credits": credits}},
+    )
+    already_paid = write.modified_count != 1
+    await db.clinical_simulation_attempts.update_one(
+        {"attemptId": attempt_id, "completion": {"$exists": False}},
+        {"$set": {"completion": debrief, "completed_at": now_iso()}},
+    )
+    await db.players.update_one(
+        {"id": player_id, "clinical_simulation_active_attempt_id": attempt_id},
+        {"$set": {"clinical_simulation_active_attempt_id": None, "updated_at": now_iso()}},
+    )
+    receipt = await db.clinical_simulation_attempts.find_one(
+        {"attemptId": attempt_id, "player_id": player_id}, {"_id": 0, "completion": 1}
+    )
+    current = await db.players.find_one({"id": player_id}, {"_id": 0})
+    # Derive level from the authoritative post-increment XP. If another
+    # completion lands first, the XP predicate prevents this write from
+    # overwriting its later level calculation.
+    await db.players.update_one(
+        {"id": player_id, "xp": current.get("xp", 0)},
+        {"$set": {"player_level": player_level_from_xp(int(current.get("xp", 0)))}},
+    )
+    current = await db.players.find_one({"id": player_id}, {"_id": 0})
+    return {
+        "player": Player(**current).model_dump(),
+        "debrief": (receipt or {}).get("completion") or debrief,
+        # Only a request that found a prior receipt at entry is a retry. Two
+        # in-flight first submissions both receive the same canonical result.
+        "already_completed": False,
     }
 
 

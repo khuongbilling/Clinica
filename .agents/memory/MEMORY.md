@@ -129,3 +129,4 @@
 - [Journey run geometry identity](journey-run-geometry-identity.md) — version/hash markers alone cannot prove persisted tiles; compare coordinate set plus start/gate and recover stale runs through abandon→rechallenge.
 - [Future map obstacle presentation](future-map-obstacle-presentation.md) — from Ch6, blockers require fixed non-playable geometry plus reviewed raster art and asset-backed raised runtime props.
 - [Player Hero authority rails](player-hero-authority.md) — one-time Hero outcomes use conditional server writes; Journey opportunity rolls derive only from persisted validated visits and reconcile cleared-run retries.
+- [Clinical Simulation Lab authority](clinical-simulation-authority.md) — Package 2 attempts bind server-owned manifest/action/seed state; scores and rewards are never client claims.

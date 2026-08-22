@@ -31,6 +31,7 @@ import {
   ObjectiveId,
 } from "@/src/game/objectiveProgress";
 import { playerLevelFromXp } from "@/src/game/progression";
+import { recommendedSimulation } from "@/src/game/clinicalSimulation";
 
 // ── Next-in-chain hero banner ─────────────────────────────────────────────────
 interface ChainGameDef {
@@ -549,6 +550,21 @@ export default function UniversityHubScreen() {
               </Pressable>
 
               <Text style={styles.sectionHeading}>PRACTICE LABS</Text>
+              <Pressable style={[pracStyles.curriculumCard, { borderColor: "#A78BFA55", backgroundColor: "#19132A" }]}
+                onPress={() => router.push(dynRoute.simulation(recommendedSimulation(player.clinical_simulation_history).id))}
+                testID="university-clinical-simulation-lab">
+                <View style={pracStyles.curriculumLeft}>
+                  <View style={[pracStyles.curriculumBadge, { backgroundColor: "#A78BFA22" }]}>
+                    <Ionicons name="pulse-outline" size={14} color="#C4B5FD" />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[pracStyles.curriculumKicker, { color: "#C4B5FD" }]}>ZERO-STAMINA CASEWORK</Text>
+                    <Text style={pracStyles.curriculumTitle}>Clinical Simulation Lab</Text>
+                    <Text style={pracStyles.curriculumSub}>Recommended patient progression · pause and resume · safe branching</Text>
+                  </View>
+                </View>
+                <Ionicons name="arrow-forward" size={16} color="#C4B5FD" />
+              </Pressable>
               <View style={labsStyles.grid}>
                 <Pressable style={labsStyles.labCard} onPress={() => router.push(ROUTES.UNI_CUE_LAB)} testID="university-lab-cue">
                   <View style={[labsStyles.labIcon, { backgroundColor: "#2DD4BF18" }]}>

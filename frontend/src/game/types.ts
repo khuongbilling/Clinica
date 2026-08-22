@@ -452,6 +452,24 @@ export interface PlayerState {
   cue_topic_progress?: Record<string, number>;
   /** Server-owned, bounded evidence for shared Clinical Challenge practice. */
   clinical_practice?: import('./clinicalChallenge').ClinicalPracticeProfile;
+  /**
+   * Clinical Simulation Lab is separate from Package 1 lab evidence. The
+   * server owns action receipts and keeps this compact summary only for
+   * discovery, resumable entry, achievements, and debrief history.
+   */
+  clinical_simulation_history?: Array<{
+    simulationId: string;
+    variantFamilyId: string;
+    score: number;
+    outcome: import('./clinicalSimulation').SimulationOutcome;
+    safety: import('./clinicalSimulation').SimulationSafety;
+    completedAt: string;
+  }>;
+  clinical_simulation_achievements?: string[];
+  clinical_simulation_active_attempt_id?: string | null;
+  clinical_simulation_first_clear_claims?: Record<string, string>;
+  clinical_simulation_family_bests?: Record<string, number>;
+  clinical_simulation_daily_event_ids?: string[];
   // J4 — Hero Skill Academy upgrade ranks. Keyed by upgradeId (see heroSkillAcademy.ts).
   // Value = current rank (0 = not purchased; 1 = Rank I active; 2 = Rank II active).
   // Backfilled as {} for existing players in normalizeProgression.

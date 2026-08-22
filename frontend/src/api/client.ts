@@ -1,6 +1,9 @@
 import Constants from 'expo-constants';
 import { PlayerState } from '@/src/game/types';
 import type { PlayerHeroEligibility, PlayerHeroRecord, PlayerHeroAppearance } from '@/src/game/playerHero';
+import type {
+  SimulationConfig, SimulationDebrief, SimulationManifest, SimulationAttemptState,
+} from '@/src/game/clinicalSimulation';
 
 const BASE_URL = (process.env.EXPO_PUBLIC_BACKEND_URL || (Constants?.expoConfig?.extra as any)?.backendUrl || '').replace(/\/$/, '');
 const API = `${BASE_URL}/api`;
@@ -158,6 +161,48 @@ export const api = {
       headers: sessionToken ? { 'X-Clinica-Session': sessionToken } : {},
     },
   ),
+  getClinicalSimulations: (id: string, sessionToken?: string) =>
+    http<{ simulations: SimulationManifest[]; recommended_id: string; eligible: boolean; reason?: string }>(
+      `/player/${id}/clinical-simulations`,
+      { headers: sessionToken ? { 'X-Clinica-Session': sessionToken } : {} },
+    ),
+  beginClinicalSimulation: (
+    id: string,
+    simulationId: string,
+    config: SimulationConfig,
+    retryMode: 'same_branch' | 'new_variation' | 'similar_case' | 'guided' = 'new_variation',
+    priorAttemptId?: string,
+    sessionToken?: string,
+  ) => http<{ attempt: SimulationAttemptState }>(
+    `/player/${id}/clinical-simulations/attempts`,
+    {
+      method: 'POST',
+      body: JSON.stringify({ simulation_id: simulationId, config, retry_mode: retryMode, prior_attempt_id: priorAttemptId }),
+      headers: sessionToken ? { 'X-Clinica-Session': sessionToken } : {},
+    },
+  ),
+  getClinicalSimulationAttempt: (id: string, attemptId: string, sessionToken?: string) =>
+    http<{ attempt: SimulationAttemptState }>(
+      `/player/${id}/clinical-simulations/attempts/${attemptId}`,
+      { headers: sessionToken ? { 'X-Clinica-Session': sessionToken } : {} },
+    ),
+  submitClinicalSimulationAction: (id: string, attemptId: string, actionId: string, sessionToken?: string) =>
+    http<{ attempt: SimulationAttemptState }>(
+      `/player/${id}/clinical-simulations/attempts/${attemptId}/actions`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ action_id: actionId }),
+        headers: sessionToken ? { 'X-Clinica-Session': sessionToken } : {},
+      },
+    ),
+  completeClinicalSimulation: (id: string, attemptId: string, sessionToken?: string) =>
+    http<{ player: PlayerState; debrief: SimulationDebrief; already_completed: boolean }>(
+      `/player/${id}/clinical-simulations/attempts/${attemptId}/complete`,
+      {
+        method: 'POST',
+        headers: sessionToken ? { 'X-Clinica-Session': sessionToken } : {},
+      },
+    ),
   beginUniversityPracticeAttempt: (
     id: string,
     attempt: {
