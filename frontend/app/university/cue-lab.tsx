@@ -12,11 +12,12 @@ import { usePlayer } from "@/src/game/store";
 import {
   CueScenario, PracticeDifficulty,
   DIFFICULTY_LABEL, DIFFICULTY_COLOR, ACTIVITY_META,
-  PRACTICE_REWARDS, PRACTICE_REPEAT_REWARDS, pickDailyPracticeScenario, scrollLabel, itemLabel,
+  PRACTICE_REWARDS, PRACTICE_REPEAT_REWARDS, PRACTICE_DIFFICULTIES, normalizePracticeDifficulty, pickDailyPracticeScenario, scrollLabel, itemLabel, toClinicalChallenge,
   CUE_SCENARIOS,
 } from "@/src/game/uniPractice";
 import { getDailyPracticeCircuit } from "@/src/game/practiceCurriculum";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
+import { evaluateClinicalChallenge, recommendClinicalDifficulty } from "@/src/game/clinicalChallenge";
 
 const META = ACTIVITY_META.cue_lab;
 
@@ -27,7 +28,7 @@ export default function CueLabScreen() {
   const { player, completeUniPractice } = usePlayer();
 
   const [phase, setPhase]         = useState<Phase>('pick');
-  const [difficulty, setDifficulty] = useState<PracticeDifficulty>('beginner');
+  const [difficulty, setDifficulty] = useState<PracticeDifficulty>('introductory');
   const [scenario, setScenario]   = useState<CueScenario | null>(null);
   const [selected, setSelected]   = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
@@ -71,10 +72,11 @@ export default function CueLabScreen() {
   }
 
   async function handleClaim() {
-    if (claiming || claimed) return;
+    if (claiming || claimed || !scenario || !selected) return;
     setClaiming(true);
     try {
-      const res = await completeUniPractice('cue_lab', difficulty);
+      const challenge = toClinicalChallenge(scenario);
+      const res = await completeUniPractice('cue_lab', difficulty, challenge, evaluateClinicalChallenge(challenge, { selectedIds: [selected] }));
       setResult(res);
       setNewMilestones(res.newMilestones.map((m) => m.label));
       setClaimed(true);
@@ -84,11 +86,17 @@ export default function CueLabScreen() {
     }
   }
 
-  if (!player) return null;
+  if (!player) {
+    return <SafeAreaView style={styles.container}><View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: 10 }}>
+      <Ionicons name="hourglass-outline" size={26} color={META.accent} />
+      <Text style={styles.heroSub}>Loading Clinical Cue Lab…</Text>
+    </View></SafeAreaView>;
+  }
 
   // ── Phase: Pick Difficulty ──────────────────────────────────────────────
   if (phase === 'pick') {
     const isRepeat = (player.uni_cue_lab_count ?? 0) > 0;
+    const recommended = recommendClinicalDifficulty(player.clinical_practice);
     const rewardTable = isRepeat ? PRACTICE_REPEAT_REWARDS.cue_lab : PRACTICE_REWARDS.cue_lab;
     return (
       <SafeAreaView style={styles.container} edges={["top"]}>
@@ -125,20 +133,21 @@ export default function CueLabScreen() {
 
            <Text style={styles.sectionLabel}>{isRepeat ? 'REPEAT REWARDS · DAILY TAPER APPLIES' : 'CHOOSE DIFFICULTY'}</Text>
 
-          {(['beginner', 'standard', 'advanced'] as PracticeDifficulty[]).map((diff) => {
+           {PRACTICE_DIFFICULTIES.map((diff) => {
              const r = rewardTable[diff];
             const color = DIFFICULTY_COLOR[diff];
-            const scenarios = CUE_SCENARIOS.filter((s) => s.difficulty === diff);
+             const scenarios = CUE_SCENARIOS.filter((s) => normalizePracticeDifficulty(s.difficulty) === diff);
             return (
               <Pressable key={diff} style={[styles.diffCard, { borderColor: color + '40' }]} onPress={() => startPlay(diff)}>
                 <View style={[styles.diffBadge, { backgroundColor: color + '18' }]}>
                   <Text style={[styles.diffBadgeTxt, { color }]}>{DIFFICULTY_LABEL[diff].toUpperCase()}</Text>
                 </View>
                 <Text style={styles.diffDesc}>
-                  {diff === 'beginner' ? 'One clear cue — minimal distractors.' :
+                   {diff === 'introductory' ? 'One clear cue — minimal distractors.' :
                    diff === 'standard' ? 'Two related cues with simple distractors.' :
-                   'Multiple cues, hidden cues, strong distractors.'}
+                    diff === 'advanced' ? 'Multiple cues, hidden cues, strong distractors.' : 'Ambiguous trends, competing signals, and escalation reasoning.'}
                 </Text>
+                {recommended === diff && <Text style={[styles.diffPool, { color }]}>Recommended from recent validated practice</Text>}
                 <Text style={styles.diffPool}>{scenarios.length} scenarios</Text>
                 <View style={styles.rewardRow}>
                   <RewardChip icon="star-outline" color="#F59E0B" label={`+${r.playerXp} XP`} />
@@ -161,7 +170,8 @@ export default function CueLabScreen() {
   // ── Phase: Play ─────────────────────────────────────────────────────────
   if (phase === 'play' && scenario) {
     const correctOpt = scenario.options.find((o) => o.isCorrect);
-    const isCorrect = selected === correctOpt?.id;
+    const evaluation = submitted && selected ? evaluateClinicalChallenge(toClinicalChallenge(scenario), { selectedIds: [selected] }) : null;
+    const isCorrect = evaluation?.verdict === 'correct';
 
     return (
       <SafeAreaView style={styles.container} edges={["top"]}>
@@ -236,10 +246,11 @@ export default function CueLabScreen() {
                 <Ionicons name={isCorrect ? 'checkmark-circle' : 'close-circle'} size={18}
                   color={isCorrect ? '#34D399' : '#F87171'} />
                 <Text style={[styles.feedbackVerdict, { color: isCorrect ? '#34D399' : '#F87171' }]}>
-                  {isCorrect ? 'Correct!' : 'Not quite — here\'s why:'}
+                  {isCorrect ? 'Correct!' : evaluation?.verdict === 'unsafe' ? 'Unsafe choice — review the priority:' : 'Review complete — here\'s why:'}
                 </Text>
               </View>
               <Text style={styles.feedbackExplanation}>{scenario.explanation}</Text>
+              <Text accessibilityLiveRegion="polite" style={styles.feedbackExplanation}>Clinical result: {evaluation?.score ?? 0}% · {evaluation?.safety.replace('_', ' ')}</Text>
               <View style={styles.keyLearningRow}>
                 <Ionicons name="bulb-outline" size={13} color="#F59E0B" />
                 <Text style={styles.keyLearningTxt}>{scenario.keyLearning}</Text>

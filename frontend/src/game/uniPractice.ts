@@ -10,12 +10,22 @@
  */
 
 import { getDailyPracticeCircuit } from './practiceCurriculum';
+import {
+  ClinicalChallenge, ClinicalDifficulty, ClinicalOption, MasteryDomain,
+} from './clinicalChallenge';
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
-export type PracticeDifficulty = 'beginner' | 'standard' | 'advanced';
+export type PracticeDifficulty = ClinicalDifficulty;
+/** Retained only for authored pre-2.0 records; rendered as Introductory. */
+type AuthoredPracticeDifficulty = PracticeDifficulty | 'beginner';
 export type PracticeActivityType = 'cue_lab' | 'triage' | 'stack';
 export type AllActivityType = PracticeActivityType | 'lotus_lesson';
+export const PRACTICE_DIFFICULTIES: readonly PracticeDifficulty[] = ['introductory', 'standard', 'advanced', 'expert'];
+
+export function normalizePracticeDifficulty(difficulty: AuthoredPracticeDifficulty): PracticeDifficulty {
+  return difficulty === 'beginner' ? 'introductory' : difficulty;
+}
 
 export interface PracticeRewardDef {
   playerXp: number;
@@ -63,38 +73,44 @@ export interface UniShopItem {
 
 export const PRACTICE_REWARDS: Record<PracticeActivityType, Record<PracticeDifficulty, PracticeRewardDef>> = {
   cue_lab: {
-    beginner: { playerXp: 10, heroXp: 0, universityCredits: 15, scrollKey: 'cue_scroll', scrollCount: 1 },
+    introductory: { playerXp: 10, heroXp: 0, universityCredits: 15, scrollKey: 'cue_scroll', scrollCount: 1 },
     standard: { playerXp: 15, heroXp: 0, universityCredits: 25, scrollKey: 'cue_scroll', scrollCount: 2 },
     advanced:  { playerXp: 20, heroXp: 0, universityCredits: 35, scrollKey: 'cue_scroll', scrollCount: 2 },
+    expert: { playerXp: 20, heroXp: 0, universityCredits: 35, scrollKey: 'cue_scroll', scrollCount: 2 },
   },
   triage: {
-    beginner: { playerXp: 10, heroXp: 0, universityCredits: 15, scrollKey: 'triage_scroll', scrollCount: 1 },
+    introductory: { playerXp: 10, heroXp: 0, universityCredits: 15, scrollKey: 'triage_scroll', scrollCount: 1 },
     standard: { playerXp: 15, heroXp: 0, universityCredits: 25, scrollKey: 'triage_scroll', scrollCount: 2 },
     advanced:  { playerXp: 20, heroXp: 0, universityCredits: 35, scrollKey: 'triage_scroll', scrollCount: 2 },
+    expert: { playerXp: 20, heroXp: 0, universityCredits: 35, scrollKey: 'triage_scroll', scrollCount: 2 },
   },
   stack: {
-    beginner: { playerXp: 10, heroXp: 0, universityCredits: 15, scrollKey: 'stab_scroll', scrollCount: 1 },
+    introductory: { playerXp: 10, heroXp: 0, universityCredits: 15, scrollKey: 'stab_scroll', scrollCount: 1 },
     standard: { playerXp: 15, heroXp: 0, universityCredits: 25, scrollKey: 'stab_scroll', scrollCount: 2 },
     advanced:  { playerXp: 20, heroXp: 0, universityCredits: 35, scrollKey: 'stab_scroll', scrollCount: 2 },
+    expert: { playerXp: 20, heroXp: 0, universityCredits: 35, scrollKey: 'stab_scroll', scrollCount: 2 },
   },
 };
 
 // Repeat rewards are smaller so farming is not profitable
 export const PRACTICE_REPEAT_REWARDS: Record<PracticeActivityType, Record<PracticeDifficulty, PracticeRewardDef>> = {
   cue_lab: {
-    beginner: { playerXp: 5, heroXp: 0, universityCredits: 8,  scrollKey: 'cue_scroll', scrollCount: 1 },
+    introductory: { playerXp: 5, heroXp: 0, universityCredits: 8,  scrollKey: 'cue_scroll', scrollCount: 1 },
     standard: { playerXp: 8, heroXp: 0, universityCredits: 12, scrollKey: 'cue_scroll', scrollCount: 1 },
     advanced:  { playerXp: 10, heroXp: 0, universityCredits: 15, scrollKey: 'cue_scroll', scrollCount: 2 },
+    expert: { playerXp: 10, heroXp: 0, universityCredits: 15, scrollKey: 'cue_scroll', scrollCount: 2 },
   },
   triage: {
-    beginner: { playerXp: 5, heroXp: 0, universityCredits: 8,  scrollKey: 'triage_scroll', scrollCount: 1 },
+    introductory: { playerXp: 5, heroXp: 0, universityCredits: 8,  scrollKey: 'triage_scroll', scrollCount: 1 },
     standard: { playerXp: 8, heroXp: 0, universityCredits: 12, scrollKey: 'triage_scroll', scrollCount: 1 },
     advanced:  { playerXp: 10, heroXp: 0, universityCredits: 15, scrollKey: 'triage_scroll', scrollCount: 2 },
+    expert: { playerXp: 10, heroXp: 0, universityCredits: 15, scrollKey: 'triage_scroll', scrollCount: 2 },
   },
   stack: {
-    beginner: { playerXp: 5, heroXp: 0, universityCredits: 8,  scrollKey: 'stab_scroll', scrollCount: 1 },
+    introductory: { playerXp: 5, heroXp: 0, universityCredits: 8,  scrollKey: 'stab_scroll', scrollCount: 1 },
     standard: { playerXp: 8, heroXp: 0, universityCredits: 12, scrollKey: 'stab_scroll', scrollCount: 1 },
     advanced:  { playerXp: 10, heroXp: 0, universityCredits: 15, scrollKey: 'stab_scroll', scrollCount: 2 },
+    expert: { playerXp: 10, heroXp: 0, universityCredits: 15, scrollKey: 'stab_scroll', scrollCount: 2 },
   },
 };
 
@@ -160,7 +176,7 @@ export const UNI_SHOP_ITEMS: UniShopItem[] = [
 export interface CueOption { id: string; text: string; isCorrect: boolean; }
 export interface CueScenario {
   id: string;
-  difficulty: PracticeDifficulty;
+  difficulty: AuthoredPracticeDifficulty;
   title: string;
   context: string;
   question: string;
@@ -323,7 +339,7 @@ export const CUE_SCENARIOS: CueScenario[] = [
 export interface TriagePatient { id: string; name: string; age: number; situation: string; }
 export interface TriageScenario {
   id: string;
-  difficulty: PracticeDifficulty;
+  difficulty: AuthoredPracticeDifficulty;
   title: string;
   instruction: string;
   patients: TriagePatient[];
@@ -471,7 +487,7 @@ export const TRIAGE_SCENARIOS: TriageScenario[] = [
 export interface StackStep { id: string; text: string; explanation: string; isDistractor?: boolean; }
 export interface StackScenario {
   id: string;
-  difficulty: PracticeDifficulty;
+  difficulty: AuthoredPracticeDifficulty;
   title: string;
   context: string;
   steps: StackStep[];
@@ -617,6 +633,113 @@ export const STACK_SCENARIOS: StackScenario[] = [
   },
 ];
 
+// One approved expert seed per lab. The authoring contract below makes it safe
+// to grow this curated bank without changing evaluators, rewards, or routes.
+CUE_SCENARIOS.push({
+  id: 'cue_e1', difficulty: 'expert', title: 'Silent Sepsis Escalation',
+  context: 'A patient with a urinary infection is newly confused, breathing 26/min, and has cool mottled hands. Their temperature is only 37.7°C.',
+  question: 'Which combined cue requires immediate escalation?',
+  options: [
+    { id: 'temperature', text: 'The temperature is not very high', isCorrect: false },
+    { id: 'perfusion', text: 'New confusion, rapid breathing, and poor perfusion', isCorrect: true },
+    { id: 'diagnosis', text: 'The infection already has a diagnosis', isCorrect: false },
+    { id: 'comfort', text: 'Offer a warm blanket and recheck later', isCorrect: false },
+  ],
+  explanation: 'Deterioration can present without a high fever. Acute mental-status change, tachypnea, and poor perfusion need urgent assessment and escalation.',
+  keyLearning: 'Escalate the pattern, not one reassuring number.',
+});
+
+TRIAGE_SCENARIOS.push({
+  id: 'tri_e1', difficulty: 'expert', title: 'Competing Time-Critical Changes',
+  instruction: 'Choose the patient who needs assessment first, then use the reasoning to sequence the others.',
+  patients: [
+    { id: 'postop', name: 'Bay 1 · Post-op', age: 58, situation: 'Pain 7/10; awake, speaking full sentences, dressing dry.' },
+    { id: 'sepsis', name: 'Bay 2 · Infection', age: 71, situation: 'New confusion, respiratory rate 28/min, cool hands.' },
+    { id: 'diabetes', name: 'Bay 3 · Diabetes', age: 43, situation: 'Hungry before lunch; glucose 4.1 mmol/L, alert and able to swallow.' },
+  ],
+  correctPatientId: 'sepsis',
+  explanation: 'New confusion with tachypnea and poor perfusion suggests acute deterioration. The low glucose is important but the patient is alert and able to take rapid treatment while help is mobilized.',
+  keyLearning: 'Prioritize threatened ABCs and acute deterioration over stable-but-important needs.',
+});
+
+STACK_SCENARIOS.push({
+  id: 'stack_e1', difficulty: 'expert', title: 'Escalating Respiratory Deterioration',
+  context: 'A patient becomes drowsy with increasing work of breathing. Arrange a safe first-response sequence.',
+  steps: [
+    { id: 'call', text: 'Call urgent assistance and stay with the patient', explanation: 'Escalate early and keep the patient observed.' },
+    { id: 'abc', text: 'Assess airway, breathing, circulation and vital trends', explanation: 'Use a structured assessment to identify immediate threats.' },
+    { id: 'support', text: 'Support airway and breathing within your role', explanation: 'Treat immediate compromise while the response team arrives.' },
+    { id: 'handover', text: 'Give a concise handover with onset and trends', explanation: 'A focused handover supports a fast team response.' },
+    { id: 'routine', text: 'Finish routine documentation before calling', explanation: 'Routine documentation must never delay escalation.', isDistractor: true },
+  ],
+  correctOrder: ['call', 'abc', 'support', 'handover', 'routine'],
+  teachingNote: 'Call early → structured assessment → immediate support → handover. Documentation follows safety-critical action.',
+});
+
+function authoredMeta(activity: PracticeActivityType, scenarioId: string): { topics: string[]; mastery: MasteryDomain[]; family: string } {
+  const prefix = scenarioId.replace(/_[bsae]\d+$/, '');
+  if (activity === 'cue_lab') return { family: prefix || scenarioId, topics: ['clinical-assessment'], mastery: ['assessment', 'systems'] };
+  if (activity === 'triage') return { family: prefix || scenarioId, topics: ['priority-care'], mastery: ['judgment', 'command'] };
+  return { family: prefix || scenarioId, topics: ['care-sequencing'], mastery: ['stabilization', 'systems'] };
+}
+
+/**
+ * Adapter from the early lab content into the shared challenge language.
+ * Keep content authoring here for now; future modes should provide their own
+ * adapters rather than importing a practice route or its rewards.
+ */
+export function toClinicalChallenge(scenario: CueScenario | TriageScenario | StackScenario): ClinicalChallenge {
+  const activity: PracticeActivityType = 'options' in scenario ? 'cue_lab' : 'patients' in scenario ? 'triage' : 'stack';
+  const meta = authoredMeta(activity, scenario.id);
+  const rationale = 'explanation' in scenario ? scenario.explanation : scenario.teachingNote;
+  const keyLearning = 'keyLearning' in scenario ? scenario.keyLearning : scenario.teachingNote;
+  const base = {
+    id: scenario.id,
+    version: 1,
+    variantFamilyId: meta.family,
+    status: 'approved' as const,
+    activity,
+    difficulty: normalizePracticeDifficulty(scenario.difficulty),
+    title: scenario.title,
+    context: 'context' in scenario ? scenario.context : scenario.instruction,
+    rationale,
+    keyLearning,
+    nextStepGuidance: 'Review the rationale, then continue when you are ready.',
+    topicTags: meta.topics,
+    masteryTags: meta.mastery,
+  };
+  if ('options' in scenario) {
+    const options: ClinicalOption[] = scenario.options.map((option) => ({
+      id: option.id,
+      text: option.text,
+      credit: option.isCorrect ? 1 : 0,
+      distractorExplanation: option.isCorrect ? undefined : `This does not explain the priority cue in this presentation.`,
+    }));
+    return { ...base, interaction: 'single_choice', prompt: scenario.question, options, correctIds: scenario.options.filter((option) => option.isCorrect).map((option) => option.id), safety: {} };
+  }
+  if ('patients' in scenario) {
+    return {
+      ...base,
+      interaction: 'priority',
+      prompt: scenario.instruction,
+      options: scenario.patients.map((patient) => ({ id: patient.id, text: `${patient.name}: ${patient.situation}`, credit: patient.id === scenario.correctPatientId ? 1 : 0 })),
+      correctIds: [scenario.correctPatientId],
+      priorityOrder: [scenario.correctPatientId],
+      safety: { unsafeCap: 0.35 },
+    };
+  }
+  const prioritySteps = scenario.steps.filter((step) => !step.isDistractor);
+  return {
+    ...base,
+    interaction: 'sequence',
+    prompt: 'Arrange the response steps in the safest order.',
+    options: scenario.steps.map((step) => ({ id: step.id, text: step.text, unsafe: Boolean(step.isDistractor), distractorExplanation: step.isDistractor ? 'This task may matter later, but it must not delay immediate stabilization.' : undefined })),
+    requiredIds: prioritySteps.map((step) => step.id),
+    relationships: prioritySteps.slice(1).map((step, index) => ({ beforeId: prioritySteps[index].id, afterId: step.id, required: true })),
+    safety: { unsafeCap: 0.35 },
+  };
+}
+
 // ── Helpers ────────────────────────────────────────────────────────────────
 
 function shuffled<T>(items: T[]): T[] {
@@ -652,10 +775,10 @@ export function pickRandomScenario(
     activityType === 'triage'  ? TRIAGE_SCENARIOS :
     STACK_SCENARIOS;
   const filtered = pool.filter(
-    (s) => s.difficulty === difficulty && s.id !== excludeId,
+    (s) => normalizePracticeDifficulty(s.difficulty) === difficulty && s.id !== excludeId,
   );
   if (!filtered.length) {
-    const fallback = pool.filter((s) => s.difficulty === difficulty);
+    const fallback = pool.filter((s) => normalizePracticeDifficulty(s.difficulty) === difficulty);
     if (!fallback.length) return null;
     return prepareScenario(fallback[Math.floor(Math.random() * fallback.length)]);
   }
@@ -682,7 +805,7 @@ export function pickDailyPracticeScenario(
     activityType === 'cue_lab' ? CUE_SCENARIOS :
     activityType === 'triage' ? TRIAGE_SCENARIOS :
     STACK_SCENARIOS;
-  const candidates = pool.filter((scenario) => scenario.difficulty === difficulty && scenario.id !== excludeId);
+  const candidates = pool.filter((scenario) => normalizePracticeDifficulty(scenario.difficulty) === difficulty && scenario.id !== excludeId);
   if (!candidates.length) return pickRandomScenario(activityType, difficulty, excludeId);
 
   // The rotation is deterministic for the day, but answer order is prepared
@@ -747,15 +870,17 @@ export function itemLabel(key: string): string {
 }
 
 export const DIFFICULTY_LABEL: Record<PracticeDifficulty, string> = {
-  beginner: 'Beginner',
+  introductory: 'Introductory',
   standard: 'Standard',
   advanced:  'Advanced',
+  expert: 'Expert',
 };
 
 export const DIFFICULTY_COLOR: Record<PracticeDifficulty, string> = {
-  beginner: '#22D3EE',
+  introductory: '#22D3EE',
   standard: '#F59E0B',
   advanced:  '#F97316',
+  expert: '#A78BFA',
 };
 
 export const ACTIVITY_META: Record<PracticeActivityType, { label: string; icon: string; accent: string; description: string; battleRecommend: string }> = {

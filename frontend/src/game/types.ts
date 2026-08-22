@@ -450,6 +450,8 @@ export interface PlayerState {
   // Clinical Cue — lightweight per-topic progress counter (Codex/University hook).
   // Additive only; never blocks battle flow.
   cue_topic_progress?: Record<string, number>;
+  /** Server-owned, bounded evidence for shared Clinical Challenge practice. */
+  clinical_practice?: import('./clinicalChallenge').ClinicalPracticeProfile;
   // J4 — Hero Skill Academy upgrade ranks. Keyed by upgradeId (see heroSkillAcademy.ts).
   // Value = current rank (0 = not purchased; 1 = Rank I active; 2 = Rank II active).
   // Backfilled as {} for existing players in normalizeProgression.

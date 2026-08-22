@@ -10,11 +10,12 @@ import { usePlayer } from "@/src/game/store";
 import {
   TriageScenario, PracticeDifficulty,
   DIFFICULTY_LABEL, DIFFICULTY_COLOR, ACTIVITY_META,
-  PRACTICE_REWARDS, PRACTICE_REPEAT_REWARDS, pickDailyPracticeScenario, scrollLabel, itemLabel,
+  PRACTICE_REWARDS, PRACTICE_REPEAT_REWARDS, PRACTICE_DIFFICULTIES, normalizePracticeDifficulty, pickDailyPracticeScenario, scrollLabel, itemLabel, toClinicalChallenge,
   TRIAGE_SCENARIOS,
 } from "@/src/game/uniPractice";
 import { getDailyPracticeCircuit } from "@/src/game/practiceCurriculum";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
+import { evaluateClinicalChallenge, recommendClinicalDifficulty } from "@/src/game/clinicalChallenge";
 
 const META = ACTIVITY_META.triage;
 type Phase = 'pick' | 'play' | 'done';
@@ -24,7 +25,7 @@ export default function TriageHallScreen() {
   const { player, completeUniPractice } = usePlayer();
 
   const [phase, setPhase]           = useState<Phase>('pick');
-  const [difficulty, setDifficulty] = useState<PracticeDifficulty>('beginner');
+  const [difficulty, setDifficulty] = useState<PracticeDifficulty>('introductory');
   const [scenario, setScenario]     = useState<TriageScenario | null>(null);
   const [selected, setSelected]     = useState<string | null>(null);
   const [submitted, setSubmitted]   = useState(false);
@@ -60,10 +61,11 @@ export default function TriageHallScreen() {
   }
 
   async function handleClaim() {
-    if (claiming || result) return;
+    if (claiming || result || !scenario || !selected) return;
     setClaiming(true);
     try {
-      const res = await completeUniPractice('triage', difficulty);
+      const challenge = toClinicalChallenge(scenario);
+      const res = await completeUniPractice('triage', difficulty, challenge, evaluateClinicalChallenge(challenge, { rankedIds: [selected] }));
       setResult(res);
       setNewMilestones(res.newMilestones.map((m) => m.label));
       setPhase('done');
@@ -72,11 +74,17 @@ export default function TriageHallScreen() {
     }
   }
 
-  if (!player) return null;
+  if (!player) {
+    return <SafeAreaView style={styles.container}><View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: 10 }}>
+      <Ionicons name="hourglass-outline" size={26} color={META.accent} />
+      <Text style={styles.heroSub}>Loading Rapid Triage Hall…</Text>
+    </View></SafeAreaView>;
+  }
 
   // ── Pick Difficulty ──────────────────────────────────────────────────────
   if (phase === 'pick') {
     const isRepeat = (player.uni_triage_count ?? 0) > 0;
+    const recommended = recommendClinicalDifficulty(player.clinical_practice);
     const rewardTable = isRepeat ? PRACTICE_REPEAT_REWARDS.triage : PRACTICE_REWARDS.triage;
     return (
       <SafeAreaView style={styles.container} edges={["top"]}>
@@ -110,20 +118,21 @@ export default function TriageHallScreen() {
            )}
 
            <Text style={styles.sectionLabel}>{isRepeat ? 'REPEAT REWARDS · DAILY TAPER APPLIES' : 'CHOOSE DIFFICULTY'}</Text>
-          {(['beginner', 'standard', 'advanced'] as PracticeDifficulty[]).map((diff) => {
+           {PRACTICE_DIFFICULTIES.map((diff) => {
              const r = rewardTable[diff];
             const color = DIFFICULTY_COLOR[diff];
-            const count = TRIAGE_SCENARIOS.filter((s) => s.difficulty === diff).length;
+             const count = TRIAGE_SCENARIOS.filter((s) => normalizePracticeDifficulty(s.difficulty) === diff).length;
             return (
               <Pressable key={diff} style={[styles.diffCard, { borderColor: color + '40' }]} onPress={() => startPlay(diff)}>
                 <View style={[styles.badge, { backgroundColor: color + '18' }]}>
                   <Text style={[styles.badgeTxt, { color }]}>{DIFFICULTY_LABEL[diff].toUpperCase()}</Text>
                 </View>
                 <Text style={styles.diffDesc}>
-                  {diff === 'beginner' ? 'Choose 1 of 2 obvious priorities.' :
+                   {diff === 'introductory' ? 'Choose 1 of 2 obvious priorities.' :
                    diff === 'standard' ? 'Choose 1 of 3 patients.' :
-                   'Changing status with subtle cues.'}
+                    diff === 'advanced' ? 'Changing status with subtle cues.' : 'Competing time-critical changes and escalation reasoning.'}
                 </Text>
+                {recommended === diff && <Text style={[styles.poolTxt, { color }]}>Recommended from recent validated practice</Text>}
                 <Text style={styles.poolTxt}>{count} scenarios</Text>
                 <View style={styles.chips}>
                   <Chip icon="star-outline" color="#F59E0B" label={`+${r.playerXp} XP`} />
@@ -145,7 +154,8 @@ export default function TriageHallScreen() {
 
   // ── Play ─────────────────────────────────────────────────────────────────
   if (phase === 'play' && scenario) {
-    const isCorrect = selected === scenario.correctPatientId;
+    const evaluation = submitted && selected ? evaluateClinicalChallenge(toClinicalChallenge(scenario), { rankedIds: [selected] }) : null;
+    const isCorrect = evaluation?.verdict === 'correct';
     return (
       <SafeAreaView style={styles.container} edges={["top"]}>
         <View style={styles.header}>
@@ -215,10 +225,11 @@ export default function TriageHallScreen() {
                 <Ionicons name={isCorrect ? 'checkmark-circle' : 'close-circle'} size={18}
                   color={isCorrect ? '#34D399' : '#F87171'} />
                 <Text style={[styles.feedbackVerdict, { color: isCorrect ? '#34D399' : '#F87171' }]}>
-                  {isCorrect ? 'Correct priority!' : 'Not quite — here\'s the reasoning:'}
+                  {isCorrect ? 'Correct priority!' : evaluation?.verdict === 'unsafe' ? 'Unsafe priority — review the reasoning:' : 'Review complete — here\'s the reasoning:'}
                 </Text>
               </View>
               <Text style={styles.feedbackExplanation}>{scenario.explanation}</Text>
+              <Text accessibilityLiveRegion="polite" style={styles.feedbackExplanation}>Clinical result: {evaluation?.score ?? 0}% · {evaluation?.safety.replace('_', ' ')}</Text>
               <View style={styles.keyRow}>
                 <Ionicons name="bulb-outline" size={13} color="#F59E0B" />
                 <Text style={styles.keyTxt}>{scenario.keyLearning}</Text>

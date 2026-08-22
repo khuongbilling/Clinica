@@ -14,7 +14,7 @@ import { PlayerState } from './types';
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 export type PracticeActivityKind = 'cue_lab' | 'triage' | 'stack';
-export type PracticeDifficulty = 'beginner' | 'standard' | 'advanced';
+export type PracticeDifficulty = 'introductory' | 'standard' | 'advanced' | 'expert';
 
 /**
  * The repeatable circuit is deliberately separate from the one-time module
@@ -31,7 +31,7 @@ export interface DailyPracticeCircuitEntry {
 }
 
 const DAILY_CIRCUIT_KINDS: readonly PracticeActivityKind[] = ['cue_lab', 'triage', 'stack'];
-const DAILY_CIRCUIT_DIFFICULTIES: readonly PracticeDifficulty[] = ['beginner', 'standard', 'advanced'];
+const DAILY_CIRCUIT_DIFFICULTIES: readonly PracticeDifficulty[] = ['introductory', 'standard', 'advanced', 'expert'];
 
 function localDayOrdinal(date: Date): number {
   return Math.floor(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()) / 86_400_000);
@@ -63,7 +63,7 @@ export interface CurriculumActivity {
   label: string;
   description: string;
   route: string;            // existing route
-  difficulty: 'beginner' | 'standard' | 'advanced';
+  difficulty: PracticeDifficulty;
 }
 
 export interface ModuleReward {
@@ -114,7 +114,7 @@ export const CURRICULUM_TRACKS: CurriculumTrack[] = [
           label: 'Cue Lab — Beginner',
           description: 'Identify the single most important clinical cue in a patient scene.',
           route: '/university/cue-lab',
-          difficulty: 'beginner',
+          difficulty: 'introductory',
         },
         reward: { universityCredits: 30, playerXp: 20 },
         requiredCount: 1,
@@ -173,7 +173,7 @@ export const CURRICULUM_TRACKS: CurriculumTrack[] = [
           label: 'Triage Hall — Beginner',
           description: 'Sort a small ward by urgency: Emergency, Urgent, or Routine.',
           route: '/university/triage-hall',
-          difficulty: 'beginner',
+          difficulty: 'introductory',
         },
         reward: { universityCredits: 30, playerXp: 20 },
         requiredCount: 1,
@@ -232,7 +232,7 @@ export const CURRICULUM_TRACKS: CurriculumTrack[] = [
           label: 'Stack Lab — Beginner',
           description: 'Arrange three care steps for a straightforward patient scenario.',
           route: '/university/stack-lab',
-          difficulty: 'beginner',
+          difficulty: 'introductory',
         },
         reward: { universityCredits: 30, playerXp: 20 },
         requiredCount: 1,

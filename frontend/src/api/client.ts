@@ -140,16 +140,36 @@ export const api = {
     ),
   completeUniversityPractice: (
     id: string,
-    activity: 'cue_lab' | 'triage' | 'stack',
-    difficulty: 'beginner' | 'standard' | 'advanced',
+    completion: {
+      activity: 'cue_lab' | 'triage' | 'stack';
+      difficulty: 'introductory' | 'standard' | 'advanced' | 'expert';
+      challenge_id: string;
+      challenge_version: number;
+      attempt_id: string;
+      score: number;
+      safety_result: 'safe' | 'needs_review' | 'unsafe';
+    },
     sessionToken?: string,
-  ) => http<{ player: PlayerState; multiplier: number; granted: Record<string, number>; first_completion: boolean }>(
+  ) => http<{ player: PlayerState; multiplier: number; granted: Record<string, number>; first_completion: boolean; already_claimed: boolean; milestone_ids: string[] }>(
     `/player/${id}/university-practice/complete`,
     {
       method: 'POST',
-      body: JSON.stringify({ activity, difficulty }),
+      body: JSON.stringify(completion),
       headers: sessionToken ? { 'X-Clinica-Session': sessionToken } : {},
     },
+  ),
+  beginUniversityPracticeAttempt: (
+    id: string,
+    attempt: {
+      activity: 'cue_lab' | 'triage' | 'stack';
+      difficulty: 'introductory' | 'standard' | 'advanced' | 'expert';
+      challenge_id: string;
+      challenge_version: number;
+    },
+    sessionToken?: string,
+  ) => http<{ attempt_id: string; activity: string; challenge_id: string; challenge_version: number }>(
+    `/player/${id}/university-practice/attempts`,
+    { method: 'POST', body: JSON.stringify(attempt), headers: sessionToken ? { 'X-Clinica-Session': sessionToken } : {} },
   ),
   completeWardDefense: (
     id: string,

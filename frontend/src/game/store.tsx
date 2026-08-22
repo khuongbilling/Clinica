@@ -37,6 +37,7 @@ import { CLASS_DEFAULT_RESONANCE, FANTASY_CLASSES, fantasyClassFromClassId } fro
 import { normalizeProfileId } from './onboarding';
 import { TokenExchangeItem, MIASMA_BLOOM_MILESTONES, getMilestoneProgress } from './worldEvent';
 import { scaledAge1Reward } from './age1Economy';
+import type { ClinicalChallenge, ClinicalEvaluation } from './clinicalChallenge';
 
 const STORAGE_KEY = 'clinica.player.v2';
 
@@ -242,6 +243,12 @@ function normalizeProgression(p: PlayerState): PlayerState {
   if (!out.uni_practice_milestones_claimed) out = { ...out, uni_practice_milestones_claimed: [] };
   // J4 — backfill Hero Skill Academy upgrade state for pre-J4 saves.
   if (!out.hero_skill_upgrades) out = { ...out, hero_skill_upgrades: {} };
+  if (!out.clinical_practice) {
+    out = {
+      ...out,
+      clinical_practice: { history: [], mastery: { domains: {}, topics: {} }, personalBest: {}, safetyStreak: 0 },
+    };
+  }
   // Push 10 — backfill hero equipment loadouts for pre-P10 saves.
   if (!out.hero_equipment) out = { ...out, hero_equipment: {} };
   // Task 270 — backfill owned equipment list for pre-270 saves.
@@ -567,7 +574,9 @@ type Ctx = {
   // emits a university_lesson daily event. Milestone rewards are granted exactly once per milestone.
   completeUniPractice: (
     activityType: 'cue_lab' | 'triage' | 'stack',
-    difficulty: 'beginner' | 'standard' | 'advanced',
+    difficulty: import('./uniPractice').PracticeDifficulty,
+    challenge: ClinicalChallenge,
+    evaluation: ClinicalEvaluation,
   ) => Promise<{
     ok: boolean;
     reward: import('./uniPractice').GrantedPracticeReward;
@@ -2263,25 +2272,40 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     return { ok: true, message: `+${result.creditsEarned} University Credits!`, result };
   }, [player, updateState]);
 
-  // J3 — University practice activity completion.
+  // Shared challenge practice completion. The backend owns attempt receipts,
+  // rewards, counters, milestones, and compact mastery history.
   const completeUniPractice = useCallback(async (
     activityType: 'cue_lab' | 'triage' | 'stack',
-    difficulty: 'beginner' | 'standard' | 'advanced',
+    difficulty: import('./uniPractice').PracticeDifficulty,
+    challenge: ClinicalChallenge,
+    evaluation: ClinicalEvaluation,
   ) => {
     const base = playerRef.current;
     const empty = { ok: false, reward: null as any, newMilestones: [] as any[] };
     if (!base) return empty;
 
-    const { PRACTICE_REWARDS, PRACTICE_REPEAT_REWARDS, getNewlyEarnedMilestones } = await import('./uniPractice');
-    const countKey = activityType === 'cue_lab' ? 'uni_cue_lab_count' as const
-      : activityType === 'triage'  ? 'uni_triage_count' as const
-      : 'uni_stack_count' as const;
-    // Practice remains freely playable; its fixed-table power grant is
-    // atomically classified, tapered, and persisted by the University service.
+    const { PRACTICE_REWARDS, PRACTICE_REPEAT_REWARDS, UNI_PRACTICE_MILESTONES } = await import('./uniPractice');
+    // A receipt is issued for this exact approved id/version before a rewardable
+    // completion can be submitted. No client-selected reward data crosses this boundary.
+    const attempt = await api.beginUniversityPracticeAttempt(base.id, {
+      activity: activityType,
+      difficulty,
+      challenge_id: challenge.id,
+      challenge_version: challenge.version,
+    }, base.economy_token);
     const grant = await api.completeUniversityPractice(
-      base.id, activityType, difficulty, base.economy_token,
+      base.id,
+      {
+        activity: activityType,
+        difficulty,
+        challenge_id: challenge.id,
+        challenge_version: challenge.version,
+        attempt_id: attempt.attempt_id,
+        score: evaluation.score,
+        safety_result: evaluation.safety,
+      },
+      base.economy_token,
     );
-    const budget = { state: normalizeProgression(grant.player), multiplier: grant.multiplier };
     const isFirstComplete = grant.first_completion;
     const rawRewardDef = (isFirstComplete ? PRACTICE_REWARDS : PRACTICE_REPEAT_REWARDS)[activityType][difficulty];
     const rewardDef = {
@@ -2293,8 +2317,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       bonusItemCount: undefined,
     };
 
-    let next = budget.state;
-    const newCount = next[countKey] ?? ((base[countKey] ?? 0) + 1);
+    let next = normalizeProgression(grant.player);
 
     // Each meaningful lab can offer one small educational Stamina recovery per
     // calendar day. Replays still record scores, but cannot repeatedly refill.
@@ -2307,28 +2330,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       next = await mergeEconomyState(next, economy.player);
     } catch { /* repeated labs remain playable without an additional bonus */ }
 
-    // Auto-check and grant newly earned milestones (once-only)
-    const alreadyClaimed = base.uni_practice_milestones_claimed ?? [];
-    const newlyEarned = getNewlyEarnedMilestones(activityType, newCount, alreadyClaimed);
-    for (const ms of newlyEarned) {
-      if (ms.rewards.playerXp) next = applyXp(next, ms.rewards.playerXp);
-      if (ms.rewards.universityCredits) {
-        next = { ...next, university_credits: (next.university_credits || 0) + ms.rewards.universityCredits };
-      }
-      if (ms.rewards.codexShards) {
-        next = { ...next, codex_shards: (next.codex_shards || 0) + ms.rewards.codexShards };
-      }
-      if (ms.rewards.inventory) {
-        const msInv = { ...(next.inventory || {}) };
-        for (const [k, v] of Object.entries(ms.rewards.inventory)) {
-          msInv[k] = (msInv[k] || 0) + v;
-        }
-        next = { ...next, inventory: msInv };
-      }
-    }
-    if (newlyEarned.length > 0) {
-      next = { ...next, uni_practice_milestones_claimed: [...alreadyClaimed, ...newlyEarned.map((m) => m.id)] };
-    }
+    const newlyEarned = UNI_PRACTICE_MILESTONES.filter((milestone) => grant.milestone_ids.includes(milestone.id));
 
     // Daily rounds — counts as a university_lesson event + material_earned
     // (practice sessions always grant at least 1 learning material scroll).

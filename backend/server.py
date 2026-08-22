@@ -283,6 +283,9 @@ class Player(BaseModel):
     uni_triage_count: int = 0
     uni_stack_count: int = 0
     uni_practice_milestones_claimed: List[str] = Field(default_factory=list)
+    # Compact, server-owned practice evidence. It is not a currency and never
+    # decays; its bounded history is used for recommendations and breadth gates.
+    clinical_practice: Dict[str, Any] = Field(default_factory=dict)
     hero_skill_upgrades: Dict[str, int] = Field(default_factory=dict)
     practice_modules_completed: List[str] = Field(default_factory=list)
     seen_practice_curriculum: bool = False
@@ -383,29 +386,35 @@ FIRST_CLEAR_REWARDS = {
 UNIVERSITY_PRACTICE_REWARDS = {
     "cue_lab": {
         "beginner": (10, 15, "cue_scroll", 1), "standard": (15, 25, "cue_scroll", 2),
-        "advanced": (20, 35, "cue_scroll", 2),
+        "advanced": (20, 35, "cue_scroll", 2), "introductory": (10, 15, "cue_scroll", 1),
+        "expert": (20, 35, "cue_scroll", 2),
     },
     "triage": {
         "beginner": (10, 15, "triage_scroll", 1), "standard": (15, 25, "triage_scroll", 2),
-        "advanced": (20, 35, "triage_scroll", 2),
+        "advanced": (20, 35, "triage_scroll", 2), "introductory": (10, 15, "triage_scroll", 1),
+        "expert": (20, 35, "triage_scroll", 2),
     },
     "stack": {
         "beginner": (10, 15, "stab_scroll", 1), "standard": (15, 25, "stab_scroll", 2),
-        "advanced": (20, 35, "stab_scroll", 2),
+        "advanced": (20, 35, "stab_scroll", 2), "introductory": (10, 15, "stab_scroll", 1),
+        "expert": (20, 35, "stab_scroll", 2),
     },
 }
 UNIVERSITY_PRACTICE_REPEAT_REWARDS = {
     "cue_lab": {
         "beginner": (5, 8, "cue_scroll", 1), "standard": (8, 12, "cue_scroll", 1),
-        "advanced": (10, 15, "cue_scroll", 2),
+        "advanced": (10, 15, "cue_scroll", 2), "introductory": (5, 8, "cue_scroll", 1),
+        "expert": (10, 15, "cue_scroll", 2),
     },
     "triage": {
         "beginner": (5, 8, "triage_scroll", 1), "standard": (8, 12, "triage_scroll", 1),
-        "advanced": (10, 15, "triage_scroll", 2),
+        "advanced": (10, 15, "triage_scroll", 2), "introductory": (5, 8, "triage_scroll", 1),
+        "expert": (10, 15, "triage_scroll", 2),
     },
     "stack": {
         "beginner": (5, 8, "stab_scroll", 1), "standard": (8, 12, "stab_scroll", 1),
-        "advanced": (10, 15, "stab_scroll", 2),
+        "advanced": (10, 15, "stab_scroll", 2), "introductory": (5, 8, "stab_scroll", 1),
+        "expert": (10, 15, "stab_scroll", 2),
     },
 }
 REWARD_CAPS = {
@@ -1003,6 +1012,7 @@ async def update_player(
         # them from a snapshot or a stale client could turn repeat rewards back
         # into first-clear rewards.
         "uni_cue_lab_count", "uni_triage_count", "uni_stack_count",
+         "clinical_practice", "uni_practice_milestones_claimed",
         "bosses_defeated", "claimed_milestones", "owned_titles", "owned_skins",
         # Chapter readiness and Journey key/node claims are server-authoritative
         # so a client snapshot cannot unlock a chapter by fabricating progress.
@@ -1160,7 +1170,48 @@ class ActivityAttemptRequest(BaseModel):
 
 class UniversityPracticeCompletionRequest(BaseModel):
     activity: Literal["cue_lab", "triage", "stack"]
-    difficulty: Literal["beginner", "standard", "advanced"]
+    difficulty: Literal["introductory", "standard", "advanced", "expert", "beginner"]
+    challenge_id: str
+    challenge_version: int = 1
+    attempt_id: str
+    score: int = Field(ge=0, le=100)
+    safety_result: Literal["safe", "needs_review", "unsafe"]
+
+
+class UniversityPracticeAttemptRequest(BaseModel):
+    activity: Literal["cue_lab", "triage", "stack"]
+    difficulty: Literal["introductory", "standard", "advanced", "expert", "beginner"]
+    challenge_id: str
+    challenge_version: int = 1
+
+
+# This is deliberately small, explicit, and server-owned. The frontend may
+# shuffle presentations, but it cannot invent a valid id/version/activity pair
+# or attach unrelated mastery tags to a rewardable receipt.
+PRACTICE_CHALLENGE_MANIFEST: Dict[str, Dict[str, Any]] = {}
+for _activity, _ids, _domains, _topic in (
+    ("cue_lab", ("cue_b1", "cue_b2", "cue_b3", "cue_b4", "cue_s1", "cue_s2", "cue_s3", "cue_s4", "cue_a1", "cue_a2", "cue_a3", "cue_e1"), ("assessment", "systems"), "clinical-assessment"),
+    ("triage", ("tri_b1", "tri_b2", "tri_b3", "tri_b4", "tri_s1", "tri_s2", "tri_s3", "tri_s4", "tri_a1", "tri_a2", "tri_a3", "tri_e1"), ("judgment", "command"), "priority-care"),
+    ("stack", ("stack_b1", "stack_b2", "stack_b3", "stack_b4", "stack_s1", "stack_s2", "stack_s3", "stack_s4", "stack_a1", "stack_a2", "stack_a3", "stack_e1"), ("stabilization", "systems"), "care-sequencing"),
+):
+    for _id in _ids:
+        _difficulty = "introductory" if "_b" in _id else "standard" if "_s" in _id else "advanced" if "_a" in _id else "expert"
+        PRACTICE_CHALLENGE_MANIFEST[_id] = {
+            "activity": _activity, "difficulty": _difficulty, "version": 1,
+            "family": _id.rsplit("_", 1)[0], "domains": list(_domains), "topics": [_topic],
+        }
+
+UNIVERSITY_PRACTICE_MILESTONES = (
+    ("cue_lab", 3, "cue_3", {"university_credits": 50, "inventory.cue_scroll": 1}),
+    ("cue_lab", 5, "cue_5", {"xp": 25, "university_credits": 75, "inventory.cue_scroll": 2, "inventory.hero_training_page": 1}),
+    ("cue_lab", 10, "cue_10", {"xp": 50, "university_credits": 125, "inventory.care_chain_manual": 1}),
+    ("triage", 3, "triage_3", {"university_credits": 50, "inventory.triage_scroll": 1}),
+    ("triage", 5, "triage_5", {"xp": 25, "university_credits": 75, "inventory.triage_scroll": 2, "inventory.hero_training_page": 1}),
+    ("triage", 10, "triage_10", {"xp": 50, "university_credits": 125, "inventory.care_chain_manual": 1}),
+    ("stack", 3, "stack_3", {"university_credits": 50, "inventory.stab_scroll": 1}),
+    ("stack", 5, "stack_5", {"xp": 25, "university_credits": 75, "inventory.stab_scroll": 2, "inventory.hero_training_page": 1}),
+    ("stack", 10, "stack_10", {"xp": 50, "university_credits": 125, "inventory.care_chain_manual": 1}),
+)
 
 
 WARD_SCENARIO_IDS = {
@@ -1546,18 +1597,62 @@ async def purchase_ward_aegis_sidegrade(
     return {"player": Player(**refreshed).model_dump(), "unlocked": payload.upgrade_id}
 
 
+@api_router.post("/player/{player_id}/university-practice/attempts")
+async def begin_university_practice_attempt(
+    player_id: str,
+    payload: UniversityPracticeAttemptRequest,
+    x_clinica_session: Optional[str] = Header(default=None),
+):
+    """Issue one short-lived, challenge-bound receipt before a practice claim."""
+    player = await db.players.find_one({"id": player_id}, {"_id": 0})
+    if not player:
+        raise HTTPException(status_code=404, detail="player not found")
+    if not player_access_ok(player, player_id, x_clinica_session, None):
+        raise HTTPException(status_code=401, detail="invalid player session")
+    difficulty = "introductory" if payload.difficulty == "beginner" else payload.difficulty
+    manifest = PRACTICE_CHALLENGE_MANIFEST.get(payload.challenge_id)
+    if not manifest or manifest["activity"] != payload.activity or manifest["difficulty"] != difficulty or manifest["version"] != payload.challenge_version:
+        raise HTTPException(status_code=422, detail="challenge is not an approved practice challenge")
+    attempt = {
+        "id": str(uuid.uuid4()), "player_id": player_id, "activity": payload.activity,
+        "challenge_id": payload.challenge_id, "challenge_version": payload.challenge_version,
+        "difficulty": difficulty, "created_at": now_iso(), "status": "issued",
+    }
+    await db.activity_attempts.insert_one(attempt)
+    return {"attempt_id": attempt["id"], "activity": payload.activity, "challenge_id": payload.challenge_id, "challenge_version": payload.challenge_version}
+
+
 @api_router.post("/player/{player_id}/university-practice/complete")
 async def complete_university_practice(
     player_id: str,
     payload: UniversityPracticeCompletionRequest,
     x_clinica_session: Optional[str] = Header(default=None),
 ):
-    """Persist a fixed-table University completion; no reward values are client input."""
+    """Consume one bound receipt and derive payout, milestones, and mastery server-side."""
     player = await db.players.find_one({"id": player_id}, {"_id": 0})
     if not player:
         raise HTTPException(status_code=404, detail="player not found")
     if not player_access_ok(player, player_id, x_clinica_session, None):
         raise HTTPException(status_code=401, detail="invalid player session")
+    difficulty = "introductory" if payload.difficulty == "beginner" else payload.difficulty
+    manifest = PRACTICE_CHALLENGE_MANIFEST.get(payload.challenge_id)
+    if not manifest or manifest["activity"] != payload.activity or manifest["difficulty"] != difficulty or manifest["version"] != payload.challenge_version:
+        raise HTTPException(status_code=422, detail="challenge is not an approved practice challenge")
+    issued = await db.activity_attempts.find_one_and_update(
+        {
+            "id": payload.attempt_id, "player_id": player_id, "activity": payload.activity,
+            "challenge_id": payload.challenge_id, "challenge_version": payload.challenge_version,
+            "difficulty": difficulty, "status": "issued",
+        },
+        {"$set": {"status": "processing", "submitted_at": now_iso()}},
+        return_document=True,
+    )
+    if not issued:
+        existing = await db.activity_attempts.find_one({"id": payload.attempt_id, "player_id": player_id}, {"_id": 0})
+        if existing and existing.get("status") == "claimed":
+            current = await db.players.find_one({"id": player_id}, {"_id": 0})
+            return {"player": Player(**current).model_dump(), "multiplier": 0, "granted": {}, "first_completion": False, "already_claimed": True, "milestone_ids": []}
+        raise HTTPException(status_code=409, detail="attempt already used, expired, or unavailable")
     count_key = {
         "cue_lab": "uni_cue_lab_count",
         "triage": "uni_triage_count",
@@ -1566,15 +1661,48 @@ async def complete_university_practice(
     current_count = int(player.get(count_key, 0))
     is_first_completion = current_count == 0
     rewards = UNIVERSITY_PRACTICE_REWARDS if is_first_completion else UNIVERSITY_PRACTICE_REPEAT_REWARDS
-    xp, credits, item, quantity = rewards[payload.activity][payload.difficulty]
+    xp, credits, item, quantity = rewards[payload.activity][difficulty]
     day = age1_day_key()
     used = int(player.get("age1_reward_units", 0)) if player.get("age1_reward_day") == day else 0
     multiplier = age1_reward_multiplier(used, 1)
-    increments = {
+    increments: Dict[str, int] = {
         "xp": int(round(xp * multiplier)),
         "university_credits": int(round(credits * multiplier)),
         f"inventory.{item}": int(round(quantity * multiplier)),
         count_key: 1,
+    }
+    claimed = set(player.get("uni_practice_milestones_claimed") or [])
+    milestone_ids: List[str] = []
+    for milestone_activity, threshold, milestone_id, reward in UNIVERSITY_PRACTICE_MILESTONES:
+        if milestone_activity == payload.activity and current_count + 1 >= threshold and milestone_id not in claimed:
+            milestone_ids.append(milestone_id)
+            for field, value in reward.items():
+                increments[field] = increments.get(field, 0) + int(value)
+    practice = dict(player.get("clinical_practice") or {})
+    history = list(practice.get("history") or [])
+    exact_repeats = sum(1 for entry in history if entry.get("challengeId") == payload.challenge_id)
+    mastery_gain = 0 if payload.safety_result == "unsafe" else max(1, int(payload.score // 20)) if exact_repeats == 0 else (1 if exact_repeats < 3 else 0)
+    domains = dict((practice.get("mastery") or {}).get("domains") or {})
+    topics = dict((practice.get("mastery") or {}).get("topics") or {})
+    for domain in manifest["domains"]:
+        domains[domain] = int(domains.get(domain, 0)) + mastery_gain
+    for topic in manifest["topics"]:
+        topics[topic] = int(topics.get(topic, 0)) + mastery_gain
+    best = dict(practice.get("personalBest") or {})
+    family = manifest["family"]
+    best[family] = max(int(best.get(family, 0)), payload.score)
+    prior_streak = int(practice.get("safetyStreak", 0))
+    attempt_record = {
+        "challengeId": payload.challenge_id, "challengeVersion": payload.challenge_version,
+        "variantFamilyId": family, "activity": payload.activity, "difficulty": difficulty,
+        "score": payload.score, "safety": payload.safety_result,
+        "topicTags": manifest["topics"], "masteryTags": manifest["domains"], "completedAt": now_iso(),
+    }
+    next_practice = {
+        "history": (history + [attempt_record])[-60:],
+        "mastery": {"domains": domains, "topics": topics},
+        "personalBest": best,
+        "safetyStreak": prior_streak + 1 if payload.safety_result == "safe" else 0,
     }
     increments = {key: value for key, value in increments.items() if value}
     next_xp = int(player.get("xp", 0)) + increments.get("xp", 0)
@@ -1583,16 +1711,22 @@ async def complete_university_practice(
         {"$inc": increments, "$set": {
             "updated_at": now_iso(), "age1_reward_day": day, "age1_reward_units": used + 1,
             "player_level": player_level_from_xp(next_xp),
+            "clinical_practice": next_practice,
+            "uni_practice_milestones_claimed": sorted(claimed.union(milestone_ids)),
         }},
     )
     if updated.modified_count != 1:
+        await db.activity_attempts.update_one({"id": payload.attempt_id, "status": "processing"}, {"$set": {"status": "issued"}})
         raise HTTPException(status_code=409, detail="University reward state changed; retry")
+    await db.activity_attempts.update_one({"id": payload.attempt_id}, {"$set": {"status": "claimed", "claimed_at": now_iso()}})
     current = await db.players.find_one({"id": player_id}, {"_id": 0})
     return {
         "player": Player(**current).model_dump(),
         "multiplier": multiplier,
         "granted": increments,
         "first_completion": is_first_completion,
+        "milestone_ids": milestone_ids,
+        "already_claimed": False,
     }
 
 

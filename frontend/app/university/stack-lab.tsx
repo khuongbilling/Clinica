@@ -10,11 +10,12 @@ import { usePlayer } from "@/src/game/store";
 import {
   StackScenario, PracticeDifficulty,
   DIFFICULTY_LABEL, DIFFICULTY_COLOR, ACTIVITY_META,
-  PRACTICE_REWARDS, PRACTICE_REPEAT_REWARDS, pickDailyPracticeScenario, scrollLabel, itemLabel,
+  PRACTICE_REWARDS, PRACTICE_REPEAT_REWARDS, PRACTICE_DIFFICULTIES, normalizePracticeDifficulty, pickDailyPracticeScenario, scrollLabel, itemLabel, toClinicalChallenge,
   STACK_SCENARIOS,
 } from "@/src/game/uniPractice";
 import { getDailyPracticeCircuit } from "@/src/game/practiceCurriculum";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
+import { evaluateClinicalChallenge, recommendClinicalDifficulty } from "@/src/game/clinicalChallenge";
 
 const META = ACTIVITY_META.stack;
 type Phase = 'pick' | 'play' | 'done';
@@ -34,7 +35,7 @@ export default function StackLabScreen() {
   const { player, completeUniPractice } = usePlayer();
 
   const [phase, setPhase]           = useState<Phase>('pick');
-  const [difficulty, setDifficulty] = useState<PracticeDifficulty>('beginner');
+  const [difficulty, setDifficulty] = useState<PracticeDifficulty>('introductory');
   const [scenario, setScenario]     = useState<StackScenario | null>(null);
   // shuffled pool of step IDs available to pick
   const [pool, setPool]             = useState<string[]>([]);
@@ -99,10 +100,11 @@ export default function StackLabScreen() {
   }
 
   async function handleClaim() {
-    if (claiming || result) return;
+    if (claiming || result || !scenario) return;
     setClaiming(true);
     try {
-      const res = await completeUniPractice('stack', difficulty);
+      const challenge = toClinicalChallenge(scenario);
+      const res = await completeUniPractice('stack', difficulty, challenge, evaluateClinicalChallenge(challenge, { sequenceIds: sequence }));
       setResult(res);
       setNewMilestones(res.newMilestones.map((m) => m.label));
       setPhase('done');
@@ -111,11 +113,17 @@ export default function StackLabScreen() {
     }
   }
 
-  if (!player) return null;
+  if (!player) {
+    return <SafeAreaView style={styles.container}><View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: 10 }}>
+      <Ionicons name="hourglass-outline" size={26} color={META.accent} />
+      <Text style={styles.heroSub}>Loading Stabilize Stack Lab…</Text>
+    </View></SafeAreaView>;
+  }
 
   // ── Pick Difficulty ──────────────────────────────────────────────────────
   if (phase === 'pick') {
     const isRepeat = (player.uni_stack_count ?? 0) > 0;
+    const recommended = recommendClinicalDifficulty(player.clinical_practice);
     const rewardTable = isRepeat ? PRACTICE_REPEAT_REWARDS.stack : PRACTICE_REWARDS.stack;
     return (
       <SafeAreaView style={styles.container} edges={["top"]}>
@@ -148,20 +156,21 @@ export default function StackLabScreen() {
              </View>
            )}
            <Text style={styles.sectionLabel}>{isRepeat ? 'REPEAT REWARDS · DAILY TAPER APPLIES' : 'CHOOSE DIFFICULTY'}</Text>
-          {(['beginner', 'standard', 'advanced'] as PracticeDifficulty[]).map((diff) => {
+           {PRACTICE_DIFFICULTIES.map((diff) => {
              const r = rewardTable[diff];
             const color = DIFFICULTY_COLOR[diff];
-            const count = STACK_SCENARIOS.filter((s) => s.difficulty === diff).length;
+             const count = STACK_SCENARIOS.filter((s) => normalizePracticeDifficulty(s.difficulty) === diff).length;
             return (
               <Pressable key={diff} style={[styles.diffCard, { borderColor: color + '40' }]} onPress={() => startPlay(diff)}>
                 <View style={[styles.badge, { backgroundColor: color + '18' }]}>
                   <Text style={[styles.badgeTxt, { color }]}>{DIFFICULTY_LABEL[diff].toUpperCase()}</Text>
                 </View>
                 <Text style={styles.diffDesc}>
-                  {diff === 'beginner' ? '3 steps — clear sequence, no distractors.' :
+                   {diff === 'introductory' ? '3 steps — clear sequence, no distractors.' :
                    diff === 'standard' ? '3-4 steps — slightly more complex.' :
-                   '4-6 steps with one distractor action.'}
+                    diff === 'advanced' ? '4-6 steps with one distractor action.' : 'Escalation, dependencies, and reassessment reasoning.'}
                 </Text>
+                {recommended === diff && <Text style={[styles.poolTxt, { color }]}>Recommended from recent validated practice</Text>}
                 <Text style={styles.poolTxt}>{count} scenarios · Wrong answers give teaching hints</Text>
                 <View style={styles.chips}>
                   <Chip icon="star-outline"   color="#F59E0B" label={`+${r.playerXp} XP`} />
@@ -196,7 +205,8 @@ export default function StackLabScreen() {
         if (ok) correctCount++;
       }
     }
-    const allCorrect = submitted && correctCount === scenario.steps.length;
+    const evaluation = submitted ? evaluateClinicalChallenge(toClinicalChallenge(scenario), { sequenceIds: sequence }) : null;
+    const allCorrect = evaluation?.verdict === 'correct';
 
     return (
       <SafeAreaView style={styles.container} edges={["top"]}>
@@ -292,13 +302,14 @@ export default function StackLabScreen() {
                 <Ionicons name={allCorrect ? 'checkmark-circle' : 'school-outline'} size={18}
                   color={allCorrect ? '#34D399' : '#F59E0B'} />
                 <Text style={[styles.feedbackVerdict, { color: allCorrect ? '#34D399' : '#F59E0B' }]}>
-                  {allCorrect ? `Perfect sequence!` : `${correctCount}/${scenario.steps.length} correct — teaching note below`}
+                  {allCorrect ? `Perfect sequence!` : `${evaluation?.score ?? 0}% — teaching note below`}
                 </Text>
               </View>
               <View style={styles.teachingRow}>
                 <Ionicons name="bulb-outline" size={13} color="#F59E0B" />
                 <Text style={styles.teachingTxt}>{scenario.teachingNote}</Text>
               </View>
+              <Text accessibilityLiveRegion="polite" style={styles.teachingTxt}>Safety: {evaluation?.safety.replace('_', ' ')}</Text>
 
               {/* Show correct order for reference */}
               {!allCorrect && (
