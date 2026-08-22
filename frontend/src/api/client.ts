@@ -1,5 +1,6 @@
 import Constants from 'expo-constants';
 import { PlayerState } from '@/src/game/types';
+import type { PlayerHeroEligibility, PlayerHeroRecord, PlayerHeroAppearance } from '@/src/game/playerHero';
 
 const BASE_URL = (process.env.EXPO_PUBLIC_BACKEND_URL || (Constants?.expoConfig?.extra as any)?.backendUrl || '').replace(/\/$/, '');
 const API = `${BASE_URL}/api`;
@@ -52,6 +53,31 @@ export const api = {
       body: JSON.stringify({ specialization_id: specializationId }),
       headers: sessionToken ? { 'X-Clinica-Session': sessionToken } : {},
     }),
+  getPlayerHeroEligibility: (id: string, sessionToken?: string) =>
+    http<PlayerHeroEligibility>(`/player/${id}/player-hero/eligibility`, {
+      headers: sessionToken ? { 'X-Clinica-Session': sessionToken } : {},
+    }),
+  createPlayerHero: (
+    id: string,
+    input: {
+      display_name: string;
+      pronouns: string;
+      appearance: PlayerHeroAppearance;
+      focus: string;
+      stats: Record<string, number>;
+      core_trait_id: string;
+      natural_talent_id: string;
+      creed_id: string;
+    },
+    sessionToken?: string,
+  ) => http<{ player: PlayerState; player_hero: PlayerHeroRecord; already_created: boolean }>(
+    `/player/${id}/player-hero/create`,
+    {
+      method: 'POST',
+      body: JSON.stringify(input),
+      headers: sessionToken ? { 'X-Clinica-Session': sessionToken } : {},
+    },
+  ),
   mutateEconomy: (
     id: string,
     mutation: {
@@ -175,6 +201,18 @@ export const api = {
         headers: sessionToken ? { 'X-Clinica-Session': sessionToken } : {},
       },
     ),
+  selectClass: (id: string, classId: string, sessionToken?: string) =>
+    http<PlayerState>(`/player/${id}/select-class`, {
+      method: 'POST',
+      body: JSON.stringify({ class_id: classId }),
+      headers: sessionToken ? { 'X-Clinica-Session': sessionToken } : {},
+    }),
+  claimClassTier: (id: string, level: 1 | 10 | 20 | 30, sessionToken?: string) =>
+    http<PlayerState>(`/player/${id}/class-tiers`, {
+      method: 'POST',
+      body: JSON.stringify({ level }),
+      headers: sessionToken ? { 'X-Clinica-Session': sessionToken } : {},
+    }),
   purchaseJourneyMerchant: (id: string, runId: string, tileId: string, stockId: string, sessionToken?: string) =>
     http<{ player: PlayerState; run: unknown }>(
       `/player/${id}/journey-runs/${runId}/merchant-purchase`,

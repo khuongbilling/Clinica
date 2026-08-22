@@ -222,6 +222,14 @@ class Player(BaseModel):
     rank_index: int = 0
     xp: int = 0
     player_level: int = 1
+    # Player Hero is an isolated, one-time character record. It is not a roster
+    # hero and is never included in heroes_owned/hero_progression.
+    player_hero: Optional[Dict[str, Any]] = None
+    player_hero_opportunities: List[Dict[str, Any]] = Field(default_factory=list)
+    # New accounts begin after the already-completed modern opening. The
+    # separate flag makes that completed awakening explicit for eligibility;
+    # legacy documents without it remain safely locked until reconciled.
+    awakening_beat_complete: bool = True
     class_tree_id: Optional[str] = None
     class_diagnostic_resonance: Optional[str] = None
     class_diagnostic_secondary: Optional[str] = None
@@ -429,6 +437,11 @@ class PlayerUpdate(BaseModel):
     rank_index: Optional[int] = None
     xp: Optional[int] = None
     player_level: Optional[int] = None
+    # Accepted only so the generic snapshot can explicitly discard these
+    # valuable fields. Player Hero writes belong to its protected endpoints.
+    player_hero: Optional[Dict[str, Any]] = None
+    player_hero_opportunities: Optional[List[Dict[str, Any]]] = None
+    awakening_beat_complete: Optional[bool] = None
     class_tree_id: Optional[str] = None
     class_diagnostic_resonance: Optional[str] = None
     class_diagnostic_secondary: Optional[str] = None
@@ -518,6 +531,137 @@ class PlayerUpdate(BaseModel):
     chapter_boss_keys: Optional[Dict[str, Any]] = None
     # Canonical shift per choice chapter (str chapter_id → "day"|"evening"|"night").
     canonical_shifts: Optional[Dict[str, str]] = None
+
+
+# ---------- Player Hero foundation ----------
+# These definitions intentionally live beside the API models rather than in the
+# roster/equipment models. Only the baseline and Level 35 sidegrade are
+# currently playable; higher namespaces are contracts for future gated work.
+PLAYER_HERO_STAT_KEYS = ("insight", "carePower", "intervention", "guard", "coordination")
+PLAYER_HERO_STAT_TOTAL = 25
+PLAYER_HERO_STAT_MAX = 10
+PLAYER_HERO_RATES_BP = {"standard": 9400, "prodigy": 500, "convergence": 100}
+PLAYER_HERO_FOCUS_IDS = {"lantern", "lotus", "compass", "bell"}
+PLAYER_HERO_CORE_TRAITS = {"steady_hands", "clinical_eye", "quiet_resolve"}
+PLAYER_HERO_NATURAL_TALENTS = {"pattern_reader", "rapid_learner", "protective_instinct"}
+PLAYER_HERO_CREEDS = {"care_before_glory", "truth_in_practice", "leave_no_one_behind"}
+PLAYER_HERO_STAGE_GATES = {
+    "baseline": (30, True), "doctrine": (35, True), "resonance": (40, False),
+    "echo": (40, False), "aegis": (45, False), "covenant": (45, False),
+    "ascendant": (50, False), "exalted": (50, False), "genesis": (50, False),
+    "sovereign": (50, False), "convergence": (50, False),
+}
+
+
+class PlayerHeroCreateRequest(BaseModel):
+    # Identity is bounded at the API boundary. Valuable outcomes below are
+    # still always derived server-side; clients cannot submit potential,
+    # signature lineage, IDs, timestamps, or rewards.
+    display_name: str = Field(min_length=1, max_length=24)
+    pronouns: str = Field(min_length=1, max_length=32)
+    appearance: Dict[str, int]
+    focus: str
+    stats: Dict[str, int]
+    core_trait_id: str
+    natural_talent_id: str
+    creed_id: str
+
+
+class PlayerHeroProficiencyRequest(BaseModel):
+    source: Literal["university_practice", "qualifying_journey"]
+    run_id: Optional[str] = None
+
+
+def player_hero_requirements(doc: Dict[str, Any]) -> Dict[str, Any]:
+    level = int(doc.get("player_level") or player_level_from_xp(int(doc.get("xp") or 0)))
+    class_id = doc.get("class_tree_id")
+    progress = (doc.get("class_progress") or {}).get(class_id, []) if class_id else []
+    specialization = (doc.get("class_specialization") or {}).get(class_id) if class_id else None
+    requirements = [
+        {"id": "player_level_30", "label": "Player Level 30", "met": level >= 30,
+         "detail": f"Level {level}/30"},
+        {"id": "modern_opening", "label": "Opening identity and prologue completed",
+         "met": bool(doc.get("opening_prologue_complete") and doc.get("identity_restored") and doc.get("prologue_complete")),
+         "detail": "Modern opening complete" if doc.get("opening_prologue_complete") and doc.get("identity_restored") and doc.get("prologue_complete") else "Complete the modern opening and identity reconstruction"},
+        {"id": "root_calling", "label": "Root Calling finalized", "met": bool(class_id),
+         "detail": str(class_id) if class_id else "Choose a class"},
+        {"id": "class_tier_30", "label": "Level-30 Class Tier claimed", "met": 30 in progress,
+         "detail": "Claimed" if 30 in progress else "Claim the Level-30 class tier"},
+        {"id": "specialization", "label": "Specialization selected", "met": bool(specialization),
+         "detail": str(specialization) if specialization else "Choose a specialization"},
+        {"id": "awakening_beat", "label": "Awakening beat completed", "met": bool(doc.get("awakening_beat_complete")),
+         "detail": "Awakened" if doc.get("awakening_beat_complete") else "Complete the awakening story beat"},
+    ]
+    created = bool(doc.get("player_hero"))
+    if created:
+        state = "created"
+    elif level < 20:
+        state = "hidden"
+    elif level < 30:
+        state = "foreshadowed"
+    elif all(item["met"] for item in requirements):
+        state = "unlocked"
+    else:
+        state = "locked"
+    return {"state": state, "canCreate": state == "unlocked", "requirements": requirements}
+
+
+def _player_hero_public(doc: Dict[str, Any]) -> Dict[str, Any]:
+    return {k: v for k, v in Player(**doc).model_dump().items() if k != "economy_token"}
+
+
+async def resolve_player_hero_journey_opportunity(player: Dict[str, Any], run: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    """Resolve one immutable development opportunity for one cleared Journey.
+
+    The completed run owns the roll identity. Exploration only changes the
+    threshold before the HMAC roll is evaluated; neither tile reloads nor retry
+    requests can make another roll because the result (including no award) is
+    persisted under the immutable run id.
+    """
+    hero = player.get("player_hero")
+    if not hero:
+        return None
+    run_id = str(run.get("id") or "")
+    if not run_id:
+        return None
+    resolved_run_ids = list(player.get("player_hero_opportunity_run_ids") or [])
+    existing = next((row for row in (player.get("player_hero_opportunities") or []) if row.get("runId") == run_id), None)
+    if existing:
+        return existing
+    # Never accept the mutable client-side aggregate for a valuable outcome.
+    # This count is rebuilt from the server-frozen tiles and visit state.
+    explored = max(1, sum(
+        1 for tile in (run.get("tiles") or [])
+        if isinstance(tile, dict) and tile.get("visited")
+    ))
+    # Base 20%, then +1pp per optional visited tile after five, capped +8pp.
+    exploration_bonus_bp = min(800, max(0, explored - 5) * 100)
+    threshold_bp = 2000 + exploration_bonus_bp
+    secret = (os.environ.get("SESSION_SECRET") or "player-hero-opportunity").encode()
+    digest = hmac.new(secret, f"{player['id']}:{run_id}:player-hero-opportunity".encode(), hashlib.sha256).digest()
+    roll_bp = int.from_bytes(digest[:4], "big") % 10_000
+    level = int(player.get("player_level") or player_level_from_xp(int(player.get("xp") or 0)))
+    awarded = roll_bp < threshold_bp
+    opportunity = {
+        "id": f"player_hero_opportunity_{run_id}",
+        "runId": run_id,
+        "source": "journey",
+        "resolvedAt": now_iso(),
+        "exploredTileCount": explored,
+        "thresholdBp": threshold_bp,
+        "awarded": awarded,
+        "kind": ("principle" if level >= 35 else "focus_blueprint") if awarded else None,
+        "persistedResolution": "server_roll_once",
+    }
+    write = await db.players.update_one(
+        {"id": player["id"], "player_hero_opportunity_run_ids": {"$ne": run_id}},
+        {"$set": {"updated_at": now_iso()},
+         "$addToSet": {"player_hero_opportunity_run_ids": run_id, "player_hero_opportunities": opportunity}},
+    )
+    if write.modified_count != 1:
+        current = await db.players.find_one({"id": player["id"]}, {"_id": 0, "player_hero_opportunities": 1})
+        return next((row for row in (current or {}).get("player_hero_opportunities") or [] if row.get("runId") == run_id), opportunity)
+    return opportunity
 
 
 # ---------- Routes ----------
@@ -621,6 +765,207 @@ async def get_player(
     return {k: v for k, v in Player(**doc).model_dump().items() if k != "economy_token"}
 
 
+@api_router.get("/player/{player_id}/player-hero/eligibility")
+async def get_player_hero_eligibility(
+    player_id: str,
+    x_clinica_session: Optional[str] = Header(default=None),
+):
+    """Return the persisted gate state without exposing any creation inputs."""
+    doc = await db.players.find_one({"id": player_id}, {"_id": 0})
+    if not doc:
+        raise HTTPException(status_code=404, detail="player not found")
+    if not player_access_ok(doc, player_id, x_clinica_session, None):
+        raise HTTPException(status_code=401, detail="invalid player session")
+    return player_hero_requirements(doc)
+
+
+def _roll_player_hero_potential() -> str:
+    # SystemRandom is server-side and never seeded from client input. The
+    # persisted receipt makes this roll a one-time operation even across
+    # retries, reloads, and concurrent requests.
+    roll = secrets.randbelow(10_000)
+    if roll < PLAYER_HERO_RATES_BP["convergence"]:
+        return "convergence"
+    if roll < PLAYER_HERO_RATES_BP["convergence"] + PLAYER_HERO_RATES_BP["prodigy"]:
+        return "prodigy"
+    return "standard"
+
+
+def _validate_player_hero_create(payload: PlayerHeroCreateRequest) -> None:
+    appearance_limits = {
+        "skinTone": (0, 5), "hairStyle": (0, 4), "hairColor": (0, 7),
+        "faceStyle": (0, 5), "accentColor": (0, 7),
+    }
+    if set(payload.appearance) != set(appearance_limits):
+        raise HTTPException(status_code=422, detail="appearance must contain exactly the five bounded appearance fields")
+    for key, (low, high) in appearance_limits.items():
+        value = payload.appearance[key]
+        if not isinstance(value, int) or value < low or value > high:
+            raise HTTPException(status_code=422, detail=f"{key} must be an integer from {low} to {high}")
+    if payload.focus not in PLAYER_HERO_FOCUS_IDS:
+        raise HTTPException(status_code=422, detail="unknown Player Hero Focus")
+    if payload.core_trait_id not in PLAYER_HERO_CORE_TRAITS:
+        raise HTTPException(status_code=422, detail="unknown Core Trait")
+    if payload.natural_talent_id not in PLAYER_HERO_NATURAL_TALENTS:
+        raise HTTPException(status_code=422, detail="unknown Natural Talent")
+    if payload.creed_id not in PLAYER_HERO_CREEDS:
+        raise HTTPException(status_code=422, detail="unknown Creed")
+    if set(payload.stats) != set(PLAYER_HERO_STAT_KEYS):
+        raise HTTPException(status_code=422, detail="stats must contain exactly five Player Hero combat stats")
+    if any(not isinstance(payload.stats[key], int) or payload.stats[key] < 0 or payload.stats[key] > PLAYER_HERO_STAT_MAX for key in PLAYER_HERO_STAT_KEYS):
+        raise HTTPException(status_code=422, detail=f"each combat stat must be an integer from 0 to {PLAYER_HERO_STAT_MAX}")
+    if sum(payload.stats.values()) != PLAYER_HERO_STAT_TOTAL:
+        raise HTTPException(status_code=422, detail=f"combat stat allocations must total {PLAYER_HERO_STAT_TOTAL}")
+
+
+@api_router.post("/player/{player_id}/player-hero/create")
+async def create_player_hero(
+    player_id: str,
+    payload: PlayerHeroCreateRequest,
+    x_clinica_session: Optional[str] = Header(default=None),
+):
+    """Create the one Player Hero, atomically and exactly once.
+
+    The client may choose bounded identity and baseline options. The server
+    snapshots Root Calling, derives the typed Signature, rolls Potential, and
+    owns all timestamps/IDs. Replay returns the original record unchanged.
+    """
+    doc = await db.players.find_one({"id": player_id}, {"_id": 0})
+    if not doc:
+        raise HTTPException(status_code=404, detail="player not found")
+    if not player_access_ok(doc, player_id, x_clinica_session, None):
+        raise HTTPException(status_code=401, detail="invalid player session")
+    if doc.get("player_hero"):
+        return {"player": _player_hero_public(doc), "player_hero": doc["player_hero"], "already_created": True}
+    eligibility = player_hero_requirements(doc)
+    if not eligibility["canCreate"]:
+        raise HTTPException(status_code=409, detail={"message": "Player Hero is not unlocked", "eligibility": eligibility})
+    _validate_player_hero_create(payload)
+
+    class_id = str(doc["class_tree_id"])
+    specialization_id = str((doc.get("class_specialization") or {}).get(class_id))
+    element_by_class = {
+        "medic": "River", "scholar": "Mind", "alchemist": "Fire",
+        "village_caretaker": "Growth", "ward_commander": "Protection",
+    }
+    now = now_iso()
+    receipt_id = str(uuid.uuid4())
+    potential = _roll_player_hero_potential()
+    signature_id = f"signature_{class_id}_{specialization_id}"
+    hero_id = f"player_hero_{uuid.uuid4()}"
+    hero = {
+        "id": hero_id,
+        "state": "created",
+        "identity": {
+            "displayName": payload.display_name.strip()[:24],
+            "pronouns": payload.pronouns.strip()[:32],
+            "appearance": dict(payload.appearance),
+            "focus": payload.focus,
+            "rootCalling": {"classId": class_id, "specializationId": specialization_id, "capturedAt": now},
+        },
+        "skillDNA": {
+            "element": element_by_class.get(class_id, "Mind"),
+            "actionType": "support",
+            "signatureId": signature_id,
+            "signatureTier": "standard",
+            "equilibriumCost": 1,
+        },
+        "stats": dict(payload.stats),
+        "potential": {"tier": potential, "rolledAt": now, "receiptId": receipt_id, "ratesBp": PLAYER_HERO_RATES_BP},
+        "progression": {
+            "coreTraitId": payload.core_trait_id, "acquiredTraitId": None,
+            "naturalTalentId": payload.natural_talent_id, "acquiredTalentId": None,
+            "activeFeatIds": [], "creedId": payload.creed_id,
+            "signatureLineageId": signature_id, "covenantId": None, "primaryAegisId": None,
+            "proficiency": 0, "proficiencyEvidence": [],
+        },
+        "equilibrium": {
+            "activeStrongEffects": 0, "counterTags": ["standard_signature"],
+            "amplificationCap": 0.25, "mitigationCap": 0.25, "freeActionCap": 0,
+        },
+        "createdAt": now,
+    }
+    # The predicate is the exactly-once lock. A concurrent request cannot
+    # replace this record or generate a second Potential Profile.
+    write = await db.players.update_one(
+        {"id": player_id, "$or": [
+            {"player_hero": {"$exists": False}},
+            {"player_hero": None},
+        ]},
+        {"$set": {
+            "player_hero": hero,
+            "player_hero_creation_receipt": {
+                "receipt_id": receipt_id, "created_at": now, "hero_id": hero_id,
+            },
+            "updated_at": now,
+        }},
+    )
+    if write.modified_count != 1:
+        current = await db.players.find_one({"id": player_id}, {"_id": 0})
+        if not current:
+            raise HTTPException(status_code=404, detail="player not found")
+        if current.get("player_hero"):
+            return {"player": _player_hero_public(current), "player_hero": current["player_hero"], "already_created": True}
+        raise HTTPException(status_code=409, detail="Player Hero state changed; retry")
+    updated = await db.players.find_one({"id": player_id}, {"_id": 0})
+    return {"player": _player_hero_public(updated), "player_hero": hero, "already_created": False}
+
+
+@api_router.post("/player/{player_id}/player-hero/proficiency")
+async def award_player_hero_proficiency(
+    player_id: str,
+    payload: PlayerHeroProficiencyRequest,
+    x_clinica_session: Optional[str] = Header(default=None),
+):
+    """Grant one proficiency only after server-verifiable meaningful practice.
+
+    There is deliberately no shop, fragment, currency, or paid pathway here.
+    The evidence receipt is idempotent so offline retries cannot duplicate it.
+    """
+    player = await db.players.find_one({"id": player_id}, {"_id": 0})
+    if not player:
+        raise HTTPException(status_code=404, detail="player not found")
+    if not player_access_ok(player, player_id, x_clinica_session, None):
+        raise HTTPException(status_code=401, detail="invalid player session")
+    if not player.get("player_hero"):
+        raise HTTPException(status_code=409, detail="create a Player Hero before earning proficiency")
+    if payload.source == "university_practice":
+        # University completion receipts are not server-issued yet. Refuse
+        # rather than treating client-owned aggregate counters as evidence.
+        raise HTTPException(status_code=409, detail="University proficiency is unavailable until verified activity receipts ship")
+    if not payload.run_id:
+        raise HTTPException(status_code=422, detail="a completed Journey run is required")
+    run = await db.journey_runs.find_one(
+        {"id": payload.run_id, "player_id": player_id, "status": "cleared"}, {"_id": 0, "id": 1},
+    )
+    if not run:
+        raise HTTPException(status_code=409, detail="Journey practice must come from a cleared server run")
+    # The client never chooses a receipt key. A cleared run can produce exactly
+    # one canonical practice receipt regardless of retry count or payload.
+    evidence_id = f"journey-practice:{run['id']}"
+    evidence = {
+        "id": evidence_id,
+        "practiceType": "validated_meaningful_practice",
+        "source": "qualifying_journey",
+        "verifiedAt": now_iso(),
+        "proficiencyAward": 1,
+    }
+    write = await db.players.update_one(
+        {"id": player_id, "player_hero.progression.proficiencyEvidence.id": {"$ne": evidence_id}},
+        {
+            "$inc": {"player_hero.progression.proficiency": 1},
+            "$push": {"player_hero.progression.proficiencyEvidence": evidence},
+            "$set": {"updated_at": now_iso()},
+        },
+    )
+    current = await db.players.find_one({"id": player_id}, {"_id": 0})
+    return {
+        "player": _player_hero_public(current),
+        "already_awarded": write.modified_count != 1,
+        "proficiency": int((current.get("player_hero") or {}).get("progression", {}).get("proficiency", 0)),
+    }
+
+
 @api_router.put("/player/{player_id}", response_model=Player)
 async def update_player(
     player_id: str,
@@ -657,6 +1002,15 @@ async def update_player(
         "ward_aegis_pity", "ward_aegis_lifetime_fragments", "ward_aegis_week_key",
         "ward_aegis_weekly_random_drops", "ward_aegis_milestone_granted", "ward_aegis_qualifying_day",
         "ward_defense_reward_day", "ward_defense_reward_claims",
+        # Player Hero state is valuable and exactly-once. It is never accepted
+        # through a generic snapshot, including stale local saves.
+        "player_hero", "player_hero_creation_receipt", "awakening_beat_complete",
+        "player_hero_opportunities", "player_hero_opportunity_run_ids",
+        # These are Player Hero creation gates. Allowing a generic snapshot to
+        # change any one of them would turn the protected create endpoint into
+        # a client-forged progression shortcut.
+        "opening_prologue_complete", "opening_prologue_phase", "prologue_complete",
+        "identity_restored", "class_tree_id", "class_progress", "class_specialization",
     ):
         updates.pop(field, None)
     # Legacy Skill Academy purchases predate the Ward Aegis feature and still
@@ -1402,6 +1756,89 @@ class ClaimSpecializationRequest(BaseModel):
     specialization_id: str
 
 
+class SelectClassRequest(BaseModel):
+    class_id: str
+
+
+class ClaimClassTierRequest(BaseModel):
+    level: Literal[1, 10, 20, 30]
+
+
+CLASS_TIER_REQUIREMENTS: dict[int, dict[str, int]] = {
+    1: {},
+    10: {"class_manuals": 1},
+    20: {"knowledge_points": 30, "class_manuals": 1},
+    30: {"ascension_seals": 1},
+}
+
+
+@api_router.post("/player/{player_id}/select-class", response_model=Player)
+async def select_class(
+    player_id: str,
+    payload: SelectClassRequest,
+    x_clinica_session: Optional[str] = Header(default=None),
+):
+    """Persist the freely chosen Root Calling outside generic snapshots."""
+    if payload.class_id not in VALID_SPECIALIZATIONS:
+        raise HTTPException(status_code=422, detail="unknown class")
+    player = await db.players.find_one({"id": player_id}, {"_id": 0})
+    if not player:
+        raise HTTPException(status_code=404, detail="player not found")
+    if not player_access_ok(player, player_id, x_clinica_session, None):
+        raise HTTPException(status_code=401, detail="invalid player session")
+    await db.players.update_one(
+        {"id": player_id},
+        {"$set": {"class_tree_id": payload.class_id, "updated_at": now_iso()}},
+    )
+    updated = await db.players.find_one({"id": player_id}, {"_id": 0})
+    return Player(**updated)
+
+
+@api_router.post("/player/{player_id}/class-tiers", response_model=Player)
+async def claim_class_tier(
+    player_id: str,
+    payload: ClaimClassTierRequest,
+    x_clinica_session: Optional[str] = Header(default=None),
+):
+    """Atomically spend server-owned materials for one class-tier claim."""
+    player = await db.players.find_one({"id": player_id}, {"_id": 0})
+    if not player:
+        raise HTTPException(status_code=404, detail="player not found")
+    if not player_access_ok(player, player_id, x_clinica_session, None):
+        raise HTTPException(status_code=401, detail="invalid player session")
+    class_id = player.get("class_tree_id")
+    if class_id not in VALID_SPECIALIZATIONS:
+        raise HTTPException(status_code=409, detail="select a Root Calling first")
+    level = payload.level
+    player_level = int(player.get("player_level") or player_level_from_xp(int(player.get("xp") or 0)))
+    if player_level < level:
+        raise HTTPException(status_code=409, detail=f"Player Level {level} is required")
+    progress = (player.get("class_progress") or {}).get(class_id, [])
+    previous = {10: 1, 20: 10, 30: 20}.get(level)
+    if previous and previous not in progress:
+        raise HTTPException(status_code=409, detail="claim the preceding class tier first")
+    requirements = CLASS_TIER_REQUIREMENTS[level]
+    query: Dict[str, Any] = {
+        "id": player_id,
+        f"class_progress.{class_id}": {"$ne": level},
+    }
+    for material, qty in requirements.items():
+        query[f"inventory.{material}"] = {"$gte": qty}
+    increments = {f"inventory.{material}": -qty for material, qty in requirements.items()}
+    result = await db.players.update_one(
+        query,
+        {
+            "$addToSet": {f"class_progress.{class_id}": level},
+            "$inc": increments,
+            "$set": {"updated_at": now_iso()},
+        },
+    )
+    if result.modified_count != 1:
+        raise HTTPException(status_code=409, detail="tier is already claimed or required materials are unavailable")
+    updated = await db.players.find_one({"id": player_id}, {"_id": 0})
+    return Player(**updated)
+
+
 @api_router.post("/player/{player_id}/claim-specialization", response_model=Player)
 async def claim_specialization(
     player_id: str,
@@ -1733,8 +2170,12 @@ async def save_journey_run(run_id: str, payload: JourneyRunSave, x_clinica_sessi
         and (destination["q"], destination["r"]) not in _journey_neighbors(current)
     ):
         raise HTTPException(status_code=409, detail="Journey movement must be adjacent")
-    # Preserve the frozen topology and encounter assignment. Only the benign
-    # visibility/visited state may be carried forward from the client.
+    # Preserve the frozen topology and encounter assignment. A client may
+    # report visual fog, but only the adjacent movement it just proved can add
+    # a visited tile. This prevents a forged explored count from influencing
+    # Player Hero development rolls.
+    server_visited = {tile_id for tile_id, tile in frozen_by_id.items() if tile.get("visited")}
+    server_visited.update({run.get("current_tile_id"), payload.current_tile_id})
     merged_tiles: list[dict[str, Any]] = []
     for tile_id, frozen in frozen_by_id.items():
         candidate = incoming_by_id[tile_id]
@@ -1742,7 +2183,7 @@ async def save_journey_run(run_id: str, payload: JourneyRunSave, x_clinica_sessi
             raise HTTPException(status_code=422, detail="journey encounters are immutable")
         merged = dict(frozen)
         merged["visibility"] = candidate.get("visibility", frozen.get("visibility"))
-        merged["visited"] = bool(candidate.get("visited", frozen.get("visited")))
+        merged["visited"] = tile_id in server_visited
         # A chest can only be resolved while standing on that server-owned
         # treasure tile. Other encounter/reward flags remain immutable.
         if (frozen.get("encounter") == "treasure"
@@ -1753,8 +2194,8 @@ async def save_journey_run(run_id: str, payload: JourneyRunSave, x_clinica_sessi
         merged_tiles.append(merged)
     updates: Dict[str, Any] = {
         "tiles": merged_tiles, "current_tile_id": payload.current_tile_id,
-        "explored_tile_count": max(int(run.get("explored_tile_count", 1)), int(payload.explored_tile_count or 0)),
-        "explored_tile_ids": list(set(run.get("explored_tile_ids", [])) | set(payload.explored_tile_ids or [])),
+        "explored_tile_count": len(server_visited),
+        "explored_tile_ids": sorted(server_visited),
         "call_team": payload.call_team, "cards": payload.cards, "blessings": payload.blessings, "pressure": payload.pressure,
     }
     updates = {key: value for key, value in updates.items() if value is not None}
@@ -1858,17 +2299,27 @@ async def complete_journey_chapter_boss(
         raise HTTPException(status_code=404, detail="player not found")
     if not player_access_ok(player, player_id, x_clinica_session, None):
         raise HTTPException(status_code=401, detail="invalid player session")
-    commitments = player.get("age1_stamina_commitments") or []
-    commitment = next((c for c in reversed(commitments) if not c.get("consumed") and int(c.get("cost", 0)) == 5), None)
-    if not commitment:
-        raise HTTPException(status_code=409, detail="a Chapter Boss Stamina commitment is required")
     run = await db.journey_runs.find_one({"id": run_id, "player_id": player_id}, {"_id": 0})
     if not run:
         raise HTTPException(status_code=404, detail="journey run not found")
     if int(run.get("chapter_id", 1)) > int(player.get("chapter_progress", 1)):
         raise HTTPException(status_code=403, detail="chapter is not unlocked")
     if run.get("chapter_boss_defeated") or run.get("status") == "cleared":
-        return {"already_completed": True, "run": run, "granted": {}}
+        # Reconcile a prior interrupted completion before returning its
+        # idempotent response: once cleared, the run is the permanent roll key.
+        opportunity = await resolve_player_hero_journey_opportunity(player, run)
+        current = await db.players.find_one({"id": player_id}, {"_id": 0}) if opportunity else player
+        return {
+            "already_completed": True,
+            "run": run,
+            "player": Player(**current).model_dump(),
+            "granted": {},
+            "player_hero_opportunity": opportunity,
+        }
+    commitments = player.get("age1_stamina_commitments") or []
+    commitment = next((c for c in reversed(commitments) if not c.get("consumed") and int(c.get("cost", 0)) == 5), None)
+    if not commitment:
+        raise HTTPException(status_code=409, detail="a Chapter Boss Stamina commitment is required")
     if run.get("status") != "active":
         raise HTTPException(status_code=409, detail="journey run is not active")
     gate_id = run.get("gate_anchor_tile_id")
@@ -1924,11 +2375,15 @@ async def complete_journey_chapter_boss(
         )
     refreshed_player = await db.players.find_one({"id": player_id}, {"_id": 0})
     refreshed_run = await db.journey_runs.find_one({"id": run_id}, {"_id": 0})
+    opportunity = await resolve_player_hero_journey_opportunity(refreshed_player, refreshed_run)
+    if opportunity:
+        refreshed_player = await db.players.find_one({"id": player_id}, {"_id": 0})
     return {
         "already_completed": False,
         "run": refreshed_run,
         "player": Player(**refreshed_player).model_dump(),
         "granted": CHAPTER_BOSS_FIRST_CLEAR_REWARD if reward_write.modified_count == 1 else {},
+        "player_hero_opportunity": opportunity,
     }
 
 

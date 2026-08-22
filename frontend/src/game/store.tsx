@@ -6,6 +6,7 @@ import { clearShopSeenCache } from '@/src/game/shopSeenStore';
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { api } from '@/src/api/client';
 import { Aptitude, PlayerState } from './types';
+import type { PlayerHeroEligibility, PlayerHeroRecord, PlayerHeroAppearance } from './playerHero';
 import { RANKS } from './content';
 import { isValidAvatarId } from './avatars';
 import { canEvolve, defaultProgress, evolveProgress, getProgress, DUP_SHARD_BONUS, MAX_STAR } from './evolution';
@@ -62,6 +63,12 @@ function normalizeProgression(p: PlayerState): PlayerState {
   if ((p.runs_completed ?? 0) > 0 && !p.diagnostic_intro_seen) { p = { ...p, diagnostic_intro_seen: true }; changed = true; }
   if ((p.runs_completed ?? 0) > 0 && !p.identity_restored)     { p = { ...p, identity_restored: true };     changed = true; }
   if (p.avatar_id === undefined) { p = { ...p, avatar_id: '' }; changed = true; }
+  // Player Hero is deliberately read-side only here. Legacy accounts do not
+  // receive it by migration; the dedicated server endpoint creates it exactly
+  // once after every eligibility requirement has been verified.
+  if (p.player_hero === undefined) { p = { ...p, player_hero: null }; changed = true; }
+  if (p.player_hero_opportunities === undefined) { p = { ...p, player_hero_opportunities: [] }; changed = true; }
+  if (p.awakening_beat_complete === undefined) { p = { ...p, awakening_beat_complete: false }; changed = true; }
   // Task 369 — one-time migration: rewrite stored legacy learning_profile IDs
   // to their canonical equivalents so the dual-branch fallbacks in
   // getTutorialTier / getInitialFeedbackLevel / getStarRules /
@@ -649,6 +656,11 @@ type Ctx = {
   confirmIdentityReconstruction: (data: IdentityReconstructionInput) => Promise<void>;
   // Task 513 — Permanently lock in a specialization for a class (requires Lv30 claimed).
   claimSpecialization: (classId: import('./classTree').ClassId, specializationId: string) => Promise<{ ok: boolean; message: string }>;
+  getPlayerHeroEligibility: () => Promise<PlayerHeroEligibility | null>;
+  createPlayerHero: (input: {
+    displayName: string; pronouns: string; appearance: PlayerHeroAppearance; focus: string;
+    stats: Record<string, number>; coreTraitId: string; naturalTalentId: string; creedId: string;
+  }) => Promise<{ ok: boolean; message: string; hero?: PlayerHeroRecord }>;
 };
 
 // Push 8 — Full set of identity choices made during Lotus Recall character creation.
@@ -798,6 +810,9 @@ function defaultPlayer(args: CreatePlayerArgs, id: string): PlayerState {
     rank_index: 0,
     xp: 0,
     player_level: 1,
+    player_hero: null,
+    player_hero_opportunities: [],
+    awakening_beat_complete: false,
     mastery: { assessment: 0, stabilization: 0, pharmacology: 0, judgment: 0, command: 0, systems: 0 },
     codex_unlocked: [],
     // Heroes are earned exclusively through University Recruitment — new
@@ -2549,11 +2564,17 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     if (!base) return { ok: false, message: 'No player loaded.' };
     if (!CLASS_IDS.includes(classId)) return { ok: false, message: 'Unknown class.' };
     if (base.class_tree_id === classId) return { ok: true, message: 'Already your current class.' };
-    const next = { ...base, class_tree_id: classId };
-    playerRef.current = next;
-    await updateState(next);
+    try {
+      const response = await api.selectClass(base.id, classId, base.economy_token);
+      const next = normalizeProgression({ ...response, economy_token: base.economy_token });
+      playerRef.current = next;
+      setPlayer(next);
+      await saveLocal(next);
+    } catch {
+      return { ok: false, message: 'Your Root Calling could not be saved. Please try again.' };
+    }
     return { ok: true, message: `Your class is now ${classId[0].toUpperCase()}${classId.slice(1)}.` };
-  }, [updateState]);
+  }, []);
 
   // Class Tree (Push 6) — claims a Lv10/20/30 ability tier for a class,
   // spending the required materials from inventory. Lv1 tiers are automatic
@@ -2569,17 +2590,17 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     const playerLevel = base.player_level ?? playerLevelFromXp(base.xp).level;
     const check = canClaimTier(card, playerLevel, progress, base.inventory || {});
     if (!check.ok) return { ok: false, message: check.reason || 'Cannot unlock this ability yet.' };
-    const inventory = { ...(base.inventory || {}) };
-    for (const req of card.requirements) {
-      inventory[req.material] = (inventory[req.material] || 0) - req.qty;
+    try {
+      const response = await api.claimClassTier(base.id, level, base.economy_token);
+      const next = normalizeProgression({ ...response, economy_token: base.economy_token });
+      playerRef.current = next;
+      setPlayer(next);
+      await saveLocal(next);
+    } catch {
+      return { ok: false, message: 'This class tier could not be claimed. Please try again.' };
     }
-    const classProgress = { ...defaultClassProgress(), ...(base.class_progress || {}) };
-    classProgress[classId] = [...(classProgress[classId] || []), level];
-    const next = { ...base, inventory, class_progress: classProgress };
-    playerRef.current = next;
-    await updateState(next);
     return { ok: true, message: `${card.name} unlocked.` };
-  }, [updateState]);
+  }, []);
 
   // Task 513 — Permanently lock in a specialization for a class.
   // Client pre-checks prevent unnecessary round-trips; the backend endpoint is
@@ -2612,6 +2633,47 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       // Surface server rejection (e.g. already set on another device)
       const msg = err?.message || 'Failed to lock specialization. Try again.';
       return { ok: false, message: msg };
+    }
+  }, []);
+
+  const getPlayerHeroEligibility = useCallback(async (): Promise<PlayerHeroEligibility | null> => {
+    const base = playerRef.current;
+    if (!base?.economy_token) return null;
+    try {
+      return await api.getPlayerHeroEligibility(base.id, base.economy_token);
+    } catch {
+      return null;
+    }
+  }, []);
+
+  const createPlayerHero = useCallback(async (input: {
+    displayName: string; pronouns: string; appearance: PlayerHeroAppearance; focus: string;
+    stats: Record<string, number>; coreTraitId: string; naturalTalentId: string; creedId: string;
+  }) => {
+    const base = playerRef.current;
+    if (!base?.economy_token) return { ok: false, message: 'Reconnect your session before creating a Player Hero.' };
+    try {
+      const result = await api.createPlayerHero(base.id, {
+        display_name: input.displayName,
+        pronouns: input.pronouns,
+        appearance: input.appearance,
+        focus: input.focus,
+        stats: input.stats,
+        core_trait_id: input.coreTraitId,
+        natural_talent_id: input.naturalTalentId,
+        creed_id: input.creedId,
+      }, base.economy_token);
+      const next = normalizeProgression({ ...result.player, economy_token: base.economy_token });
+      playerRef.current = next;
+      setPlayer(next);
+      await saveLocal(next);
+      return {
+        ok: true,
+        message: result.already_created ? 'Your Player Hero was already created.' : 'Player Hero created.',
+        hero: result.player_hero,
+      };
+    } catch (err: any) {
+      return { ok: false, message: err?.message || 'Could not create your Player Hero.' };
     }
   }, []);
 
@@ -3404,10 +3466,11 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     confirmIdentityReconstruction,
     equipItem, unequipItem,
     claimSpecialization,
+    getPlayerHeroEligibility, createPlayerHero,
     applyFogMapChapterBossRewards,
     reconcileChapterBossKeys,
     setCanonicalShift,
-  }), [player, loading, dailyPulse, openRoundsSignal, requestOpenDailyRounds, createPlayer, applyRewards, claimJourneyChapterBoss, claimJourneyAreaBoss, completeVerdantha, recordWardWaves, purchaseItem, purchaseJourneyMerchant, assembleCovenantScroll, redeemExchangeItem, claimMilestone, setActiveTitle, purchaseSkin, equipSkin, purchaseUpgrade, refillStamina, pullGacha, upgradeUnitMastery, setWardLoadout, setRealmLayout, setRealmAssignment, collectRealmProduction, recordFailure, syncInventory, saveActiveTeam, summonOnce, evolveHero, recruitOnce, freeRecruitOnce, tutorialRecruitOnce, recruitTen, promoteHeroCert, trainHero, toggleHeroLock, toggleHeroFavorite, completeLesson, completeSimulation, completeUniPractice, grantLegacyUniPracticeReward, upgradeHeroSkill, spendStamina, logWellnessActivity, checkInDailyRounds, claimDailyObjective, claimDailyAllComplete, claimWeeklyGoal, claimWeeklyTask, claimWeeklyAllComplete, claimQuestMilestone, claimPracticeModule, markPracticeCurriculumSeen, exchangeInsightCrystals, recordCueTopics, resetPlayer, refresh, setPlayerClass, claimClassTier, completePrologue, completeIdentityRestore, setAvatar, completeDiagnosticIntro, markReminiscenceSeen, markStorySceneSeen, completeLotusLessonNode, applyClassDiagnostic, confirmClassDiagnostic, setLearningProfile, updateBattleStars, performSweep, claimLevelReward, claimChapterChest, claimChapter3Star, claimJourneyNode, markLv2UnlockSeen, markUniversityIntroSeen, completeWardDefense, purchaseWardExchange, assembleWardAegis, updateState, setEquippedCards, markCardTutorialSeen, markCallTutorialSeen, advanceProloguePhase, completePrologueCinematic, claimPrologueRewards, confirmIdentityReconstruction, equipItem, unequipItem, claimSpecialization, applyFogMapChapterBossRewards, reconcileChapterBossKeys]);
+  }), [player, loading, dailyPulse, openRoundsSignal, requestOpenDailyRounds, createPlayer, applyRewards, claimJourneyChapterBoss, claimJourneyAreaBoss, completeVerdantha, recordWardWaves, purchaseItem, purchaseJourneyMerchant, assembleCovenantScroll, redeemExchangeItem, claimMilestone, setActiveTitle, purchaseSkin, equipSkin, purchaseUpgrade, refillStamina, pullGacha, upgradeUnitMastery, setWardLoadout, setRealmLayout, setRealmAssignment, collectRealmProduction, recordFailure, syncInventory, saveActiveTeam, summonOnce, evolveHero, recruitOnce, freeRecruitOnce, tutorialRecruitOnce, recruitTen, promoteHeroCert, trainHero, toggleHeroLock, toggleHeroFavorite, completeLesson, completeSimulation, completeUniPractice, grantLegacyUniPracticeReward, upgradeHeroSkill, spendStamina, logWellnessActivity, checkInDailyRounds, claimDailyObjective, claimDailyAllComplete, claimWeeklyGoal, claimWeeklyTask, claimWeeklyAllComplete, claimQuestMilestone, claimPracticeModule, markPracticeCurriculumSeen, exchangeInsightCrystals, recordCueTopics, resetPlayer, refresh, setPlayerClass, claimClassTier, completePrologue, completeIdentityRestore, setAvatar, completeDiagnosticIntro, markReminiscenceSeen, markStorySceneSeen, completeLotusLessonNode, applyClassDiagnostic, confirmClassDiagnostic, setLearningProfile, updateBattleStars, performSweep, claimLevelReward, claimChapterChest, claimChapter3Star, claimJourneyNode, markLv2UnlockSeen, markUniversityIntroSeen, completeWardDefense, purchaseWardExchange, assembleWardAegis, updateState, setEquippedCards, markCardTutorialSeen, markCallTutorialSeen, advanceProloguePhase, completePrologueCinematic, claimPrologueRewards, confirmIdentityReconstruction, equipItem, unequipItem, claimSpecialization, getPlayerHeroEligibility, createPlayerHero, applyFogMapChapterBossRewards, reconcileChapterBossKeys]);
 
   return <PlayerContext.Provider value={value}>{children}</PlayerContext.Provider>;
 }

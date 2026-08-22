@@ -159,6 +159,30 @@ export default function HeroesScreen() {
               </View>
             </View>
           )}
+          <Pressable
+            style={[
+              styles.playerHeroCard,
+              player.player_hero ? styles.playerHeroCreated : styles.playerHeroLocked,
+            ]}
+            onPress={() => router.push(ROUTES.playerHero)}
+            testID="player-hero-entry"
+          >
+            <View style={styles.playerHeroIcon}>
+              <Ionicons name={player.player_hero ? "sparkles" : "lock-closed"} size={22} color={UI.gold} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.playerHeroKicker}>YOUR HERO</Text>
+              <Text style={styles.playerHeroTitle}>
+                {player.player_hero ? player.player_hero.identity.displayName : "The Awakening Path"}
+              </Text>
+              <Text style={styles.playerHeroSub}>
+                {player.player_hero
+                  ? `${player.player_hero.skillDNA.signatureId.replace(/_/g, " ")} · separate from your recruited roster`
+                  : "A one-time, earned calling. Review its requirements."}
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color={UI.gold} />
+          </Pressable>
           {/* ── Filter chips ── */}
           <ScrollView horizontal showsHorizontalScrollIndicator={false}
             style={styles.filterRow} contentContainerStyle={styles.filterRowContent}>
@@ -787,6 +811,21 @@ const styles = StyleSheet.create({
   },
   legendaryLockLabel: { color: UI.gold, fontSize: 11, fontWeight: "700", letterSpacing: 1 },
   legendaryLockSub:   { color: UI.gold + "99", fontSize: 10, letterSpacing: 0.3 },
+
+  playerHeroCard: {
+    flexDirection: "row", alignItems: "center", gap: SPACING.md,
+    borderRadius: RADIUS.lg, borderWidth: 1, padding: SPACING.md,
+    marginBottom: SPACING.md,
+  },
+  playerHeroLocked: { backgroundColor: UI.panel, borderColor: UI.gold + "55" },
+  playerHeroCreated: { backgroundColor: UI.gold + "12", borderColor: UI.gold + "AA" },
+  playerHeroIcon: {
+    width: 46, height: 46, borderRadius: 23, alignItems: "center", justifyContent: "center",
+    backgroundColor: UI.gold + "16", borderWidth: 1, borderColor: UI.gold + "55",
+  },
+  playerHeroKicker: { color: UI.gold, fontSize: 10, fontWeight: "800", letterSpacing: 1.2 },
+  playerHeroTitle: { color: COLORS.onSurface, fontSize: 16, fontWeight: "800", marginTop: 2 },
+  playerHeroSub: { color: COLORS.onSurfaceSecondary, fontSize: 12, lineHeight: 17, marginTop: 2 },
 
   // Recruit tab
   recruitBanner: {

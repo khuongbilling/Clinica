@@ -110,6 +110,7 @@ const DEV_PROLOGUE_TESTER: AppRoute = "/dev-prologue-tester" as AppRoute;
 const HERO_AUDIT:           AppRoute = "/hero-audit"          as AppRoute;
 const BATTLE_AUDIT:         AppRoute = "/battle-audit"        as AppRoute;
 const HERO_PICKER:          AppRoute = "/hero-picker"         as AppRoute;
+const PLAYER_HERO:          AppRoute = "/player-hero"         as AppRoute;
 
 /**
  * Static route constants — prefer these over raw string literals in
@@ -303,6 +304,8 @@ export const ROUTES = {
   // Full-page hero selection reached from mission-loadout team slots.
   HERO_PICKER,
   heroPicker: HERO_PICKER,
+  PLAYER_HERO,
+  playerHero: PLAYER_HERO,
 } as const;
 
 /**

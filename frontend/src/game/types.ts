@@ -1,5 +1,6 @@
-export type Aptitude = 'guardian' | 'sage' | 'warden' | 'weaver';
+import type { PlayerHeroEligibility, PlayerHeroRecord } from "./playerHero";
 
+export type Aptitude = 'guardian' | 'sage' | 'warden' | 'weaver';
 export type ElementSystem =
   | 'Air' | 'River' | 'Fire' | 'Energy' | 'Storm'
   | 'Mind' | 'Filter' | 'Forge' | 'Protection' | 'Growth';
@@ -275,6 +276,11 @@ export interface PlayerState {
   // Derived from `xp` via progression.ts but persisted for fast reads and
   // to detect level-ups (stamina cap, feature unlocks, Player Class tiers).
   player_level?: number;
+  /** Separate server-authoritative Player Hero; never part of heroes_owned or hero_progression. */
+  player_hero?: PlayerHeroRecord | null;
+  player_hero_eligibility?: PlayerHeroEligibility;
+  player_hero_opportunities?: import("./playerHero").PlayerHeroOpportunity[];
+  awakening_beat_complete?: boolean;
   // Class Tree (Push 6) — account-level class identity, additive to the
   // legacy `player_class` onboarding flavor field above. See
   // src/game/classTree.ts for the full class/ability/materials model.
