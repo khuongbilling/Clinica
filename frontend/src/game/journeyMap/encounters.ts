@@ -45,6 +45,7 @@ import {
   getAreaBossCap,
 } from './config';
 import type { EncounterType, ChestTier } from './types';
+import { isEliteBattle } from './encounterResolution';
 
 // ── Public types ──────────────────────────────────────────────────────────────
 
@@ -57,6 +58,7 @@ export interface AssignedTile {
   encounter: EncounterType;
   /** Only defined when encounter === 'treasure'. */
   chestTier?: ChestTier;
+  isElite?: boolean;
 }
 
 export interface EncounterAssignment {
@@ -305,6 +307,9 @@ export function assignJourneyEncounters({
   for (const tile of tiles) {
     if (tile.encounter === 'treasure') {
       tile.chestTier = weightedRoll(chestRates, rng);
+    }
+    if (tile.encounter === 'battle') {
+      tile.isElite = isEliteBattle(String(seed), tile.tileKey, chapter);
     }
   }
 

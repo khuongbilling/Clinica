@@ -143,6 +143,15 @@ export const api = {
         headers: sessionToken ? { 'X-Clinica-Session': sessionToken } : {},
       },
     ),
+  purchaseJourneyMerchant: (id: string, runId: string, tileId: string, stockId: string, sessionToken?: string) =>
+    http<{ player: PlayerState; run: unknown }>(
+      `/player/${id}/journey-runs/${runId}/merchant-purchase`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ tile_id: tileId, stock_id: stockId }),
+        headers: sessionToken ? { 'X-Clinica-Session': sessionToken } : {},
+      },
+    ),
   completeVerdantha: (id: string, sessionToken?: string) =>
     http<{ already_completed: boolean; player: PlayerState; granted: Record<string, number> }>(
       `/player/${id}/world-event/verdantha/completion`,

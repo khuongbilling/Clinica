@@ -2,6 +2,7 @@
 // Add new enemies here when art is generated.
 
 import type { ImageSourcePropType } from 'react-native';
+import { allChapterEnemyRefs } from '../game/chapterContent';
 
 const SPRITES: Record<string, ImageSourcePropType> = {
   air_sprite: require('../../assets/enemies/air_sprite.png'),
@@ -29,6 +30,21 @@ const SPRITES: Record<string, ImageSourcePropType> = {
   crisis_convergence: require('../../assets/enemies/crisis_convergence.png'),
 };
 
+/**
+ * Every package alias has an intentional source family.  Keeping this mapping
+ * adjacent to Metro's static require table avoids accidental runtime fallback
+ * art while allowing a recolour/name/FX variant to share the approved sprite.
+ */
+export const ENEMY_REUSABLE_ART_SOURCE: Record<string, string> = {};
+for (const entry of allChapterEnemyRefs()) {
+  if (entry.id !== entry.artSourceId) {
+    ENEMY_REUSABLE_ART_SOURCE[entry.id] = entry.artSourceId;
+    const source = SPRITES[entry.artSourceId];
+    if (!source) throw new Error(`[EnemySprites] missing approved art source '${entry.artSourceId}' for '${entry.id}'`);
+    SPRITES[entry.id] = source;
+  }
+}
+
 // All enemy portrait modules, for cache preloading at game start.
 export const ENEMY_SPRITE_MODULES = Object.values(SPRITES);
 
@@ -38,4 +54,8 @@ export function getEnemySprite(enemyId: string): ImageSourcePropType | undefined
 
 export function hasEnemySprite(enemyId: string): boolean {
   return enemyId in SPRITES;
+}
+
+export function getEnemySpriteArtSource(enemyId: string): string | undefined {
+  return ENEMY_REUSABLE_ART_SOURCE[enemyId] ?? (hasEnemySprite(enemyId) ? enemyId : undefined);
 }

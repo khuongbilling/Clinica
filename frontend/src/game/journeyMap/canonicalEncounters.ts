@@ -52,6 +52,7 @@ import {
 } from './canonicalConfig';
 import { rollWardEventSubtype } from './wardEventSubtypes';
 import { computeSpatialMultipliers } from './encounterSpatialWeights';
+import { isEliteBattle } from './encounterResolution';
 
 // ── Public types ───────────────────────────────────────────────────────────────
 
@@ -82,6 +83,8 @@ export interface CanonicalAssignedTile {
   encounter:                      CanonicalEncounterType;
   /** Only defined when encounter === 'treasure'. */
   chestTier?:                     ChestTier;
+  /** Enhanced metadata on a normal battle, never a separate encounter kind. */
+  isElite?:                       boolean;
   /** Only defined when encounter === 'wardEvent'. */
   wardEventSubtype?:              WardEventSubtype;
 }
@@ -255,6 +258,11 @@ export function assignCanonicalEncounters({
     if (battleCount >= battleDensityCap) {
       liveWeights.battle = 0;
     }
+    // Chapter 5+ merchant cadence can roll often enough to produce multiples;
+    // Age 1 deliberately allows only one persistent merchant per run.
+    if (merchantCount >= 1) {
+      liveWeights.merchant = 0;
+    }
 
     // ── Spatial weight multipliers (Push 3) ───────────────────────────────────
     // Zone-aware biasing for blueprint-pipeline chapters.
@@ -306,6 +314,9 @@ export function assignCanonicalEncounters({
       assignedTile.chestTier = weightedRoll(
         chestRates as unknown as Record<string, number>, rng,
       ) as ChestTier;
+    }
+    if (encounter === 'battle') {
+      assignedTile.isElite = isEliteBattle(String(seed), tile.tileKey, chapter);
     }
 
     // Ward event subtype: shift-weighted roll from wardEventSubtypes.ts.

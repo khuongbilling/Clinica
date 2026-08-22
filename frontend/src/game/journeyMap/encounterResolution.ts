@@ -28,6 +28,7 @@
  */
 
 import type { JourneyRun, JourneyTile, ChestTier } from './types';
+import { CHAPTER_ELITE_RATE_BP, getChapterContent, isAge1Chapter } from '../chapterContent';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -35,15 +36,16 @@ export interface TreasureReward {
   xp:     number;
   crowns: number;
   shards: number;
+  inventory?: Record<string, number>;
 }
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
 /** Loot table keyed by chest tier. */
 export const TREASURE_REWARDS: Record<ChestTier, TreasureReward> = {
-  bronze: { xp:  50, crowns:  25, shards: 0 },
-  silver: { xp: 100, crowns:  75, shards: 2 },
-  gold:   { xp: 200, crowns: 150, shards: 5 },
+  bronze: { xp: 0, crowns:  25, shards: 0, inventory: { 'Lab Token': 1 } },
+  silver: { xp: 0, crowns:  75, shards: 2, inventory: { 'Lab Token': 2 } },
+  gold:   { xp: 0, crowns: 150, shards: 5, inventory: { 'Lab Token': 3 } },
 };
 
 // ── Chapter enemy pools (deterministic seeded picks) ─────────────────────────
@@ -54,48 +56,24 @@ export const TREASURE_REWARDS: Record<ChestTier, TreasureReward> = {
  * difficulty range.  Derived via fnv1a hash of (seed + ':' + tileId) so the
  * same tile always yields the same enemy for a given run.
  */
-const CHAPTER_BATTLE_POOL: Record<number, readonly string[]> = {
-  1: ['dehydration_wisp', 'air_sprite', 'fluid_phantom'],
-  2: ['fever_imp',        'air_sprite', 'dehydration_wisp'],
-  3: ['fever_shade',      'gale_spirit', 'fluid_phantom'],
-  4: ['fever_shade',      'gale_spirit', 'fluid_phantom'],
-  5: ['gale_spirit',      'fever_shade', 'fluid_phantom'],
-};
-
-const DEFAULT_BATTLE_POOL = CHAPTER_BATTLE_POOL[1];
-
-/** Chapter → area-boss enemy (fixed, not seeded — there is exactly one per run). */
-const CHAPTER_AREA_BOSS: Record<number, string> = {
-  1: 'fluid_phantom',
-  2: 'fever_shade',
-  3: 'gale_spirit',
-  4: 'gale_spirit',
-  5: 'fever_shade',
-  6: 'gale_spirit',
-  7: 'fever_shade',
-  8: 'gale_spirit',
-  9: 'dehydration_specter',
-};
-
-// Chapters after the explicit early-game table inherit the Chapter 9+
-// real-world boss.  Keeping the default here is safe because every
-// pre-Chapter-9 chapter has an explicit entry above.
-const DEFAULT_AREA_BOSS = 'dehydration_specter';
-
-/**
- * Chapter → chapter-boss enemy (the final gate encounter).
- * Uses the prologue boss for early chapters since that is the only fully-wired
- * boss enemy with sprite and scripted result handling.
- */
-const CHAPTER_BOSS: Record<number, string> = {
-  1: 'silent_infarct',
-  2: 'silent_infarct',
-  3: 'silent_infarct',
-  4: 'silent_infarct',
-  5: 'silent_infarct',
-};
-
-const DEFAULT_CHAPTER_BOSS = 'silent_infarct';
+export const CHAPTER_BATTLE_POOL: Record<number, readonly string[]> = Object.fromEntries(
+  Array.from({ length: 10 }, (_, index) => {
+    const chapter = index + 1;
+    return [chapter, getChapterContent(chapter).normal.map(entry => entry.id)];
+  }),
+);
+export const CHAPTER_AREA_BOSS: Record<number, string> = Object.fromEntries(
+  Array.from({ length: 10 }, (_, index) => {
+    const chapter = index + 1;
+    return [chapter, getChapterContent(chapter).areaBoss.id];
+  }),
+);
+export const CHAPTER_BOSS: Record<number, string> = Object.fromEntries(
+  Array.from({ length: 10 }, (_, index) => {
+    const chapter = index + 1;
+    return [chapter, getChapterContent(chapter).chapterBoss.id];
+  }),
+);
 
 // ── PRNG helpers ──────────────────────────────────────────────────────────────
 
@@ -124,14 +102,19 @@ export function deriveEnemyId(
   tileId:    string,
   chapterId: number,
 ): string {
-  const pool = CHAPTER_BATTLE_POOL[chapterId] ?? DEFAULT_BATTLE_POOL;
+  if (!isAge1Chapter(chapterId)) {
+    throw new Error(`[encounterResolution] missing Age 1 battle package for chapter ${chapterId}`);
+  }
+  const content = getChapterContent(chapterId);
+  if (isEliteBattle(runSeed, tileId, chapterId)) return content.elite.id;
+  const pool = content.normal;
   const hash = fnv1a32(`${runSeed}:${tileId}`);
-  return pool[hash % pool.length];
+  return pool[hash % pool.length].id;
 }
 
 /** Return the fixed area-boss enemy for a chapter. */
 export function getAreaBossEnemyId(chapterId: number): string {
-  return CHAPTER_AREA_BOSS[chapterId] ?? DEFAULT_AREA_BOSS;
+  return getChapterContent(chapterId).areaBoss.id;
 }
 
 /**
@@ -153,7 +136,46 @@ export function resolveJourneyAreaBossEnemyId(
 
 /** Return the fixed chapter-boss (gate encounter) enemy for a chapter. */
 export function getChapterBossEnemyId(chapterId: number): string {
-  return CHAPTER_BOSS[chapterId] ?? DEFAULT_CHAPTER_BOSS;
+  return getChapterContent(chapterId).chapterBoss.id;
+}
+
+/** Elite is metadata on a battle tile, never a separate map encounter type. */
+export function isEliteBattle(runSeed: string, tileId: string, chapterId: number): boolean {
+  if (!isAge1Chapter(chapterId)) return false;
+  return fnv1a32(`${runSeed}:${tileId}:elite`) % 10_000 < CHAPTER_ELITE_RATE_BP;
+}
+
+export function getBattleEncounter(runSeed: string, tileId: string, chapterId: number) {
+  const elite = isEliteBattle(runSeed, tileId, chapterId);
+  const content = getChapterContent(chapterId);
+  const enemyId = deriveEnemyId(runSeed, tileId, chapterId);
+  const entry = elite ? content.elite : content.normal.find(enemy => enemy.id === enemyId)!;
+  return { enemyId, elite, label: entry.name };
+}
+
+export type BossCacheKind = 'areaBoss' | 'chapterBoss';
+
+/** Separate area and chapter cache profiles; rechallenges deliberately award no XP. */
+export function getBossCacheReward(chapterId: number, kind: BossCacheKind, firstClear: boolean): TreasureReward {
+  const chapter = Math.max(1, Math.min(10, chapterId));
+  const major = kind === 'chapterBoss';
+  return {
+    xp: firstClear ? chapter * (major ? 35 : 15) : 0,
+    crowns: chapter * (major ? 80 : 40),
+    shards: chapter * (major ? 3 : 1),
+    inventory: { 'Lab Token': major ? 3 : 1 },
+  };
+}
+
+export function getTreasureReward(tier: ChestTier, chapterId: number): TreasureReward {
+  const base = TREASURE_REWARDS[tier];
+  const chapter = Math.max(1, Math.min(10, chapterId));
+  return {
+    xp: 0,
+    crowns: base.crowns + (chapter - 1) * (tier === 'gold' ? 14 : tier === 'silver' ? 8 : 4),
+    shards: base.shards + Math.floor((chapter - 1) / (tier === 'bronze' ? 5 : 3)),
+    inventory: { 'Lab Token': (base.inventory?.['Lab Token'] ?? 0) + Math.floor((chapter - 1) / 4) },
+  };
 }
 
 // ── Tile helper ───────────────────────────────────────────────────────────────
@@ -236,11 +258,11 @@ export function resolveTreasureClaim(
 
   // Duplicate-claim guard: return zero rewards if already claimed.
   if (!tile || tile.rewardClaimed) {
-    return { run, rewards: { xp: 0, crowns: 0, shards: 0 } };
+    return { run, rewards: { xp: 0, crowns: 0, shards: 0, inventory: {} } };
   }
 
   const tier: ChestTier = tile.chestTier ?? 'bronze';
-  const rewards = TREASURE_REWARDS[tier];
+  const rewards = getTreasureReward(tier, run.chapterId);
 
   const updatedRun = touch({
     ...run,

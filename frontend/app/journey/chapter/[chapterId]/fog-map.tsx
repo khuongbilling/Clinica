@@ -60,6 +60,7 @@ import {
   resolveNone, resolveBattleWin, resolveAreaBossWin,
   resolveTreasureClaim, resolveMerchantVisit, resolveChapterBossWin,
   deriveEnemyId, getAreaBossEnemyId, getChapterBossEnemyId,
+  getBattleEncounter,
   TREASURE_REWARDS,
   type TreasureReward,
 } from '@/src/game/journeyMap/encounterResolution';
@@ -804,6 +805,7 @@ export default function ChapterFogMapShell() {
     outcome:          battleOutcome,
     journeyIsAreaBoss,
     journeyIsChapterBoss,
+    journeyIsElite,
     shift:            requestedShiftParam,
   } = useLocalSearchParams<{
     chapterId:            string;
@@ -812,6 +814,7 @@ export default function ChapterFogMapShell() {
     outcome?:             string;
     journeyIsAreaBoss?:   string;
     journeyIsChapterBoss?: string;
+    journeyIsElite?:      string;
     /** Player-chosen shift for choice chapters (Ch4/7/9/10); validated below. */
     shift?:               string;
   }>();
@@ -1330,6 +1333,7 @@ export default function ChapterFogMapShell() {
     tileId:          string,
     isAreaBoss:      boolean,
     isChapterBoss:   boolean,
+    isElite:         boolean = false,
   ) => {
     router.replace({
       pathname: '/battle',
@@ -1340,6 +1344,7 @@ export default function ChapterFogMapShell() {
         journeyTileId:        tileId,
         journeyIsAreaBoss:    isAreaBoss    ? '1' : '0',
         journeyIsChapterBoss: isChapterBoss ? '1' : '0',
+        journeyIsElite:       isElite       ? '1' : '0',
         journeyRunId:         run?.id ?? '',
         // Battle bridge: the run's frozen TimeOfDay travels with the battle
         // so shift-specific orchestration can key off it.
@@ -1450,9 +1455,10 @@ export default function ChapterFogMapShell() {
       console.warn('[fog-map] treasure saveRun:', e);
       return;
     }
-    if (rewards.xp > 0 || rewards.crowns > 0 || rewards.shards > 0) {
+    if (rewards.xp > 0 || rewards.crowns > 0 || rewards.shards > 0 || Object.keys(rewards.inventory ?? {}).length > 0) {
       applyRewards({ xp: rewards.xp, crowns: rewards.crowns, codexShards: rewards.shards,
         codex: [], enemyId: 'journey_treasure', enemyName: 'Journey Treasure',
+        inventoryDelta: rewards.inventory,
         rewardActivity: 'journey_treasure', contentKey: `${run.id}:${treasureModalTileId}` })
         .catch(e => console.warn('[fog-map] applyRewards:', e));
     }
@@ -1493,7 +1499,7 @@ export default function ChapterFogMapShell() {
       const sourceTile = run.tiles.find(t => t.id === tile.id);
       const enemyId = sourceTile?.encounter === 'areaBoss'
         ? getAreaBossEnemyId(chNum)
-        : deriveEnemyId(run.seed, tile.id, chNum);
+        : getBattleEncounter(run.seed, tile.id, chNum).enemyId;
       const difficulty = ENEMIES.find(e => e.id === enemyId)?.difficulty ?? 1;
       const cost = sourceTile?.resolved ? 0 : getJourneyStaminaCost(sourceTile?.encounter ?? 'none', difficulty);
       if (cost > 0 && !await spendStamina(cost)) {
@@ -1533,8 +1539,8 @@ export default function ChapterFogMapShell() {
             journeyRunRepository.saveRun(afterMove)
               .catch(e => console.warn('[fog-map] pre-battle saveRun:', e));
             navigateToBattle(
-              deriveEnemyId(run.seed, tile.id, chNum),
-              tile.id, false, false,
+              getBattleEncounter(run.seed, tile.id, chNum).enemyId,
+              tile.id, false, false, !!sourceTile?.isElite,
             );
             return; // early return — we're leaving the screen
 
@@ -2190,7 +2196,10 @@ export default function ChapterFogMapShell() {
         <MerchantModal
           visible
           runSeed={run.seed}
+          runId={run.id}
           tileId={merchantModalTileId}
+          chapterId={chNum}
+          inventory={run.tiles.find(tile => tile.id === merchantModalTileId)?.merchantInventory}
           onLeave={() => setMerchantModalTileId(null)}
         />
       )}

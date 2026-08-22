@@ -181,6 +181,12 @@ export interface JourneyTile {
    */
   chestTier?: ChestTier;
 
+  /** Enhanced subtype of a normal battle encounter; never a map category. */
+  isElite?: boolean;
+
+  /** Stable six-slot merchant inventory generated once for this run tile. */
+  merchantInventory?: Array<{ id: string; name: string; quantity: number; price: number; rarity: 'common' | 'rare' | 'ultra' }>;
+
   /**
    * Sub-classification of the ward event on this tile.
    * Only set when encounter === 'wardEvent'; undefined otherwise.

@@ -5,7 +5,7 @@
 
 This document compiles every enemy's full stat block, the complete formula chains for Strike / Stabilize / Shield, reference tables for stat multipliers, affinity modifiers, and care chain bonuses, and the chapter pool membership for each enemy. It is intended to be readable in any Markdown viewer or on GitHub for balance work without running the app.
 
-29 main enemies · 5 wave afflictions · 3 named bosses
+93 main enemies · 5 wave afflictions · 3 named bosses
 
 ---
 
@@ -181,6 +181,12 @@ These are the true-ward versions of simulation-era enemies. All have `chapterGat
 | `drought_river_shade` | Drought-Bound River Shade | 175 | 54 | 10 | 22% | 12% | 24% | 14% | 12% | Fluid / Hydration / Storm / Cardiac | River | `river_sludge` | — |
 | `confusion_veil` | Confusion Veil | 170 | 62 | 9 | 22% | 10% | 24% | 14% | 12% | Mind / Neuro-Psych | Mind | `mind_fog` | — |
 | `glycemic_rupture` | Glycemic Rupture | 195 | 50 | 13 | 22% | 18% | 24% | 14% | 12% | Energy / Metabolic / Storm / Cardiac | Energy | `energy_lock` | — |
+| `ch9_dehydration_specter` | Dehydration Specter | 265 | 55 | 14 | 22% | 22% | 24% | 14% | 12% | Fluid / Hydration | River | `—` | — |
+| `ch9_airway_rupture` | Airway Rupture | 165 | 42 | 11 | 14% | 12% | 16% | 6% | 8% | Airway / Respiratory | Air | `—` | — |
+| `ch9_ward_fire` | Ward Fire | 85 | 65 | 4 | 5% | — | 8% | 0% | — | Fire / Inflammation | Fire | `—` | — |
+| `ch9_cardiac_echo` | Cardiac Echo | 100 | 50 | 6 | 10% | — | 12% | 3% | 5% | Fluid / Hydration / Airway / Respiratory | River | `—` | — |
+| `ch9_acute_harbinger` | Acute Harbinger | 265 | 55 | 14 | 22% | 34% | 24% | 14% | 12% | Fluid / Hydration | River | `—` | — |
+| `ch9_critical_convergence` | Critical Convergence | 235 | 36 | 15 | 22% | 15% | 24% | 14% | 14% | Mind / Neuro-Psych / Fluid / Hydration | Mind | `—` | — |
 
 **Notes:**
 - All share the same Corr Resist / Hidden Def / Stab Press / Aff Resist baseline (22% / 24% / 14% / 12%).
@@ -545,6 +551,12 @@ All have `chapterGate: 9` — excluded from earlier chapter pools by separate ga
 | `drought_river_shade` | Drought-Bound River Shade | Fluid / Hydration / Storm / Cardiac | `river_sludge` |
 | `confusion_veil` | Confusion Veil | Mind / Neuro-Psych | `mind_fog` |
 | `glycemic_rupture` | Glycemic Rupture | Energy / Metabolic / Storm / Cardiac | `energy_lock` |
+| `ch9_dehydration_specter` | Dehydration Specter | Fluid / Hydration | `—` |
+| `ch9_airway_rupture` | Airway Rupture | Airway / Respiratory | `—` |
+| `ch9_ward_fire` | Ward Fire | Fire / Inflammation | `—` |
+| `ch9_cardiac_echo` | Cardiac Echo | Fluid / Hydration / Airway / Respiratory | `—` |
+| `ch9_acute_harbinger` | Acute Harbinger | Fluid / Hydration | `—` |
+| `ch9_critical_convergence` | Critical Convergence | Mind / Neuro-Psych / Fluid / Hydration | `—` |
 
 ### Chapter 10 — Boss Only
 
@@ -570,7 +582,7 @@ Chapter 10 has no pool enemies. The only enemy with `difficulty: 10` is:
 | Trial 6 | (c5p8) | 18% | 10% | 20% | 10% | 10% |
 | Trial 7 | (c6–7) | 20% | 12% | 22% | 12% | 12% |
 | Trial 8 | (c8p8) | 22% | 15% | 24% | 14% | 14% |
-| Real-Ward | 9 | 22% | 10%–22% | 24% | 14% | 12% |
+| Real-Ward | 9 | 5%–22% | 0%–34% | 8%–24% | 0%–14% | 0%–14% |
 | Named Bosses | — | 25%–35% | 30%–97% | 28%–40% | 12%–20% | 15%–20% |
 
 ### Corruption (HP) Progression
@@ -588,7 +600,7 @@ Chapter 10 has no pool enemies. The only enemy with `difficulty: 10` is:
 | Ch6 trial | 190 | — |
 | Ch7 trial | 210–215 | — |
 | Ch8 trial | 235 | — |
-| Ch9 real-ward | 170–265 | Wide spread; `dehydration_specter` is the outlier at 265 |
+| Ch9 real-ward | 85–265 | Wide spread; `dehydration_specter` is the outlier at 265 |
 | Lord Imbalance | 180 | Story boss — lower HP than Ch9 pool; leans on resistance instead |
 | Verdantha | 320 | World Boss; 50% stab resistance makes HP effectively much higher |
 | Silent Infarct | 3,200 | Scripted loss; unreachable in normal play |

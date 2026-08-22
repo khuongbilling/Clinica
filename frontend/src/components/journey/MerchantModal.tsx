@@ -15,6 +15,8 @@
 import { Image } from 'expo-image';
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SERIF, UI } from '@/src/theme/ui';
+import { usePlayer } from '@/src/game/store';
+import { generateMerchantInventory, type MerchantStock } from '@/src/game/journeyMap/merchant';
 
 // ── Asset ─────────────────────────────────────────────────────────────────────
 
@@ -26,7 +28,10 @@ const MERCHANT_ART =
 export interface MerchantModalProps {
   visible:   boolean;
   runSeed:   string;
+  runId:     string;
   tileId:    string;
+  chapterId: number;
+  inventory?: MerchantStock[];
   onLeave:   () => void;
 }
 
@@ -54,44 +59,20 @@ function deriveMerchantName(runSeed: string, tileId: string): string {
   return MERCHANT_NAMES[h % MERCHANT_NAMES.length];
 }
 
-// ── Stub wares (deterministic from seed + tileId) ─────────────────────────────
-
-const WARE_POOL = [
-  'Stabilising Poultice ×2',
-  'Chain Catalyst ×1',
-  'Clarity Tonic ×3',
-  'Restoration Salve ×2',
-  'Insight Crystal ×1',
-  'Ward Emblem ×1',
-  'Emergency Reserve ×2',
-  'Vitality Draught ×3',
-] as const;
-
-function deriveWares(runSeed: string, tileId: string, count = 3): readonly string[] {
-  let h = 0x811c9dc5;
-  const s = `${runSeed}:wares:${tileId}`;
-  for (let i = 0; i < s.length; i++) {
-    h ^= s.charCodeAt(i);
-    h = Math.imul(h, 0x01000193) >>> 0;
-  }
-  const wares: string[] = [];
-  for (let i = 0; i < count; i++) {
-    const idx = (h + i * 0x9e3779b9) % WARE_POOL.length;
-    wares.push(WARE_POOL[((idx % WARE_POOL.length) + WARE_POOL.length) % WARE_POOL.length]);
-  }
-  return wares;
-}
-
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export function MerchantModal({
   visible,
   runSeed,
+  runId,
   tileId,
+  chapterId,
+  inventory,
   onLeave,
 }: MerchantModalProps) {
+  const { purchaseJourneyMerchant } = usePlayer();
   const merchantName = deriveMerchantName(runSeed, tileId);
-  const wares        = deriveWares(runSeed, tileId);
+  const wares = inventory ?? generateMerchantInventory(runSeed, tileId, chapterId);
 
   return (
     <Modal
@@ -116,14 +97,21 @@ export function MerchantModal({
             testID="merchant-art"
           />
 
-          {/* Stub inventory */}
+          {/* Stable six-slot inventory. The run owns the generated stock. */}
           <View style={s.section}>
             <Text style={s.sectionLabel}>WARES</Text>
-            <Text style={s.comingSoon}>Full market coming soon.</Text>
-            {wares.map((w, i) => (
-              <View key={i} style={s.wareRow}>
-                <Text style={s.wareTxt}>· {w}</Text>
-                <Text style={s.wareLocked}>— locked</Text>
+            <Text style={s.comingSoon}>Prices are paid in Crowns.</Text>
+            {wares.map((ware) => (
+              <View key={ware.id} style={s.wareRow}>
+                <Text style={s.wareTxt}>· {ware.name} ×{ware.quantity}</Text>
+                <Pressable
+                  onPress={() => purchaseJourneyMerchant(runId, tileId, ware.id)}
+                  testID={`merchant-buy-${ware.id}`}
+                >
+                  <Text style={[s.wareLocked, ware.rarity === 'ultra' && { color: UI.gold }]}>
+                    {ware.price} ◎
+                  </Text>
+                </Pressable>
               </View>
             ))}
           </View>

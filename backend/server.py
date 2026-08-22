@@ -237,6 +237,8 @@ class Player(BaseModel):
     bosses_defeated: List[str] = Field(default_factory=list)
     failure_counts: Dict[str, int] = Field(default_factory=dict)
     inventory: Dict[str, int] = Field(default_factory=dict)
+    # Future-content access state. The catalog intentionally remains unavailable.
+    night_market_unlocked: bool = False
     codex_shards: int = 0
     crowns: int = 0
     insight_crystals: int = 0
@@ -432,6 +434,7 @@ class PlayerUpdate(BaseModel):
     bosses_defeated: Optional[List[str]] = None
     failure_counts: Optional[Dict[str, int]] = None
     inventory: Optional[Dict[str, int]] = None
+    night_market_unlocked: Optional[bool] = None
     codex_shards: Optional[int] = None
     crowns: Optional[int] = None
     insight_crystals: Optional[int] = None
@@ -1115,6 +1118,23 @@ class JourneyRunSave(BaseModel):
     pressure:                 Optional[float]     = None
 
 
+def _server_merchant_inventory(seed: str, tile_id: str, chapter_id: int) -> list[dict[str, Any]]:
+    pool = [("Lab Token", 1, 18), ("Training Scroll", 1, 24), ("Insight Crystal", 1, 30),
+            ("Stabilising Poultice", 2, 16), ("Chain Catalyst", 1, 36), ("Restoration Salve", 2, 22)]
+    digest = hashlib.sha256(f"{seed}:merchant:{tile_id}:{chapter_id}".encode()).digest()
+    scale = 1 + max(0, chapter_id - 5) * 0.12
+    stock = [{"id": f"stock-{i}", "name": pool[(digest[i] + i) % len(pool)][0],
+              "quantity": pool[(digest[i] + i) % len(pool)][1],
+              "price": int(round(pool[(digest[i] + i) % len(pool)][2] * scale)),
+              "rarity": "rare" if i == 5 else "common", "sold": False} for i in range(6)]
+    roll = int.from_bytes(digest[8:10], "big") % 1000
+    if roll == 0:
+        stock[-1] = {"id": "ultra-fragment", "name": "Covenant Skill Fragment", "quantity": 1, "price": int(round(180 * scale)), "rarity": "ultra", "sold": False}
+    elif roll == 1:
+        stock[-1] = {"id": "ultra-ticket", "name": "Night Market Ticket", "quantity": 1, "price": int(round(300 * scale)), "rarity": "ultra", "sold": False}
+    return stock
+
+
 _HEX_STEPS = ((1, 0), (-1, 0), (0, 1), (0, -1), (1, -1), (-1, 1))
 
 
@@ -1131,6 +1151,7 @@ def _server_owned_journey_tiles(payload: JourneyRunCreate) -> tuple[list[dict[st
         raise HTTPException(status_code=422, detail="invalid journey tile count")
     tiles: list[dict[str, Any]] = []
     seen: set[tuple[int, int]] = set()
+    merchant_used = False
     for value in raw:
         if not isinstance(value, dict) or not isinstance(value.get("id"), str):
             raise HTTPException(status_code=422, detail="invalid journey tile")
@@ -1141,11 +1162,20 @@ def _server_owned_journey_tiles(payload: JourneyRunCreate) -> tuple[list[dict[st
         # Preserve ordinary authored encounters. Reward-bearing boss placement
         # is server-owned below, so a save cannot introduce an Area/Chapter Boss.
         encounter = value.get("encounter")
-        if encounter not in {"battle", "treasure", "merchant", "wardEvent"}:
+        if encounter not in {"battle", "treasure", "wardEvent", "merchant"}:
             encounter = "none"
+        elif encounter == "merchant" and (payload.chapter_id < 5 or merchant_used):
+            encounter = "none"
+        elif encounter == "merchant":
+            merchant_used = True
         tiles.append({"id": value["id"], "q": q, "r": r,
                       "zoneType": value.get("zoneType"), "clearingId": value.get("clearingId"),
                       "visualVariant": value.get("visualVariant"), "encounter": encounter,
+                      # Generated client-side from a deterministic run namespace.
+                      # Freeze it with the tile so reopening the merchant cannot reroll.
+                      "merchantInventory": _server_merchant_inventory(payload.seed, value["id"], payload.chapter_id) if encounter == "merchant" else None,
+                      "isElite": bool(value.get("isElite")) if encounter == "battle" else None,
+                      "chestTier": value.get("chestTier") if encounter == "treasure" and value.get("chestTier") in {"bronze", "silver", "gold"} else "bronze",
                       "visibility": "unexplored", "visited": False, "resolved": False,
                       "rewardClaimed": False, "areaBossKeyClaimed": False})
     start = next((tile for tile in tiles if tile["id"] == payload.start_tile_id), None)
@@ -1333,6 +1363,11 @@ class JourneyChapterBossCompletionRequest(BaseModel):
 class JourneyAreaBossCompletionRequest(BaseModel):
     chapter_id: int
     tile_id: str
+
+
+class JourneyMerchantPurchaseRequest(BaseModel):
+    tile_id: str
+    stock_id: str
 
 
 CHAPTER_BOSS_FIRST_CLEAR_REWARD = {"xp": 250, "crowns": 80, "codex_shards": 100}
@@ -1569,6 +1604,54 @@ async def complete_journey_area_boss(
 async def claim_area_boss_key(player_id: str, payload: ClaimAreaBossKeyRequest):
     """Retired: Area Boss keys are committed only by area-boss-completion."""
     raise HTTPException(status_code=410, detail="use the authenticated area-boss completion route")
+
+
+@api_router.post("/player/{player_id}/journey-runs/{run_id}/merchant-purchase")
+async def purchase_journey_merchant_stock(
+    player_id: str,
+    run_id: str,
+    payload: JourneyMerchantPurchaseRequest,
+    x_clinica_session: Optional[str] = Header(default=None),
+):
+    """Atomically buy one frozen merchant slot; prices and grants come from the run."""
+    player = await db.players.find_one({"id": player_id}, {"_id": 0})
+    if not player or not player_access_ok(player, player_id, x_clinica_session, None):
+        raise HTTPException(status_code=401, detail="invalid player session")
+    run = await db.journey_runs.find_one({"id": run_id, "player_id": player_id}, {"_id": 0})
+    if not run:
+        raise HTTPException(status_code=404, detail="journey run not found")
+    tile_index = next((i for i, t in enumerate(run.get("tiles", [])) if t.get("id") == payload.tile_id), None)
+    if tile_index is None or run["tiles"][tile_index].get("encounter") != "merchant":
+        raise HTTPException(status_code=422, detail="merchant tile is not in this run")
+    stock = run["tiles"][tile_index].get("merchantInventory") or []
+    stock_index = next((i for i, item in enumerate(stock) if item.get("id") == payload.stock_id and not item.get("sold")), None)
+    if stock_index is None:
+        raise HTTPException(status_code=409, detail="merchant stock is unavailable")
+    item = stock[stock_index]
+    price, quantity, name = int(item.get("price", 0)), int(item.get("quantity", 0)), str(item.get("name", ""))
+    if price < 0 or quantity <= 0 or not name:
+        raise HTTPException(status_code=422, detail="invalid merchant stock")
+    increment = {f"inventory.{name}": quantity}
+    updates: dict[str, Any] = {"updated_at": now_iso()}
+    if name == "Night Market Ticket":
+        updates["night_market_unlocked"] = True
+    stock[stock_index] = {**item, "sold": True}
+    consumed = await db.journey_runs.update_one(
+        {"id": run_id, "player_id": player_id, f"tiles.{tile_index}.merchantInventory.{stock_index}.sold": {"$ne": True}},
+        {"$set": {f"tiles.{tile_index}.merchantInventory": stock, "updated_at": now_iso()}},
+    )
+    if consumed.modified_count != 1:
+        raise HTTPException(status_code=409, detail="merchant stock is unavailable")
+    paid = await db.players.update_one(
+        {"id": player_id, "crowns": {"$gte": price}},
+        {"$inc": {"crowns": -price, **increment}, "$set": updates},
+    )
+    if paid.modified_count != 1:
+        await db.journey_runs.update_one({"id": run_id, f"tiles.{tile_index}.merchantInventory.{stock_index}.sold": True}, {"$set": {f"tiles.{tile_index}.merchantInventory.{stock_index}.sold": False}})
+        raise HTTPException(status_code=409, detail="not enough Crowns")
+    fresh_player = await db.players.find_one({"id": player_id}, {"_id": 0})
+    fresh_run = await db.journey_runs.find_one({"id": run_id}, {"_id": 0})
+    return {"player": Player(**fresh_player).model_dump(), "run": fresh_run}
 
 
 @api_router.patch("/journey-runs/{run_id}/cleared")

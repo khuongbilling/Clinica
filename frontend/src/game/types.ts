@@ -308,6 +308,8 @@ export interface PlayerState {
   bosses_defeated: string[];
   failure_counts: Record<string, number>;
   inventory: Record<string, number>;
+  /** First Night Market ticket permanently unlocks future-market access. */
+  night_market_unlocked?: boolean;
   codex_shards: number;
   crowns: number;
   // Economy Foundation (Push 2) — earned effort-premium currency, converted at the

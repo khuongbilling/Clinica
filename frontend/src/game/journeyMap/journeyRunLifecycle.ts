@@ -51,6 +51,7 @@ import { generateHexTopology }         from './topology';
 import { fnv1a32 }                     from './prng';
 import { assignJourneyEncounters }     from './encounters';
 import { assignCanonicalEncounters }   from './canonicalEncounters';
+import { generateMerchantInventory }   from './merchant';
 import { computeInitialFog }           from './fogCalculator';
 import {
   checkRechallengeEligibility,
@@ -177,6 +178,7 @@ export interface RunTileInput {
   readonly encounter:         string;   // string for EncounterType | CanonicalEncounterType compat
   readonly chestTier?:        ChestTier;
   readonly wardEventSubtype?: WardEventSubtype;
+  readonly isElite?:          boolean;
 }
 
 /** Encounter assignment accepted by buildInitialJourneyRun. */
@@ -314,6 +316,10 @@ export function buildInitialJourneyRun({
       r:                      coord.r,
       encounter,
       chestTier:              encounter === 'treasure' ? assigned?.chestTier : undefined,
+      isElite:                encounter === 'battle' ? assigned?.isElite : undefined,
+      merchantInventory:      encounter === 'merchant'
+        ? generateMerchantInventory(seed, tileKey, chapterId)
+        : undefined,
       wardEventSubtype,
       // Cosmetic variant — only on empty terrain, no gameplay effect.
       visualVariant:          encounter === 'none' ? terrainVariant(tileKey) : undefined,

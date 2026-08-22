@@ -53,7 +53,7 @@ type DetailEntry =
   | { kind: "call"; option: typeof CALL_OPTIONS[number] };
 
 export default function Battle() {
-  const { enemyId, training, prologue, replay, journeyReturn, journeyChapterId, journeyTileId, journeyIsAreaBoss, journeyIsChapterBoss, journeyRunId, journeyShift } = useLocalSearchParams<{ enemyId: string; training?: string; prologue?: string; replay?: string; journeyReturn?: string; journeyChapterId?: string; journeyTileId?: string; journeyIsAreaBoss?: string; journeyIsChapterBoss?: string; journeyRunId?: string; journeyShift?: string }>();
+  const { enemyId, training, prologue, replay, journeyReturn, journeyChapterId, journeyTileId, journeyIsAreaBoss, journeyIsChapterBoss, journeyIsElite, journeyRunId, journeyShift } = useLocalSearchParams<{ enemyId: string; training?: string; prologue?: string; replay?: string; journeyReturn?: string; journeyChapterId?: string; journeyTileId?: string; journeyIsAreaBoss?: string; journeyIsChapterBoss?: string; journeyIsElite?: string; journeyRunId?: string; journeyShift?: string }>();
   const { player, loading } = usePlayer();
   if (loading || !player) {
     return (
@@ -62,10 +62,10 @@ export default function Battle() {
       </View>
     );
   }
-  return <BattleInner enemyId={enemyId} training={training} prologue={prologue} replay={replay} journeyReturn={journeyReturn} journeyChapterId={journeyChapterId} journeyTileId={journeyTileId} journeyIsAreaBoss={journeyIsAreaBoss} journeyIsChapterBoss={journeyIsChapterBoss} journeyRunId={journeyRunId} journeyShift={journeyShift} />;
+  return <BattleInner enemyId={enemyId} training={training} prologue={prologue} replay={replay} journeyReturn={journeyReturn} journeyChapterId={journeyChapterId} journeyTileId={journeyTileId} journeyIsAreaBoss={journeyIsAreaBoss} journeyIsChapterBoss={journeyIsChapterBoss} journeyIsElite={journeyIsElite} journeyRunId={journeyRunId} journeyShift={journeyShift} />;
 }
 
-function BattleInner({ enemyId, training, prologue, replay, journeyReturn, journeyChapterId, journeyTileId, journeyIsAreaBoss, journeyIsChapterBoss, journeyRunId, journeyShift }: { enemyId?: string; training?: string; prologue?: string; replay?: string; journeyReturn?: string; journeyChapterId?: string; journeyTileId?: string; journeyIsAreaBoss?: string; journeyIsChapterBoss?: string; journeyRunId?: string; journeyShift?: string }) {
+function BattleInner({ enemyId, training, prologue, replay, journeyReturn, journeyChapterId, journeyTileId, journeyIsAreaBoss, journeyIsChapterBoss, journeyIsElite, journeyRunId, journeyShift }: { enemyId?: string; training?: string; prologue?: string; replay?: string; journeyReturn?: string; journeyChapterId?: string; journeyTileId?: string; journeyIsAreaBoss?: string; journeyIsChapterBoss?: string; journeyIsElite?: string; journeyRunId?: string; journeyShift?: string }) {
   const router = useRouter();
   const { player, applyRewards, claimJourneyChapterBoss, claimJourneyAreaBoss, completeVerdantha, recordFailure, recordCueTopics, updateBattleStars, markCardTutorialSeen, markCallTutorialSeen, updateState, advanceProloguePhase } = usePlayer();
   const { isCompleted, startTutorial, replayTutorial, onRequiredAction, advanceStep, currentStep, activeTutorialId } = useTutorial();
@@ -1116,7 +1116,7 @@ function BattleInner({ enemyId, training, prologue, replay, journeyReturn, journ
           xp: replayXp, codexShards: 0, crowns: 0, codex: [],
           enemyId: enemy.id, enemyName: enemy.name,
           repeatable: true,
-          progressionValue: journeyIsChapterBoss || isBossEnemy ? 5 : journeyIsAreaBoss ? 3 : enemy.difficulty >= 3 ? 2 : 1,
+          progressionValue: journeyIsChapterBoss || isBossEnemy ? 5 : journeyIsAreaBoss ? 3 : journeyIsElite === '1' ? 2 : 1,
         });
       }
       if (state.outcome === "win") {
@@ -1255,7 +1255,8 @@ function BattleInner({ enemyId, training, prologue, replay, journeyReturn, journ
           regionId: mission?.kingdomRegion ?? undefined,
           heroXp: heroXpEarned,
           repeatable: !isFirstClear && !isTraining && !isPrologueTutorial,
-          progressionValue: journeyIsChapterBoss || isBossEnemy ? 5 : journeyIsAreaBoss ? 3 : enemy.difficulty >= 3 ? 2 : 1,
+          progressionValue: journeyIsChapterBoss || isBossEnemy ? 5 : journeyIsAreaBoss ? 3 : journeyIsElite === '1' ? 2 : 1,
+          prepaidStamina: journeyReturn === '1',
         } as any);
       if (rewardsResult) {
         playerLevelUp = rewardsResult.playerLevelUp || null;
@@ -1271,7 +1272,7 @@ function BattleInner({ enemyId, training, prologue, replay, journeyReturn, journ
       // Stamina gate (1 per attempt, 10 min regen) prevents farming.
       if (!isTraining && !isPrologueTutorial) {
         playerXpEarned = LOSS_LEARNING_XP;
-        await applyRewards({ xp: LOSS_LEARNING_XP, codexShards: 0, crowns: 0, codex: [], enemyId: enemy.id, enemyName: enemy.name, repeatable: true, progressionValue: journeyIsChapterBoss || isBossEnemy ? 5 : journeyIsAreaBoss ? 3 : enemy.difficulty >= 3 ? 2 : 1 });
+        await applyRewards({ xp: LOSS_LEARNING_XP, codexShards: 0, crowns: 0, codex: [], enemyId: enemy.id, enemyName: enemy.name, repeatable: true, progressionValue: journeyIsChapterBoss || isBossEnemy ? 5 : journeyIsAreaBoss ? 3 : journeyIsElite === '1' ? 2 : 1, prepaidStamina: journeyReturn === '1' });
       }
     }
     if (state.cuesTopicsCorrect.length > 0) {

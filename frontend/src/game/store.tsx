@@ -45,6 +45,10 @@ function normalizeProgression(p: PlayerState): PlayerState {
   const src = p.hero_progression || {};
   const prog: Record<string, { star: number; copies: number; level: number; xp: number; locked: boolean; favorite: boolean }> = {};
   let changed = !p.hero_progression;
+  if (p.night_market_unlocked === undefined) {
+    p = { ...p, night_market_unlocked: (p.inventory?.['Night Market Ticket'] ?? 0) > 0 };
+    changed = true;
+  }
   if (p.prologue_complete === undefined) { p = { ...p, prologue_complete: true }; changed = true; }
   if (p.identity_restored === undefined) { p = { ...p, identity_restored: true }; changed = true; }
   if (p.diagnostic_intro_seen === undefined) { p = { ...p, diagnostic_intro_seen: true }; changed = true; }
@@ -467,6 +471,8 @@ type Ctx = {
     /** Repeatable power rewards spend the hidden Age 1 daily value budget. */
     repeatable?: boolean;
     progressionValue?: number;
+    /** Journey paid its encounter stamina before entering battle. */
+    prepaidStamina?: boolean;
     /** Server reward endpoint selected by a trusted gameplay flow. */
     rewardActivity?: 'clinical_battle' | 'journey_treasure' | 'auto_sweep' | 'ward_defense' | 'university_practice' | 'world_event';
     contentKey?: string;
@@ -496,6 +502,8 @@ type Ctx = {
   // Increments the account-wide ward_defense_waves counter (drives ms_3).
   recordWardWaves: (count: number) => Promise<void>;
   purchaseItem: (itemName: string, price: number, qty?: number) => Promise<{ ok: boolean; message: string }>;
+  purchaseJourneyMerchant: (runId: string, tileId: string, stockId: string) => Promise<{ ok: boolean; message: string }>;
+  assembleCovenantScroll: () => Promise<{ ok: boolean; message: string }>;
   redeemExchangeItem: (item: TokenExchangeItem) => Promise<{ ok: boolean; message: string }>;
   claimMilestone: (milestoneId: string) => Promise<{ ok: boolean; message: string; earnedTitles?: string[] }>;
   setActiveTitle: (titleId: string) => Promise<{ ok: boolean; message: string }>;
@@ -1082,7 +1090,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
           : rewards.rewardActivity === 'university_practice' ? 'university_practice'
             : rewards.rewardActivity === 'world_event' ? 'world_event'
               : 'clinical_battle';
-      if (activity === 'clinical_battle') {
+      if (activity === 'clinical_battle' && !rewards.prepaidStamina) {
         const cost = tier === 'major_boss' ? 5 : tier === 'area_boss' ? 3 : tier === 'elite' ? 2 : 1;
         const economy = await api.mutateEconomy(next.id, { kind: 'spend_stamina', cost }, next.economy_token);
         next = await mergeEconomyState(next, economy.player);
@@ -1109,6 +1117,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
             : rewards.progressionValue === 2 ? 'elite' : 'regular';
         const firstClearAttempt = activity === 'clinical_battle'
           ? await (async () => {
+            if (rewards.prepaidStamina) return api.beginActivityAttempt(next.id, activity, tier, next.economy_token);
             const cost = tier === 'major_boss' ? 5 : tier === 'area_boss' ? 3 : tier === 'elite' ? 2 : 1;
             const economy = await api.mutateEconomy(next.id, { kind: 'spend_stamina', cost }, next.economy_token);
             next = await mergeEconomyState(next, economy.player);
@@ -1732,10 +1741,38 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       ...base,
       crowns: balance - cost,
       inventory: { ...(base.inventory || {}), [itemName]: ((base.inventory || {})[itemName] || 0) + qty },
+      night_market_unlocked: base.night_market_unlocked || itemName === 'Night Market Ticket',
     };
     playerRef.current = next; // commit synchronously before awaiting persistence
     await updateState(next);
     return { ok: true, message: `Purchased ${qty}× ${itemName} for ${cost} Crowns.` };
+  }, [updateState]);
+
+  const purchaseJourneyMerchant = useCallback(async (runId: string, tileId: string, stockId: string) => {
+    const base = playerRef.current;
+    if (!base) return { ok: false, message: 'No player loaded.' };
+    try {
+      const result = await api.purchaseJourneyMerchant(base.id, runId, tileId, stockId, base.economy_token);
+      const next = normalizeProgression(result.player);
+      playerRef.current = next;
+      setPlayer(next);
+      await saveLocal(next);
+      return { ok: true, message: 'Purchase complete.' };
+    } catch (error) {
+      return { ok: false, message: error instanceof Error ? error.message : 'Purchase unavailable.' };
+    }
+  }, []);
+
+  const assembleCovenantScroll = useCallback(async () => {
+    const base = playerRef.current;
+    if (!base) return { ok: false, message: 'No player loaded.' };
+    const { assembleCovenantScroll: assemble } = await import('./journeyMap/merchant');
+    const result = assemble(base.inventory || {});
+    if (!result.ok) return result;
+    const next = { ...base, inventory: result.inventory };
+    playerRef.current = next;
+    await updateState(next);
+    return result;
   }, [updateState]);
 
   // Spend Epidemic Tokens at the Miasma Bloom Token Exchange. Mirrors
@@ -3266,7 +3303,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   }, [updateState]);
 
   const value = useMemo<Ctx>(() => ({
-    player, loading, dailyPulse, openRoundsSignal, requestOpenDailyRounds, createPlayer, applyRewards, claimJourneyChapterBoss, claimJourneyAreaBoss, completeVerdantha, recordWardWaves, purchaseItem, redeemExchangeItem, claimMilestone, setActiveTitle, purchaseSkin, equipSkin, purchaseUpgrade, refillStamina, pullGacha, upgradeUnitMastery, setWardLoadout, setRealmLayout, setRealmAssignment, collectRealmProduction, recordFailure,
+    player, loading, dailyPulse, openRoundsSignal, requestOpenDailyRounds, createPlayer, applyRewards, claimJourneyChapterBoss, claimJourneyAreaBoss, completeVerdantha, recordWardWaves, purchaseItem, purchaseJourneyMerchant, assembleCovenantScroll, redeemExchangeItem, claimMilestone, setActiveTitle, purchaseSkin, equipSkin, purchaseUpgrade, refillStamina, pullGacha, upgradeUnitMastery, setWardLoadout, setRealmLayout, setRealmAssignment, collectRealmProduction, recordFailure,
     syncInventory, saveActiveTeam, summonOnce, evolveHero, recruitOnce, freeRecruitOnce, tutorialRecruitOnce, recruitTen, promoteHeroCert, trainHero, toggleHeroLock, toggleHeroFavorite, completeLesson, completeSimulation, completeUniPractice, grantLegacyUniPracticeReward, upgradeHeroSkill, spendStamina, logWellnessActivity, checkInDailyRounds, claimDailyObjective, claimDailyAllComplete, claimWeeklyGoal, claimWeeklyTask, claimWeeklyAllComplete, claimQuestMilestone, claimPracticeModule, markPracticeCurriculumSeen, exchangeInsightCrystals, recordCueTopics, resetPlayer, refresh, setPlayerClass, claimClassTier, completePrologue, completeIdentityRestore, setAvatar, completeDiagnosticIntro, markReminiscenceSeen, markStorySceneSeen, completeLotusLessonNode, applyClassDiagnostic, confirmClassDiagnostic, setLearningProfile, updateBattleStars, performSweep, claimLevelReward, claimChapterChest, claimChapter3Star, claimJourneyNode, markLv2UnlockSeen, markUniversityIntroSeen, updateState,
     setEquippedCards, markCardTutorialSeen, markCallTutorialSeen,
     advanceProloguePhase, completePrologueCinematic, claimPrologueRewards,
@@ -3276,7 +3313,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     applyFogMapChapterBossRewards,
     reconcileChapterBossKeys,
     setCanonicalShift,
-  }), [player, loading, dailyPulse, openRoundsSignal, requestOpenDailyRounds, createPlayer, applyRewards, claimJourneyChapterBoss, claimJourneyAreaBoss, completeVerdantha, recordWardWaves, purchaseItem, redeemExchangeItem, claimMilestone, setActiveTitle, purchaseSkin, equipSkin, purchaseUpgrade, refillStamina, pullGacha, upgradeUnitMastery, setWardLoadout, setRealmLayout, setRealmAssignment, collectRealmProduction, recordFailure, syncInventory, saveActiveTeam, summonOnce, evolveHero, recruitOnce, freeRecruitOnce, tutorialRecruitOnce, recruitTen, promoteHeroCert, trainHero, toggleHeroLock, toggleHeroFavorite, completeLesson, completeSimulation, completeUniPractice, grantLegacyUniPracticeReward, upgradeHeroSkill, spendStamina, logWellnessActivity, checkInDailyRounds, claimDailyObjective, claimDailyAllComplete, claimWeeklyGoal, claimWeeklyTask, claimWeeklyAllComplete, claimQuestMilestone, claimPracticeModule, markPracticeCurriculumSeen, exchangeInsightCrystals, recordCueTopics, resetPlayer, refresh, setPlayerClass, claimClassTier, completePrologue, completeIdentityRestore, setAvatar, completeDiagnosticIntro, markReminiscenceSeen, markStorySceneSeen, completeLotusLessonNode, applyClassDiagnostic, confirmClassDiagnostic, setLearningProfile, updateBattleStars, performSweep, claimLevelReward, claimChapterChest, claimChapter3Star, claimJourneyNode, markLv2UnlockSeen, markUniversityIntroSeen, updateState, setEquippedCards, markCardTutorialSeen, markCallTutorialSeen, advanceProloguePhase, completePrologueCinematic, claimPrologueRewards, confirmIdentityReconstruction, equipItem, unequipItem, claimSpecialization, applyFogMapChapterBossRewards, reconcileChapterBossKeys]);
+  }), [player, loading, dailyPulse, openRoundsSignal, requestOpenDailyRounds, createPlayer, applyRewards, claimJourneyChapterBoss, claimJourneyAreaBoss, completeVerdantha, recordWardWaves, purchaseItem, purchaseJourneyMerchant, assembleCovenantScroll, redeemExchangeItem, claimMilestone, setActiveTitle, purchaseSkin, equipSkin, purchaseUpgrade, refillStamina, pullGacha, upgradeUnitMastery, setWardLoadout, setRealmLayout, setRealmAssignment, collectRealmProduction, recordFailure, syncInventory, saveActiveTeam, summonOnce, evolveHero, recruitOnce, freeRecruitOnce, tutorialRecruitOnce, recruitTen, promoteHeroCert, trainHero, toggleHeroLock, toggleHeroFavorite, completeLesson, completeSimulation, completeUniPractice, grantLegacyUniPracticeReward, upgradeHeroSkill, spendStamina, logWellnessActivity, checkInDailyRounds, claimDailyObjective, claimDailyAllComplete, claimWeeklyGoal, claimWeeklyTask, claimWeeklyAllComplete, claimQuestMilestone, claimPracticeModule, markPracticeCurriculumSeen, exchangeInsightCrystals, recordCueTopics, resetPlayer, refresh, setPlayerClass, claimClassTier, completePrologue, completeIdentityRestore, setAvatar, completeDiagnosticIntro, markReminiscenceSeen, markStorySceneSeen, completeLotusLessonNode, applyClassDiagnostic, confirmClassDiagnostic, setLearningProfile, updateBattleStars, performSweep, claimLevelReward, claimChapterChest, claimChapter3Star, claimJourneyNode, markLv2UnlockSeen, markUniversityIntroSeen, updateState, setEquippedCards, markCardTutorialSeen, markCallTutorialSeen, advanceProloguePhase, completePrologueCinematic, claimPrologueRewards, confirmIdentityReconstruction, equipItem, unequipItem, claimSpecialization, applyFogMapChapterBossRewards, reconcileChapterBossKeys]);
 
   return <PlayerContext.Provider value={value}>{children}</PlayerContext.Provider>;
 }

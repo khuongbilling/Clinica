@@ -3,6 +3,7 @@
 // colon, or period instead. Em dashes are fine in code comments only.
 // Run  bash scripts/check-em-dashes.sh  to verify before committing new content.
 import { Building, CodexEntry, Enemy, Hero, Rank } from './types';
+import { allChapterEnemyRefs, AGE1_CHAPTER_CONTENT } from './chapterContent';
 
 // ---------- RANKS ----------
 export const RANKS: Rank[] = [
@@ -2131,6 +2132,48 @@ export const ENEMIES: Enemy[] = [
     teaches: ['dka_advanced', 'insulin_safety', 'electrolyte_correction'],
   },
 ];
+
+/**
+ * Named/recoloured Age 1 variants reuse an existing battle profile and art
+ * family.  They are real entries in the battle list so the Journey and Ward
+ * Shift labels always identify the enemy being fought, rather than relying on
+ * an unresolved display-only alias.
+ */
+const BASE_ENEMIES_BY_ID = new Map(ENEMIES.map(enemy => [enemy.id, enemy]));
+const PACKAGE_ENEMY_IDS = new Set(allChapterEnemyRefs().map(entry => entry.id));
+const DIRECT_ENEMY_IDS = new Set([
+  ...AGE1_CHAPTER_CONTENT[1].normal.map(entry => entry.id),
+  AGE1_CHAPTER_CONTENT[1].areaBoss.id,
+  AGE1_CHAPTER_CONTENT[1].chapterBoss.id,
+]);
+
+export const AGE1_PACKAGE_ENEMIES: Enemy[] = allChapterEnemyRefs()
+  .filter(entry => !DIRECT_ENEMY_IDS.has(entry.id))
+  .filter((entry, index, entries) => entries.findIndex(candidate => candidate.id === entry.id) === index)
+  .map(entry => {
+    const chapter = Number(entry.id.match(/^ch(\d+)_/)?.[1] ?? 1);
+    const source = BASE_ENEMIES_BY_ID.get(entry.artSourceId);
+    if (!source) {
+      throw new Error(`[content] missing reusable enemy profile '${entry.artSourceId}' for '${entry.id}'`);
+    }
+    return {
+      ...source,
+      id: entry.id,
+      name: entry.name,
+      difficulty: Math.max(1, Math.min(10, chapter)) as Enemy['difficulty'],
+      chapterGate: chapter,
+      worldBoss: false,
+      scriptedLoss: false,
+      simulationCounterpart: undefined,
+      // Elites and bosses are explicitly enhanced profiles, while normal
+      // aliases retain their family's baseline stats.
+      stabilityResistance: entry.id.includes('harbinger') || entry.id.includes('_boss') || entry.id.includes('crown') || entry.id.includes('eclipse') || entry.id.includes('rupture')
+        ? Math.min(0.8, (source.stabilityResistance ?? 0) + 0.12)
+        : source.stabilityResistance,
+    };
+  });
+
+ENEMIES.push(...AGE1_PACKAGE_ENEMIES);
 
 // ---------- WAVE AFFLICTIONS (small companion enemies that ride alongside a primary enemy) ----------
 export const AFFLICTION_ENEMIES: Enemy[] = [

@@ -20,6 +20,7 @@ import {
 } from "@/src/game/stamina";
 import { getBattleBaseXp, isSweepUnlocked, getSweepXp, getSweepCrowns, SWEEP_STAMINA_COST } from "@/src/game/battleXp";
 import { chapterSimulationLabel } from "@/src/game/modeHub";
+import { getChapterContent } from "@/src/game/chapterContent";
 import { isFeatureUnlocked, playerLevelFromXp } from "@/src/game/progression";
 import { COLORS, ELEMENT_COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 
@@ -40,21 +41,13 @@ export default function ShiftCasesPage() {
   const dailyShift = useMemo(() => {
     if (!player) return [];
     const playerChapter = player.chapter_progress ?? 1;
-    const starters = ENEMIES.filter((e) =>
-      e.difficulty <= 2 && !e.worldBoss && !e.isAffliction &&
-      (ENEMY_CLINICAL[e.id]?.chapter ?? 1) <= playerChapter
-    );
-    const advanced = ENEMIES.filter((e) =>
-      e.difficulty >= 3 && !e.worldBoss && !e.isAffliction &&
-      (ENEMY_CLINICAL[e.id]?.chapter ?? 1) <= playerChapter
-    );
-    const seed = (player.runs_completed || 0) % 5;
-    const seed2 = (seed + 2) % 5;
-    return [
-      starters[seed % starters.length],
-      starters[(seed + 1) % starters.length],
-      advanced[seed2 % advanced.length],
-    ].filter(Boolean);
+    const chapter = Math.max(1, Math.min(10, playerChapter));
+    const packageEntry = getChapterContent(chapter);
+    // Ward Shift is chapter-owned too: every displayed card is the exact
+    // resolved Journey package enemy, including an enhanced elite case.
+    return [...packageEntry.normal, packageEntry.elite]
+      .map(entry => ENEMIES.find(enemy => enemy.id === entry.id))
+      .filter((enemy): enemy is NonNullable<typeof enemy> => !!enemy);
   }, [player]);
 
   if (!player) {
