@@ -36,6 +36,7 @@ export interface DailyReward {
   playerXp?: number;
   heroXp?: number;
   refinedLotusGems?: number; // weekly completion only — not farmable
+  stamina?: number; // bounded Age 1 engagement bonus, never a new currency
   // Task 270 — equipment item ids granted directly into owned_equipment.
   equipmentItems?: string[];
 }
@@ -835,5 +836,6 @@ export function summarizeReward(reward: DailyReward): string {
   if (reward.heroXp)             parts.push(`+${reward.heroXp} Hero XP`);
   if (reward.refinedLotusGems)   parts.push(`${reward.refinedLotusGems} Refined Gems`);
   if (reward.insightCrystals)    parts.push(`${reward.insightCrystals} Crystal${reward.insightCrystals > 1 ? 's' : ''}`);
+  if (reward.stamina)            parts.push(`+${reward.stamina} Stamina`);
   return parts.join(' · ') || 'No reward';
 }

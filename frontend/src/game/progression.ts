@@ -61,15 +61,19 @@ export function playerLevelFromXp(xp: number): PlayerLevelInfo {
   };
 }
 
-// ---------- Shift Stamina cap ----------
-// Base 20, +1 every 2 levels, with an extra +1 bump at key milestones.
-export const STAMINA_MILESTONES = [5, 10, 15, 20, 25, 30];
-
+// ---------- Age 1 Stamina cap ----------
+// A deliberately slow curve: the first age is paced by meaningful clinical
+// commitments, not by giving a rapidly expanding energy bar.
 export function staminaMaxForLevel(level: number): number {
-  const base = 20;
-  const trickle = Math.floor(Math.max(0, level - 1) / 2);
-  const milestoneBonus = STAMINA_MILESTONES.filter((m) => level >= m).length;
-  return base + trickle + milestoneBonus;
+  const l = Math.max(1, Math.floor(level || 1));
+  if (l <= 4) return 20;
+  if (l <= 6) return 22;
+  if (l <= 8) return 24;
+  if (l <= 10) return 26;
+  if (l <= 13) return 27;
+  if (l <= 16) return 28;
+  if (l <= 19) return 29;
+  return 30;
 }
 
 // ---------- Feature unlocks ----------
@@ -130,6 +134,9 @@ export function getFeatureUnlock(id: string): FeatureUnlock | undefined {
 export function getFeatureUnlockLevel(id: string): number {
   return getFeatureUnlock(id)?.level ?? 1;
 }
+
+/** Compatibility alias for callers that use the concise unlock lookup name. */
+export const featureUnlockLevel = getFeatureUnlockLevel;
 
 export function isFeatureUnlocked(id: string, level: number): boolean {
   const f = getFeatureUnlock(id);

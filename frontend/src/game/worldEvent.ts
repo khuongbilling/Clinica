@@ -758,7 +758,8 @@ export const REWARD_CATEGORY_LABEL: Record<EventRewardItem["category"], string> 
 };
 
 // ── B6 — Community Health Board: Public Health Education Cards ────────────
-// Shown read-only to all players (even below Level 5) in the world-event
+// Shown read-only to all players below the World Event unlock threshold in the
+// world-event
 // locked view. Plain-language, non-medical-advice cards framed in Clinica
 // fantasy terms. Art direction: donghua/anime, luminous teal-green palette.
 

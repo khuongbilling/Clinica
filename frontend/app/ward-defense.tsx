@@ -3025,7 +3025,15 @@ export default function WardDefense() {
     if ((gs.phase === "won" || gs.phase === "lost") && !rewardsApplied.current && player) {
       rewardsApplied.current = true;
       const r = calcRewards(gs.phase === "won", gs.stability);
-      applyRewards({ xp: r.playerXp, codexShards: r.codexShards }).catch(() => {});
+      applyRewards({
+        xp: r.playerXp,
+        codexShards: r.codexShards,
+        // Ward Defense itself remains free to replay; only repeat power
+        // rewards taper once a prior wave has been recorded.
+        repeatable: (player.ward_defense_waves ?? 0) > 0,
+        progressionValue: 1,
+        rewardActivity: 'ward_defense',
+      }).catch(() => {});
       // Unlock defeated enemies in the Clinical Compendium
       const defeatedIds = Object.entries(gs.enemyMastery)
         .filter(([, m]) => m.defeated)

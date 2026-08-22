@@ -2,21 +2,40 @@ import { useEffect, useState } from 'react';
 import { staminaMaxForLevel } from './progression';
 
 // ---------- SHIFT STAMINA ----------
-// Each ward encounter costs stamina; it recovers 1 point per REGEN interval of
+// Meaningful ward commitments cost stamina; it recovers 1 point per REGEN interval of
 // real time, capped at the player's current stamina max. All regen is computed
 // lazily from a stored value + timestamp, so nothing needs to run in the background.
 //
-// The stamina cap now scales with Player Level (see progression.ts
-// staminaMaxForLevel) instead of being a flat constant. MAX_STAMINA is kept as
-// the Level-1 base cap for legacy callers/fallbacks that don't have a player
-// object handy (e.g. defaultPlayer() initial value).
+// The stamina cap follows the slow Age 1 Player Level curve.
 export const MAX_STAMINA = staminaMaxForLevel(1);
-// A regular ward case costs 1 Shift Challenge; a boss costs 5.
+// Costs are for meaningful commitments, never ordinary movement or discovery.
 export const ENCOUNTER_COST = 1;
+export const ELITE_ENCOUNTER_COST = 2;
+export const AREA_BOSS_ENCOUNTER_COST = 3;
 export const BOSS_ENCOUNTER_COST = 5;
-// Shift Challenges refill 6 per hour (one every 10 minutes) up to the cap.
-export const REGEN_MINUTES = 10;
+// Age 1 pacing: one point every fifteen minutes.
+export const REGEN_MINUTES = 15;
 export const REGEN_MS = REGEN_MINUTES * 60 * 1000;
+
+export type MeaningfulAction = 'regular' | 'elite' | 'areaBoss' | 'boss' | 'hazard' | 'sweep';
+export const STAMINA_COSTS: Record<MeaningfulAction, number> = {
+  regular: ENCOUNTER_COST,
+  elite: ELITE_ENCOUNTER_COST,
+  areaBoss: AREA_BOSS_ENCOUNTER_COST,
+  boss: BOSS_ENCOUNTER_COST,
+  hazard: ENCOUNTER_COST,
+  sweep: ENCOUNTER_COST,
+};
+
+export function getWardShiftStaminaCost(difficulty: number): number {
+  return difficulty >= 3 ? ELITE_ENCOUNTER_COST : ENCOUNTER_COST;
+}
+
+export function getJourneyStaminaCost(encounter: string, difficulty = 1): number {
+  if (encounter === 'areaBoss') return AREA_BOSS_ENCOUNTER_COST;
+  if (encounter === 'battle') return getWardShiftStaminaCost(difficulty);
+  return 0;
+}
 
 /** Resolve the stamina cap for a player, derived from Player Level. */
 export function maxStaminaForPlayer(player: { player_level?: number } | null | undefined): number {

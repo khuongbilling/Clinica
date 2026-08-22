@@ -45,7 +45,6 @@ import { usePlayer } from "@/src/game/store";
 import { MilestoneRewardItem } from "@/src/components/onboarding/MilestoneReward";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 import { completeObjective } from "@/src/game/objectiveProgress";
-import { playerLevelFromXp } from "@/src/game/progression";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Zone definitions
@@ -383,7 +382,7 @@ function InfirmaryScene({ scW, found, onCorrect, onWrong }: SceneProps) {
 
 export default function CueHuntScreen() {
   const router = useRouter();
-  const { player, updateState } = usePlayer();
+  const { grantLegacyUniPracticeReward } = usePlayer();
   const { startTutorial, isCompleted, activeTutorialId } = useTutorial();
 
   const [scW, setScW] = useState(0);
@@ -472,7 +471,6 @@ export default function CueHuntScreen() {
     if (phase !== "complete" || creditedRef.current) return;
     creditedRef.current = true;
     const credits = wrongTaps === 0 ? 30 : wrongTaps === 1 ? 20 : 15;
-    setCreditsEarned(credits);
     const isPerfect = wrongTaps === 0;
     (async () => {
       // C1: grant 10 Player XP for completing Cue Hunt (once only)
@@ -488,29 +486,13 @@ export default function CueHuntScreen() {
             { icon: "trophy", label: "First Perfect Bonus" },
             ...(isObjNew ? [{ icon: "star-outline" as const, label: "+10 XP — Cue Hunt", amount: "10" }] : []),
           ]);
-          if (player && updateState) {
-            const newXp = (player.xp ?? 0) + objXp;
-            const { level: newLevel } = playerLevelFromXp(newXp);
-            await updateState({
-              ...player,
-              university_credits: (player.university_credits || 0) + credits + bonus,
-              xp: newXp,
-              player_level: newLevel,
-            });
-          }
+          const result = await grantLegacyUniPracticeReward("cue_lab", credits, objXp, isObjNew, bonus);
+          setCreditsEarned(result.universityCredits);
           return;
         }
       }
-      if (player && updateState) {
-        const newXp = (player.xp ?? 0) + objXp;
-        const { level: newLevel } = playerLevelFromXp(newXp);
-        await updateState({
-          ...player,
-          university_credits: (player.university_credits || 0) + credits,
-          xp: newXp,
-          player_level: newLevel,
-        });
-      }
+      const result = await grantLegacyUniPracticeReward("cue_lab", credits, objXp, isObjNew);
+      setCreditsEarned(result.universityCredits);
     })();
   }, [phase]); // eslint-disable-line react-hooks/exhaustive-deps
 

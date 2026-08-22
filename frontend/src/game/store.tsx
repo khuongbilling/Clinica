@@ -35,6 +35,7 @@ import { reconcileEarlyObjectives, setPendingReconcile } from './objectiveProgre
 import { CLASS_DEFAULT_RESONANCE, FANTASY_CLASSES, fantasyClassFromClassId } from './classQuiz';
 import { normalizeProfileId } from './onboarding';
 import { TokenExchangeItem, MIASMA_BLOOM_MILESTONES, getMilestoneProgress } from './worldEvent';
+import { scaledAge1Reward } from './age1Economy';
 
 const STORAGE_KEY = 'clinica.player.v2';
 
@@ -133,6 +134,16 @@ function normalizeProgression(p: PlayerState): PlayerState {
       stamina: out.stamina ?? MAX_STAMINA,
       stamina_updated_at: out.stamina_updated_at || new Date().toISOString(),
     };
+  }
+  // Age 1 bookkeeping is read-side optional so old local/backend saves remain
+  // loadable.  The old default was 5 stamina; migrate only that untouched
+  // legacy default to the new Level 1 baseline, preserving genuinely spent
+  // stamina for returning players.
+  if (out.age1_reward_units == null) out = { ...out, age1_reward_units: 0 };
+  if (out.age1_stamina_bonus_sources == null) out = { ...out, age1_stamina_bonus_sources: [] };
+  if (out.age1_refill_amount == null) out = { ...out, age1_refill_amount: 0 };
+  if (out.stamina === 5 && !out.age1_reward_day && !out.age1_refill_day) {
+    out = { ...out, stamina: MAX_STAMINA, stamina_updated_at: new Date().toISOString() };
   }
   if (!out.wellness) {
     out = { ...out, wellness: defaultWellnessState() };
@@ -453,8 +464,32 @@ type Ctx = {
     inventoryDelta?: Record<string, number>; enemyName?: string;
     // Hero EXP — per-hero contribution-based EXP, distinct from Player EXP (`xp` above).
     heroXp?: Record<string, number>;
+    /** Repeatable power rewards spend the hidden Age 1 daily value budget. */
+    repeatable?: boolean;
+    progressionValue?: number;
+    /** Server reward endpoint selected by a trusted gameplay flow. */
+    rewardActivity?: 'clinical_battle' | 'journey_treasure' | 'auto_sweep' | 'ward_defense' | 'university_practice' | 'world_event';
+    contentKey?: string;
   }) => Promise<{
     playerLevelUp: { fromLevel: number; toLevel: number } | null;
+    heroLevelUps: { heroId: string; fromLevel: number; toLevel: number }[];
+  }>;
+  claimJourneyChapterBoss: (runId: string, tileId: string) => Promise<{
+    already_completed: boolean;
+    granted: Record<string, number>;
+    playerLevelUp: null;
+    heroLevelUps: { heroId: string; fromLevel: number; toLevel: number }[];
+  }>;
+  claimJourneyAreaBoss: (runId: string, chapterId: number, tileId: string) => Promise<{
+    keys_collected?: number;
+    claimed_tile_ids?: string[];
+    playerLevelUp: null;
+    heroLevelUps: { heroId: string; fromLevel: number; toLevel: number }[];
+  }>;
+  completeVerdantha: () => Promise<{
+    already_completed: boolean;
+    granted: Record<string, number>;
+    playerLevelUp: null;
     heroLevelUps: { heroId: string; fromLevel: number; toLevel: number }[];
   }>;
   // Ward Defense: persist that `count` Bloom waves were cleared/survived this run.
@@ -504,6 +539,14 @@ type Ctx = {
     reward: import('./uniPractice').GrantedPracticeReward;
     newMilestones: import('./uniPractice').UniPracticeMilestone[];
   }>;
+  /** Economy-aware completion for the legacy Fading Apprentice practice routes. */
+  grantLegacyUniPracticeReward: (
+    activityType: 'cue_lab' | 'triage' | 'stack',
+    universityCredits: number,
+    objectiveXp: number,
+    isFirstStoryClear: boolean,
+    firstPerfectBonus?: number,
+  ) => Promise<{ universityCredits: number; staminaBonus: number }>;
   spendStamina: (cost?: number) => Promise<boolean>;
   logWellnessActivity: (input: WellnessLogInput) => Promise<WellnessResult | null>;
   // Daily Ward Rounds — free-to-earn daily engagement loop.
@@ -683,6 +726,8 @@ function addDailyReward(p: PlayerState, r: DailyReward): PlayerState {
       next = { ...next, hero_progression: prog };
     }
   }
+  // Stamina is intentionally not a local Daily Rounds reward. The economy
+  // endpoint derives its once-per-reset bonus and persists it atomically.
   return next;
 }
 
@@ -789,6 +834,13 @@ function defaultPlayer(args: CreatePlayerArgs, id: string): PlayerState {
     region_progress: {},
     stamina: MAX_STAMINA,
     stamina_updated_at: new Date().toISOString(),
+    age1_reward_day: undefined,
+    age1_reward_units: 0,
+    age1_stamina_bonus_day: undefined,
+    age1_stamina_bonus_sources: [],
+    age1_stamina_bonus_week: undefined,
+    age1_refill_day: undefined,
+    age1_refill_amount: 0,
     wellness: defaultWellnessState(),
     daily_rounds: defaultDailyRoundsState(),
     realm_seed: Math.floor(Math.random() * 2_000_000_000) + 1,
@@ -814,8 +866,11 @@ async function loadLocal(): Promise<PlayerState | null> {
 }
 
 async function trySyncToBackend(p: PlayerState): Promise<PlayerState> {
+  // Tokenless pre-session saves are deliberately local-only. There is no
+  // verifiable recovery factor with which to safely bind their old backend ID.
+  if (!p.economy_token) return p;
   try {
-    const updated = await api.updatePlayer(p.id, p as any);
+    const updated = await api.updatePlayer(p.id, p as any, p.economy_token);
     return updated;
   } catch {
     return p;
@@ -906,7 +961,23 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       setPendingReconcile(reconcileEarlyObjectives(normalized).catch(() => [] as import('./objectiveProgress').ObjectiveId[]));
 
       try {
-        const remote = normalizeProgression(await api.getPlayer(local.id));
+        let sessionToken = local.economy_token;
+        // Saves created before guest sessions retain their old local credential.
+        // Exchange it exactly once; ordinary session reads never issue tokens.
+        if (sessionToken) {
+          try {
+            const migrated = await api.migrateGuestSession(local.id, sessionToken);
+            sessionToken = migrated.session_token;
+          } catch { /* already a signed session, offline, or local-only save */ }
+        }
+        // Policy for accounts created before signed sessions: preserve their
+        // local save, but do not send an unauthenticated ID-only read/mutation
+        // that could either 401 or bind someone else's account.
+        if (!sessionToken) {
+          await saveLocal(normalized);
+          return;
+        }
+        const remote = normalizeProgression(await api.getPlayer(local.id, sessionToken));
         // One-way completion flags: never regress a locally-advanced value
         // with a stale backend copy.  This happens when the fire-and-forget
         // trySyncToBackend call didn't finish before the previous session
@@ -915,6 +986,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
         // never the other way around.
         const merged: PlayerState = {
           ...remote,
+          economy_token: sessionToken ?? normalized.economy_token,
           identity_restored:     (normalized.identity_restored     || remote.identity_restored)     ?? remote.identity_restored,
           diagnostic_intro_seen: (normalized.diagnostic_intro_seen || remote.diagnostic_intro_seen) ?? remote.diagnostic_intro_seen,
           seen_reminiscence:     (normalized.seen_reminiscence     || remote.seen_reminiscence)     ?? remote.seen_reminiscence,
@@ -972,9 +1044,129 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     }).catch(() => { /* ignore — offline / transient failures are fine */ });
   }, []);
 
+  // The backend owns Age 1 stamina and taper bookkeeping. Only merge those
+  // fields from its mutation response, preserving the caller's unrelated
+  // optimistic state update.
+  const mergeEconomyState = useCallback(async (current: PlayerState, remote: PlayerState) => {
+    const next: PlayerState = {
+      ...current,
+      crowns: remote.crowns,
+      stamina: remote.stamina,
+      stamina_updated_at: remote.stamina_updated_at,
+      age1_reward_day: remote.age1_reward_day,
+      age1_reward_units: remote.age1_reward_units,
+      age1_stamina_bonus_day: remote.age1_stamina_bonus_day,
+      age1_stamina_bonus_sources: remote.age1_stamina_bonus_sources,
+      age1_stamina_bonus_week: remote.age1_stamina_bonus_week,
+      age1_refill_day: remote.age1_refill_day,
+      age1_refill_amount: remote.age1_refill_amount,
+    };
+    playerRef.current = next;
+    setPlayer(next);
+    await saveLocal(next);
+    return next;
+  }, []);
+
   const applyRewards = useCallback(async (rewards: Parameters<Ctx['applyRewards']>[0] & { regionId?: string }) => {
-    if (!player) return { playerLevelUp: null, heroLevelUps: [] };
-    let next = { ...player };
+    const base = playerRef.current ?? player;
+    if (!base) return { playerLevelUp: null, heroLevelUps: [] };
+    let next = { ...base };
+    // First-clear, authored, key, chapter, and boss rewards call this without
+    // `repeatable`, so they always receive their complete intended value.
+    if (rewards.repeatable && (rewards.progressionValue ?? 0) > 0) {
+      const tier = rewards.progressionValue === 5 ? 'major_boss'
+        : rewards.progressionValue === 3 ? 'area_boss'
+          : rewards.progressionValue === 2 ? 'elite' : 'regular';
+      const activity = rewards.rewardActivity === 'auto_sweep' ? 'auto_sweep'
+        : rewards.rewardActivity === 'ward_defense' ? 'ward_defense'
+          : rewards.rewardActivity === 'university_practice' ? 'university_practice'
+            : rewards.rewardActivity === 'world_event' ? 'world_event'
+              : 'clinical_battle';
+      if (activity === 'clinical_battle') {
+        const cost = tier === 'major_boss' ? 5 : tier === 'area_boss' ? 3 : tier === 'elite' ? 2 : 1;
+        const economy = await api.mutateEconomy(next.id, { kind: 'spend_stamina', cost }, next.economy_token);
+        next = await mergeEconomyState(next, economy.player);
+      }
+      const attempt = await api.beginActivityAttempt(next.id, activity, tier, next.economy_token);
+      const server = await api.claimActivityAttempt(next.id, attempt.attempt_id, next.economy_token);
+      const authoritative = normalizeProgression(server.player);
+      playerRef.current = authoritative;
+      setPlayer(authoritative);
+      await saveLocal(authoritative);
+      return { playerLevelUp: null, heroLevelUps: [] };
+    }
+    // One-time story and authored numeric grants use the same atomic endpoint,
+    // but deliberately do not spend the repeat budget. Story-state fields such
+    // as codex unlocks and boss flags continue through the ordinary snapshot.
+    if (rewards.xp || rewards.crowns || rewards.codexShards || rewards.epidemicTokens
+      || rewards.inventoryDelta || rewards.heroXp || rewards.mastery) {
+      const activity = rewards.rewardActivity ?? (rewards.enemyId === 'journey_treasure' ? 'journey_treasure' : 'clinical_battle');
+      const hasAuthoritativeActivity = !!rewards.rewardActivity || !!rewards.enemyId;
+      if (!rewards.repeatable && hasAuthoritativeActivity
+        && (activity === 'clinical_battle' || activity === 'auto_sweep' || activity === 'journey_treasure' || activity === 'university_practice' || activity === 'ward_defense')) {
+        const tier = rewards.progressionValue === 5 ? 'major_boss'
+          : rewards.progressionValue === 3 ? 'area_boss'
+            : rewards.progressionValue === 2 ? 'elite' : 'regular';
+        const firstClearAttempt = activity === 'clinical_battle'
+          ? await (async () => {
+            const cost = tier === 'major_boss' ? 5 : tier === 'area_boss' ? 3 : tier === 'elite' ? 2 : 1;
+            const economy = await api.mutateEconomy(next.id, { kind: 'spend_stamina', cost }, next.economy_token);
+            next = await mergeEconomyState(next, economy.player);
+            return api.beginActivityAttempt(next.id, activity, tier, next.economy_token);
+          })()
+          : null;
+        const server = await api.grantActivityReward(next.id, activity, {
+          repeatable: false,
+          claim_key: rewards.contentKey ?? rewards.enemyId ?? rewards.enemyName ?? activity,
+          attempt_id: firstClearAttempt?.attempt_id,
+        }, next.economy_token);
+        const authoritative = normalizeProgression(server.player);
+        // The server owns numeric reward fields. Preserve local story and
+        // encounter markers so a first-clear battle still records its codex,
+        // boss, hero, and chapter bookkeeping without trusting client amounts.
+        next = {
+          ...authoritative,
+          codex_unlocked: Array.from(new Set([...(authoritative.codex_unlocked || []), ...(next.codex_unlocked || [])])),
+          bosses_defeated: Array.from(new Set([...(authoritative.bosses_defeated || []), ...(next.bosses_defeated || [])])),
+          failure_counts: next.failure_counts,
+          enemy_mastery: next.enemy_mastery,
+          region_progress: next.region_progress,
+          runs_completed: next.runs_completed,
+        };
+        if (rewards.codex?.length) {
+          next.codex_unlocked = Array.from(new Set([...(next.codex_unlocked || []), ...rewards.codex]));
+        }
+        if (rewards.bossId && !next.bosses_defeated.includes(rewards.bossId)) {
+          next.bosses_defeated = [...next.bosses_defeated, rewards.bossId];
+        }
+        if (rewards.enemyId) {
+          next.failure_counts = { ...(next.failure_counts || {}), [rewards.enemyId]: 0 };
+        }
+        if (rewards.enemyName) {
+          next.enemy_mastery = {
+            ...(next.enemy_mastery || {}),
+            [rewards.enemyName]: (next.enemy_mastery?.[rewards.enemyName] || 0) + 1,
+          };
+        }
+        if (rewards.regionId) {
+          next.region_progress = {
+            ...(next.region_progress || {}),
+            [rewards.regionId]: (next.region_progress?.[rewards.regionId] || 0) + 1,
+          };
+        }
+        next.runs_completed = (next.runs_completed || 0) + 1;
+        playerRef.current = next;
+        setPlayer(next);
+        await saveLocal(next);
+        // Persist non-numeric completion markers (codex, mastery, boss and
+        // regional state) alongside the server-issued numeric reward snapshot.
+        // This writes the exact authoritative totals back, not client-computed
+        // reward amounts, so it cannot double the first-clear grant.
+        await updateState(next);
+        return { playerLevelUp: null, heroLevelUps: [] };
+      }
+      throw new Error(`No server-owned reward route for ${activity}`);
+    }
     let playerLevelUp: { fromLevel: number; toLevel: number } | null = null;
     if (rewards.xp) {
       const applied = applyXpDetailed(next, rewards.xp);
@@ -993,7 +1185,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
         const fromLevel = existing.level ?? 1;
         // Same player-level gate as the Training Hall scroll system.
         const cap = Math.min(levelCapForStar(existing.star ?? 1), battlePlayerLvl);
-        const result = addHeroXp(fromLevel, existing.xp ?? 0, xpAmount, cap);
+        const result = addHeroXp(fromLevel, existing.xp ?? 0, xpAmount as number, cap);
         prog[heroId] = { ...existing, xp: result.xp, level: result.level };
         if (result.level > fromLevel) heroLevelUps.push({ heroId, fromLevel, toLevel: result.level });
       }
@@ -1037,7 +1229,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     if (rewards.inventoryDelta) {
       next.inventory = { ...(next.inventory || {}) };
       for (const [k, v] of Object.entries(rewards.inventoryDelta)) {
-        next.inventory[k] = (next.inventory[k] || 0) + v;
+        next.inventory[k] = (next.inventory[k] || 0) + (v as number);
       }
     }
     if (rewards.enemyName) {
@@ -1054,7 +1246,52 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     next = foldDaily(next, 'ward_shift_win');
     await updateState(next);
     return { playerLevelUp, heroLevelUps };
-  }, [player, updateState]);
+  }, [player, updateState, mergeEconomyState]);
+
+  const claimJourneyChapterBoss = useCallback(async (runId: string, tileId: string) => {
+    const base = playerRef.current ?? player;
+    if (!base) throw new Error('No player loaded');
+    const result = await api.completeJourneyChapterBoss(base.id, runId, tileId, base.economy_token);
+    if (!result.player) return { ...result, playerLevelUp: null, heroLevelUps: [] };
+    const authoritative = normalizeProgression(result.player);
+    playerRef.current = authoritative;
+    setPlayer(authoritative);
+    await saveLocal(authoritative);
+    return { ...result, playerLevelUp: null, heroLevelUps: [] };
+  }, [player]);
+
+  const claimJourneyAreaBoss = useCallback(async (runId: string, chapterId: number, tileId: string) => {
+    const base = playerRef.current ?? player;
+    if (!base) throw new Error('No player loaded');
+    const result = await api.completeJourneyAreaBoss(base.id, runId, chapterId, tileId, base.economy_token);
+    const current = playerRef.current ?? base;
+    const keyState = result.chapter_key_state;
+    const next = {
+      ...current,
+      chapter_boss_keys: {
+        ...(current.chapter_boss_keys ?? {}),
+        [String(chapterId)]: {
+          keys_collected: keyState.keys_collected ?? 0,
+          claimed_tile_ids: keyState.claimed_tile_ids ?? [],
+        },
+      },
+    };
+    playerRef.current = next;
+    setPlayer(next);
+    await saveLocal(next);
+    return { ...keyState, playerLevelUp: null, heroLevelUps: [] };
+  }, [player]);
+
+  const completeVerdantha = useCallback(async () => {
+    const base = playerRef.current ?? player;
+    if (!base) throw new Error('No player loaded');
+    const result = await api.completeVerdantha(base.id, base.economy_token);
+    const authoritative = normalizeProgression(result.player);
+    playerRef.current = authoritative;
+    setPlayer(authoritative);
+    await saveLocal(authoritative);
+    return { ...result, playerLevelUp: null, heroLevelUps: [] };
+  }, [player]);
 
   const recordWardWaves = useCallback(async (count: number) => {
     if (!player || !count || count <= 0) return;
@@ -1386,23 +1623,14 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     // section) BEFORE any await, so two rapid taps can't both spend the same point.
     const base = playerRef.current;
     if (!base) return false;
-    const now = Date.now();
-    const max = maxStaminaForPlayer(base);
-    const cur = regen(base.stamina ?? max, base.stamina_updated_at ?? new Date(now).toISOString(), now, max);
-    if (cur.stamina < cost) {
-      // Not enough — still persist the regenerated value so the display is fresh.
-      if (cur.stamina !== base.stamina || cur.updatedAt !== base.stamina_updated_at) {
-        const next = { ...base, stamina: cur.stamina, stamina_updated_at: cur.updatedAt };
-        playerRef.current = next;
-        await updateState(next);
-      }
+    try {
+      const result = await api.mutateEconomy(base.id, { kind: 'spend_stamina', cost }, base.economy_token);
+      await mergeEconomyState(base, result.player);
+      return true;
+    } catch {
       return false;
     }
-    const next = { ...base, stamina: cur.stamina - cost, stamina_updated_at: cur.updatedAt };
-    playerRef.current = next; // commit synchronously before awaiting persistence
-    await updateState(next);
-    return true;
-  }, [updateState]);
+  }, [mergeEconomyState]);
 
   const logWellnessActivity = useCallback(async (input: WellnessLogInput) => {
     // Off-shift only: never touches stamina, shift time, or combat systems.
@@ -1455,11 +1683,19 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     const fresh = ensureFreshDailyRounds(base.daily_rounds, modes, base.id).state;
     const res = claimAllCompleteBonus(fresh);
     if (!res.reward) return { ok: false, message: res.message };
-    const next = addDailyReward({ ...base, daily_rounds: res.state }, res.reward);
+    let next = addDailyReward({ ...base, daily_rounds: res.state }, res.reward);
+    let staminaBonus = 0;
+    try {
+      const economy = await api.mutateEconomy(base.id, {
+        kind: 'grant_stamina_bonus', source: 'daily_rounds_complete', amount: 2,
+      }, base.economy_token);
+      staminaBonus = economy.stamina_bonus ?? 0;
+      next = await mergeEconomyState(next, economy.player);
+    } catch { /* already claimed or offline: the visible round reward remains */ }
     playerRef.current = next;
     await updateState(next);
-    return { ok: true, message: res.message, reward: res.reward };
-  }, [updateState]);
+    return { ok: true, message: res.message, reward: { ...res.reward, stamina: staminaBonus } };
+  }, [updateState, mergeEconomyState]);
 
   const claimWeeklyGoal = useCallback(async () => {
     const base = playerRef.current;
@@ -1468,11 +1704,19 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     const fresh = ensureFreshDailyRounds(base.daily_rounds, modes, base.id).state;
     const res = claimWeeklyReward(fresh);
     if (!res.reward) return { ok: false, message: res.message };
-    const next = addDailyReward({ ...base, daily_rounds: res.state }, res.reward);
+    let next = addDailyReward({ ...base, daily_rounds: res.state }, res.reward);
+    let staminaBonus = 0;
+    try {
+      const economy = await api.mutateEconomy(base.id, {
+        kind: 'grant_stamina_bonus', source: 'weekly_rounds_complete', period: 'week',
+      }, base.economy_token);
+      staminaBonus = economy.stamina_bonus ?? 0;
+      next = await mergeEconomyState(next, economy.player);
+    } catch { /* already claimed or offline: preserve the non-stamina claim */ }
     playerRef.current = next;
     await updateState(next);
-    return { ok: true, message: res.message, reward: res.reward };
-  }, [updateState]);
+    return { ok: true, message: res.message, reward: { ...res.reward, stamina: staminaBonus } };
+  }, [updateState, mergeEconomyState]);
 
   const purchaseItem = useCallback(async (itemName: string, price: number, qty: number = 1) => {
     // Synchronous ref-based critical section (mirrors spendStamina) so rapid
@@ -1664,25 +1908,18 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   const refillStamina = useCallback(async (price: number, amount: number) => {
     const base = playerRef.current;
     if (!base) return { ok: false, message: 'No player loaded.' };
-    const now = Date.now();
-    const max = maxStaminaForPlayer(base);
-    const cur = regen(base.stamina ?? max, base.stamina_updated_at ?? new Date(now).toISOString(), now, max);
-    if (cur.stamina >= max) {
-      return { ok: false, message: 'Stamina is already full.' };
+    if ((base.crowns || 0) < price) return { ok: false, message: 'Not enough Crowns.' };
+    try {
+      const result = await api.mutateEconomy(base.id, { kind: 'refill_stamina', amount }, base.economy_token);
+      const restoredAmount = result.granted ?? 0;
+      const cost = result.cost ?? price;
+      const next = await mergeEconomyState(base, result.player);
+      await updateState(next);
+      return { ok: true, message: `Restored ${restoredAmount} Stamina for ${cost} Crowns.` };
+    } catch {
+      return { ok: false, message: 'Refill unavailable or today’s limit is reached.' };
     }
-    const cost = Math.max(0, Math.round(price));
-    if ((base.crowns || 0) < cost) return { ok: false, message: 'Not enough Crowns.' };
-    const restored = Math.min(max, cur.stamina + amount);
-    const next = {
-      ...base,
-      crowns: (base.crowns || 0) - cost,
-      stamina: restored,
-      stamina_updated_at: cur.updatedAt,
-    };
-    playerRef.current = next;
-    await updateState(next);
-    return { ok: true, message: `Restored ${restored - cur.stamina} Stamina for ${cost} Crowns.` };
-  }, [updateState]);
+  }, [updateState, mergeEconomyState]);
 
   const pullGacha = useCallback(async () => {
     const base = playerRef.current;
@@ -1903,45 +2140,55 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     const empty = { ok: false, reward: null as any, newMilestones: [] as any[] };
     if (!base) return empty;
 
-    const { PRACTICE_REWARDS, getNewlyEarnedMilestones } = await import('./uniPractice');
+    const { PRACTICE_REWARDS, PRACTICE_REPEAT_REWARDS, getNewlyEarnedMilestones } = await import('./uniPractice');
     const countKey = activityType === 'cue_lab' ? 'uni_cue_lab_count' as const
       : activityType === 'triage'  ? 'uni_triage_count' as const
       : 'uni_stack_count' as const;
     const currentCount = base[countKey] ?? 0;
     const newCount = currentCount + 1;
-    const rewardDef = PRACTICE_REWARDS[activityType][difficulty];
-
-    // Player XP
-    let next = applyXp(base, rewardDef.playerXp);
-
-    // University Credits
-    next = { ...next, university_credits: (next.university_credits || 0) + rewardDef.universityCredits };
-
-    // Inventory: scroll + optional bonus item
-    const inv = { ...(next.inventory || {}) };
-    inv[rewardDef.scrollKey] = (inv[rewardDef.scrollKey] || 0) + rewardDef.scrollCount;
-    if (rewardDef.bonusItemKey && rewardDef.bonusItemCount) {
-      inv[rewardDef.bonusItemKey] = (inv[rewardDef.bonusItemKey] || 0) + rewardDef.bonusItemCount;
+    const isFirstComplete = currentCount === 0;
+    const rawRewardDef = (isFirstComplete ? PRACTICE_REWARDS : PRACTICE_REPEAT_REWARDS)[activityType][difficulty];
+    const rewardInventory: Record<string, number> = { [rawRewardDef.scrollKey]: rawRewardDef.scrollCount };
+    if (rawRewardDef.bonusItemKey && rawRewardDef.bonusItemCount) {
+      rewardInventory[rawRewardDef.bonusItemKey] = rawRewardDef.bonusItemCount;
     }
-    next = { ...next, inventory: inv };
-
-    // Hero XP split across active team (or first 3 owned heroes)
     const teamIds = (base.active_team || []).filter(Boolean);
     const heroPool = teamIds.length > 0 ? teamIds : (base.heroes_owned || []).slice(0, 3);
-    if (heroPool.length > 0 && rewardDef.heroXp > 0) {
-      const perHero = Math.max(1, Math.round(rewardDef.heroXp / heroPool.length));
-      const prog = { ...(next.hero_progression || {}) };
-      for (const heroId of heroPool) {
-        const ex = prog[heroId] ? { ...prog[heroId] } : { star: 1, copies: 0, level: 1, xp: 0 };
-        const cap = levelCapForStar(ex.star ?? 1);
-        const r = addHeroXp(ex.level ?? 1, ex.xp ?? 0, perHero, cap);
-        prog[heroId] = { ...ex, xp: r.xp, level: r.level };
-      }
-      next = { ...next, hero_progression: prog };
-    }
+    const heroXp = heroPool.length > 0 && rawRewardDef.heroXp > 0
+      ? Object.fromEntries(heroPool.map(id => [id, Math.max(1, Math.round(rawRewardDef.heroXp / heroPool.length))]))
+      : undefined;
+    // Practice remains freely playable; its fixed-table power grant is
+    // atomically tapered and persisted by the University service.
+    const grant = await api.completeUniversityPractice(
+      base.id, activityType, difficulty, base.economy_token,
+    );
+    const budget = { state: normalizeProgression(grant.player), multiplier: grant.multiplier };
+    const rewardDef = {
+      ...rawRewardDef,
+      playerXp: scaledAge1Reward(rawRewardDef.playerXp, budget.multiplier),
+      heroXp: scaledAge1Reward(rawRewardDef.heroXp, budget.multiplier),
+      universityCredits: scaledAge1Reward(rawRewardDef.universityCredits, budget.multiplier),
+      scrollCount: scaledAge1Reward(rawRewardDef.scrollCount, budget.multiplier),
+      bonusItemCount: rawRewardDef.bonusItemCount
+        ? scaledAge1Reward(rawRewardDef.bonusItemCount, budget.multiplier)
+        : undefined,
+    };
+
+    let next = budget.state;
 
     // Increment activity counter
     next = { ...next, [countKey]: newCount };
+
+    // Each meaningful lab can offer one small educational Stamina recovery per
+    // calendar day. Replays still record scores, but cannot repeatedly refill.
+    let bonusAmount = 0;
+    try {
+      const economy = await api.mutateEconomy(base.id, {
+        kind: 'grant_stamina_bonus', source: `practice:${activityType}`, amount: 1,
+      }, base.economy_token);
+      bonusAmount = economy.stamina_bonus ?? 0;
+      next = await mergeEconomyState(next, economy.player);
+    } catch { /* repeated labs remain playable without an additional bonus */ }
 
     // Auto-check and grant newly earned milestones (once-only)
     const alreadyClaimed = base.uni_practice_milestones_claimed ?? [];
@@ -1976,10 +2223,47 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
 
     return {
       ok: true,
-      reward: { ...rewardDef, activityType, difficulty, isFirstComplete: currentCount === 0 },
+      reward: { ...rewardDef, stamina: bonusAmount, activityType, difficulty, isFirstComplete },
       newMilestones: newlyEarned,
     };
-  }, [updateState]);
+  }, [updateState, mergeEconomyState]);
+
+  // The Fading Apprentice labs predate the data-driven practice screen but
+  // remain reachable from the University. Keep their story-first rewards full,
+  // while sending any replayable credit grant through the same daily budget.
+  const grantLegacyUniPracticeReward = useCallback(async (
+    activityType: 'cue_lab' | 'triage' | 'stack',
+    universityCredits: number,
+    objectiveXp: number,
+    isFirstStoryClear: boolean,
+    firstPerfectBonus = 0,
+  ) => {
+    const base = playerRef.current;
+    if (!base) return { universityCredits: 0, staminaBonus: 0 };
+
+    const grant = await (async () => {
+      const attempt = await api.beginActivityAttempt(base.id, 'university_practice', 'regular', base.economy_token);
+      return api.claimActivityAttempt(base.id, attempt.attempt_id, base.economy_token);
+    })();
+    const grantedCredits = scaledAge1Reward(universityCredits, grant.multiplier);
+    let next = normalizeProgression(grant.player);
+    const persistedCredits = grantedCredits + (isFirstStoryClear ? firstPerfectBonus : 0);
+    if (objectiveXp > 0) next = applyXp(next, objectiveXp);
+    if (persistedCredits > 0) {
+      next = { ...next, university_credits: (next.university_credits || 0) + persistedCredits };
+    }
+    let staminaBonus = 0;
+    try {
+      const economy = await api.mutateEconomy(base.id, {
+        kind: 'grant_stamina_bonus', source: `practice:${activityType}`, amount: 1,
+      }, base.economy_token);
+      staminaBonus = economy.stamina_bonus ?? 0;
+      next = await mergeEconomyState(next, economy.player);
+    } catch { /* only one educational bonus is available per lab/day */ }
+    playerRef.current = next;
+    await updateState(next);
+    return { universityCredits: grantedCredits, staminaBonus };
+  }, [updateState, mergeEconomyState]);
 
   // J4 — Hero Skill Academy: spend learning materials + University Credits to
   // purchase the next rank of a skill upgrade. Uses playerRef critical section
@@ -2187,7 +2471,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     // Backend is authoritative — call dedicated endpoint so eligibility &
     // permanence are enforced server-side (not through the generic PUT).
     try {
-      const updated = await api.claimSpecialization(base.id, specializationId);
+      const updated = await api.claimSpecialization(base.id, specializationId, base.economy_token);
       const next = normalizeProgression(updated);
       playerRef.current = next;
       setPlayer(next);
@@ -2550,7 +2834,10 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     if (!ok) return { ok: false, xp: 0, crowns: 0, message: 'Not enough Shift Challenges.' };
     const xp = getSweepXp(baseXp, bestStars);
     const sweepCrowns = getSweepCrowns(baseXp);
-    await applyRewards({ xp, codexShards: 0, crowns: sweepCrowns, codex: [], enemyId, enemyName: enemyId });
+    await applyRewards({
+      xp, codexShards: 0, crowns: sweepCrowns, codex: [],
+      enemyId, enemyName: enemyId, repeatable: true, progressionValue: 1, rewardActivity: 'auto_sweep',
+    });
     return { ok: true, xp, crowns: sweepCrowns, message: `Field Practice swept! +${xp} XP, +${sweepCrowns} Crowns.` };
   }, [spendStamina, applyRewards]);
 
@@ -2860,11 +3147,19 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     const fresh = ensureFreshDailyRounds(base.daily_rounds, modes, base.id).state;
     const res = claimWeeklyAllCompletePure(fresh);
     if (!res.reward) return { ok: false, message: res.message };
-    const next = addDailyReward({ ...base, daily_rounds: res.state }, res.reward);
+    let next = addDailyReward({ ...base, daily_rounds: res.state }, res.reward);
+    let staminaBonus = 0;
+    try {
+      const economy = await api.mutateEconomy(base.id, {
+        kind: 'grant_stamina_bonus', source: 'weekly_rounds_complete', amount: 3, period: 'week',
+      }, base.economy_token);
+      staminaBonus = economy.stamina_bonus ?? 0;
+      next = await mergeEconomyState(next, economy.player);
+    } catch { /* only one weekly recovery bonus is available */ }
     playerRef.current = next;
     await updateState(next);
-    return { ok: true, message: res.message, reward: res.reward };
-  }, [updateState]);
+    return { ok: true, message: res.message, reward: { ...res.reward, stamina: staminaBonus } };
+  }, [updateState, mergeEconomyState]);
 
   const claimQuestMilestone = useCallback(async (milestoneId: string) => {
     const base = playerRef.current;
@@ -2971,8 +3266,8 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   }, [updateState]);
 
   const value = useMemo<Ctx>(() => ({
-    player, loading, dailyPulse, openRoundsSignal, requestOpenDailyRounds, createPlayer, applyRewards, recordWardWaves, purchaseItem, redeemExchangeItem, claimMilestone, setActiveTitle, purchaseSkin, equipSkin, purchaseUpgrade, refillStamina, pullGacha, upgradeUnitMastery, setWardLoadout, setRealmLayout, setRealmAssignment, collectRealmProduction, recordFailure,
-    syncInventory, saveActiveTeam, summonOnce, evolveHero, recruitOnce, freeRecruitOnce, tutorialRecruitOnce, recruitTen, promoteHeroCert, trainHero, toggleHeroLock, toggleHeroFavorite, completeLesson, completeSimulation, completeUniPractice, upgradeHeroSkill, spendStamina, logWellnessActivity, checkInDailyRounds, claimDailyObjective, claimDailyAllComplete, claimWeeklyGoal, claimWeeklyTask, claimWeeklyAllComplete, claimQuestMilestone, claimPracticeModule, markPracticeCurriculumSeen, exchangeInsightCrystals, recordCueTopics, resetPlayer, refresh, setPlayerClass, claimClassTier, completePrologue, completeIdentityRestore, setAvatar, completeDiagnosticIntro, markReminiscenceSeen, markStorySceneSeen, completeLotusLessonNode, applyClassDiagnostic, confirmClassDiagnostic, setLearningProfile, updateBattleStars, performSweep, claimLevelReward, claimChapterChest, claimChapter3Star, claimJourneyNode, markLv2UnlockSeen, markUniversityIntroSeen, updateState,
+    player, loading, dailyPulse, openRoundsSignal, requestOpenDailyRounds, createPlayer, applyRewards, claimJourneyChapterBoss, claimJourneyAreaBoss, completeVerdantha, recordWardWaves, purchaseItem, redeemExchangeItem, claimMilestone, setActiveTitle, purchaseSkin, equipSkin, purchaseUpgrade, refillStamina, pullGacha, upgradeUnitMastery, setWardLoadout, setRealmLayout, setRealmAssignment, collectRealmProduction, recordFailure,
+    syncInventory, saveActiveTeam, summonOnce, evolveHero, recruitOnce, freeRecruitOnce, tutorialRecruitOnce, recruitTen, promoteHeroCert, trainHero, toggleHeroLock, toggleHeroFavorite, completeLesson, completeSimulation, completeUniPractice, grantLegacyUniPracticeReward, upgradeHeroSkill, spendStamina, logWellnessActivity, checkInDailyRounds, claimDailyObjective, claimDailyAllComplete, claimWeeklyGoal, claimWeeklyTask, claimWeeklyAllComplete, claimQuestMilestone, claimPracticeModule, markPracticeCurriculumSeen, exchangeInsightCrystals, recordCueTopics, resetPlayer, refresh, setPlayerClass, claimClassTier, completePrologue, completeIdentityRestore, setAvatar, completeDiagnosticIntro, markReminiscenceSeen, markStorySceneSeen, completeLotusLessonNode, applyClassDiagnostic, confirmClassDiagnostic, setLearningProfile, updateBattleStars, performSweep, claimLevelReward, claimChapterChest, claimChapter3Star, claimJourneyNode, markLv2UnlockSeen, markUniversityIntroSeen, updateState,
     setEquippedCards, markCardTutorialSeen, markCallTutorialSeen,
     advanceProloguePhase, completePrologueCinematic, claimPrologueRewards,
     confirmIdentityReconstruction,
@@ -2981,7 +3276,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     applyFogMapChapterBossRewards,
     reconcileChapterBossKeys,
     setCanonicalShift,
-  }), [player, loading, dailyPulse, openRoundsSignal, requestOpenDailyRounds, createPlayer, applyRewards, recordWardWaves, purchaseItem, redeemExchangeItem, claimMilestone, setActiveTitle, purchaseSkin, equipSkin, purchaseUpgrade, refillStamina, pullGacha, upgradeUnitMastery, setWardLoadout, setRealmLayout, setRealmAssignment, collectRealmProduction, recordFailure, syncInventory, saveActiveTeam, summonOnce, evolveHero, recruitOnce, freeRecruitOnce, tutorialRecruitOnce, recruitTen, promoteHeroCert, trainHero, toggleHeroLock, toggleHeroFavorite, completeLesson, completeSimulation, completeUniPractice, upgradeHeroSkill, spendStamina, logWellnessActivity, checkInDailyRounds, claimDailyObjective, claimDailyAllComplete, claimWeeklyGoal, claimWeeklyTask, claimWeeklyAllComplete, claimQuestMilestone, claimPracticeModule, markPracticeCurriculumSeen, exchangeInsightCrystals, recordCueTopics, resetPlayer, refresh, setPlayerClass, claimClassTier, completePrologue, completeIdentityRestore, setAvatar, completeDiagnosticIntro, markReminiscenceSeen, markStorySceneSeen, completeLotusLessonNode, applyClassDiagnostic, confirmClassDiagnostic, setLearningProfile, updateBattleStars, performSweep, claimLevelReward, claimChapterChest, claimChapter3Star, claimJourneyNode, markLv2UnlockSeen, markUniversityIntroSeen, updateState, setEquippedCards, markCardTutorialSeen, markCallTutorialSeen, advanceProloguePhase, completePrologueCinematic, claimPrologueRewards, confirmIdentityReconstruction, equipItem, unequipItem, claimSpecialization, applyFogMapChapterBossRewards, reconcileChapterBossKeys]);
+  }), [player, loading, dailyPulse, openRoundsSignal, requestOpenDailyRounds, createPlayer, applyRewards, claimJourneyChapterBoss, claimJourneyAreaBoss, completeVerdantha, recordWardWaves, purchaseItem, redeemExchangeItem, claimMilestone, setActiveTitle, purchaseSkin, equipSkin, purchaseUpgrade, refillStamina, pullGacha, upgradeUnitMastery, setWardLoadout, setRealmLayout, setRealmAssignment, collectRealmProduction, recordFailure, syncInventory, saveActiveTeam, summonOnce, evolveHero, recruitOnce, freeRecruitOnce, tutorialRecruitOnce, recruitTen, promoteHeroCert, trainHero, toggleHeroLock, toggleHeroFavorite, completeLesson, completeSimulation, completeUniPractice, grantLegacyUniPracticeReward, upgradeHeroSkill, spendStamina, logWellnessActivity, checkInDailyRounds, claimDailyObjective, claimDailyAllComplete, claimWeeklyGoal, claimWeeklyTask, claimWeeklyAllComplete, claimQuestMilestone, claimPracticeModule, markPracticeCurriculumSeen, exchangeInsightCrystals, recordCueTopics, resetPlayer, refresh, setPlayerClass, claimClassTier, completePrologue, completeIdentityRestore, setAvatar, completeDiagnosticIntro, markReminiscenceSeen, markStorySceneSeen, completeLotusLessonNode, applyClassDiagnostic, confirmClassDiagnostic, setLearningProfile, updateBattleStars, performSweep, claimLevelReward, claimChapterChest, claimChapter3Star, claimJourneyNode, markLv2UnlockSeen, markUniversityIntroSeen, updateState, setEquippedCards, markCardTutorialSeen, markCallTutorialSeen, advanceProloguePhase, completePrologueCinematic, claimPrologueRewards, confirmIdentityReconstruction, equipItem, unequipItem, claimSpecialization, applyFogMapChapterBossRewards, reconcileChapterBossKeys]);
 
   return <PlayerContext.Provider value={value}>{children}</PlayerContext.Provider>;
 }

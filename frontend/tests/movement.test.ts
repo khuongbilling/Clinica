@@ -12,15 +12,15 @@
  *  4.  validateMove — adjacent hidden tile → NOT_REACHABLE
  *  5.  validateMove — tile id not in run → NOT_REACHABLE
  *  6.  validateMove — no current tile in run → NOT_REACHABLE
- *  7.  validateMove — stamina === 0 → INSUFFICIENT_STAMINA
- *  8.  validateMove — stamina === 0.9 (< 1) → INSUFFICIENT_STAMINA
+ *  7.  validateMove — stamina === 0 remains free
+ *  8.  validateMove — fractional stamina remains free
  *  9.  validateMove — stamina === 1 exactly → ok: true
  * 10.  validateMove — stamina > 1 → ok: true
  * 11.  applyMoveToRun — destination becomes current
  * 12.  applyMoveToRun — destination visibility becomes revealed
  * 13.  applyMoveToRun — destination visited flag set
- * 14.  applyMoveToRun — staminaSpent incremented by exactly 1
- * 15.  applyMoveToRun — backtrack: staminaSpent still +1 (not free)
+ * 14.  applyMoveToRun — staminaSpent is unchanged
+ * 15.  applyMoveToRun — backtracking remains free
  * 16.  applyMoveToRun — backtrack: exploredTileCount unchanged
  * 17.  applyMoveToRun — first visit: exploredTileCount +1
  * 18.  applyMoveToRun — old current tile loses current flag
@@ -31,11 +31,11 @@
  * 23.  applyMoveToRun — updatedAt is updated ISO string
  * 24.  applyMoveToRun — currentTileId matches destination
  * 25.  applyMoveToRun — tile reveals only after movement (not before)
- * 26.  applyMoveToRun — chained moves accumulate staminaSpent correctly
+ * 26.  applyMoveToRun — chained moves remain free
  * 27.  applyMoveToRun — chained moves accumulate exploredTileCount correctly
  * 28.  applyMoveToRun — refresh: currentTileId and staminaSpent preserved
  * 29.  validateMove — gate tile (visibility revealed) is a valid destination
- * 30.  MOVE_STAMINA_COST is exactly 1
+ * 30.  MOVE_STAMINA_COST is exactly 0
  */
 
 import {
@@ -186,11 +186,11 @@ check('6. no current tile in run → NOT_REACHABLE',
     return failReason(validateMove(r, '1,0', 5)) === 'NOT_REACHABLE';
   })());
 
-check('7. stamina === 0 → INSUFFICIENT_STAMINA',
-  failReason(validateMove(run, '1,0', 0)) === 'INSUFFICIENT_STAMINA');
+check('7. stamina === 0 → movement remains free',
+  valid(validateMove(run, '1,0', 0)));
 
-check('8. stamina === 0.9 (< 1) → INSUFFICIENT_STAMINA',
-  failReason(validateMove(run, '1,0', 0.9)) === 'INSUFFICIENT_STAMINA');
+check('8. stamina === 0.9 → movement remains free',
+  valid(validateMove(run, '1,0', 0.9)));
 
 check('9. stamina === 1 exactly → ok',
   valid(validateMove(run, '1,0', 1)));
@@ -209,7 +209,7 @@ check('10. stamina > 1 → ok',
   check('11. destination becomes current',            destTile.current);
   eq(destTile.visibility, 'exploredButOutOfVision',                 '12. destination visibility revealed');
   check('13. destination visited flag set',           destTile.visited);
-  eq(after.staminaSpent, 1,                           '14. staminaSpent incremented by 1');
+  eq(after.staminaSpent, 0,                           '14. staminaSpent unchanged');
   check('18. old current tile loses current flag',    !oldTile.current);
   eq(oldTile.visibility, 'exploredButOutOfVision',                  '19. old current tile stays revealed');
   eq(after.currentTileId, '1,0',                      '24. currentTileId matches destination');
@@ -241,7 +241,7 @@ check('10. stamina > 1 → ok',
   // Now backtrack: move back to (0,0).
   const after = applyMoveToRun(mid, '0,0');
 
-  eq(after.staminaSpent, 2,  '15. backtrack staminaSpent +1 (not free)');
+  eq(after.staminaSpent, 0,  '15. backtrack remains free');
   eq(after.exploredTileCount, 2, '16. backtrack: exploredTileCount unchanged (already visited)');
 })();
 
@@ -268,7 +268,7 @@ check('10. stamina > 1 → ok',
   r = applyMoveToRun(r, '1,0');
   r = applyMoveToRun(r, '2,0');
 
-  eq(r.staminaSpent,      2, '26. chained moves accumulate staminaSpent');
+  eq(r.staminaSpent,      0, '26. chained moves remain free');
   eq(r.exploredTileCount, 3, '27. chained moves accumulate exploredTileCount');
 })();
 
@@ -283,7 +283,7 @@ check('10. stamina > 1 → ok',
   const restored: JourneyRun = JSON.parse(JSON.stringify(after));
 
   eq(restored.currentTileId, '1,0', '28. refresh: currentTileId preserved');
-  eq(restored.staminaSpent, 1,      '28b. refresh: staminaSpent preserved');
+  eq(restored.staminaSpent, 0,      '28b. refresh: staminaSpent preserved');
   check('28c. refresh: current tile flag preserved',
     restored.tiles.find(t => t.id === '1,0')!.current);
 })();
@@ -304,7 +304,7 @@ check('10. stamina > 1 → ok',
 
 // ── 30: MOVE_STAMINA_COST ─────────────────────────────────────────────────────
 
-eq(MOVE_STAMINA_COST, 1, '30. MOVE_STAMINA_COST is exactly 1');
+eq(MOVE_STAMINA_COST, 0, '30. MOVE_STAMINA_COST is exactly 0');
 
 // ── Results ───────────────────────────────────────────────────────────────────
 

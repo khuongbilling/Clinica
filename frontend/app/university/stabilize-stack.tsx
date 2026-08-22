@@ -47,7 +47,6 @@ import { useClearTutorialOnExit } from "@/src/hooks/useClearTutorialOnExit";
 import { usePlayer } from "@/src/game/store";
 import { MilestoneRewardItem } from "@/src/components/onboarding/MilestoneReward";
 import { completeObjective } from "@/src/game/objectiveProgress";
-import { playerLevelFromXp } from "@/src/game/progression";
 
 // Donghua patient illustration: Wei on garden path — 1408 × 768 (landscape)
 const PATIENT_SCENE = require("../../assets/images/stabilize_patient_wei.png");
@@ -562,7 +561,7 @@ type GamePhase = "playing" | "review" | "complete";
 
 export default function StabilizeStackScreen() {
   const router = useRouter();
-  const { player, updateState } = usePlayer();
+  const { grantLegacyUniPracticeReward } = usePlayer();
   const {
     startTutorial,
     isCompleted,
@@ -613,7 +612,6 @@ export default function StabilizeStackScreen() {
     if (creditedRef.current) return;
     creditedRef.current = true;
     const credits = correctCount === CARE_PHASES.length ? 30 : correctCount === 2 ? 20 : 10;
-    setCreditsEarned(credits);
     const isPerfect = correctCount === CARE_PHASES.length;
     (async () => {
       // C1: grant 10 XP for Stabilize Stack + 10 XP for full FA chain (both once only)
@@ -631,29 +629,13 @@ export default function StabilizeStackScreen() {
             ...(isStabilizeNew ? [{ icon: "star-outline" as const, label: "+10 XP — Stabilize", amount: "10" }] : []),
             ...(isFANew ? [{ icon: "ribbon-outline" as const, label: "+10 XP — Case Chain Done!", amount: "10" }] : []),
           ]);
-          if (player && updateState) {
-            const newXp = (player.xp ?? 0) + objXp;
-            const { level: newLevel } = playerLevelFromXp(newXp);
-            await updateState({
-              ...player,
-              university_credits: (player.university_credits || 0) + credits + bonus,
-              xp: newXp,
-              player_level: newLevel,
-            });
-          }
+          const result = await grantLegacyUniPracticeReward("stack", credits, objXp, isStabilizeNew || isFANew, bonus);
+          setCreditsEarned(result.universityCredits);
           return;
         }
       }
-      if (player && updateState) {
-        const newXp = (player.xp ?? 0) + objXp;
-        const { level: newLevel } = playerLevelFromXp(newXp);
-        await updateState({
-          ...player,
-          university_credits: (player.university_credits || 0) + credits,
-          xp: newXp,
-          player_level: newLevel,
-        });
-      }
+      const result = await grantLegacyUniPracticeReward("stack", credits, objXp, isStabilizeNew || isFANew);
+      setCreditsEarned(result.universityCredits);
     })();
   }, [gamePhase]); // eslint-disable-line react-hooks/exhaustive-deps
 

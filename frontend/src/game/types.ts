@@ -237,6 +237,8 @@ export type Rank = {
 
 export interface PlayerState {
   id: string;
+  /** Opaque per-player credential, returned only at account creation. */
+  economy_token?: string;
   name: string;
   aptitude: Aptitude;
   recommended_aptitude?: Aptitude | null;
@@ -410,6 +412,14 @@ export interface PlayerState {
   region_progress?: Record<string, number>;
   stamina?: number;
   stamina_updated_at?: string;
+  // Age 1 economy bookkeeping is intentionally hidden from the HUD.
+  age1_reward_day?: string;
+  age1_reward_units?: number;
+  age1_stamina_bonus_day?: string;
+  age1_stamina_bonus_sources?: string[];
+  age1_stamina_bonus_week?: string;
+  age1_refill_day?: string;
+  age1_refill_amount?: number;
   wellness?: import('./wellness').WellnessState;
   // Daily Ward Rounds — login streak, 3 rotating daily objectives, and a weekly
   // goal. Free-to-earn engagement loop; see src/game/dailyRounds.ts.

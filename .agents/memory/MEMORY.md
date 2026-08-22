@@ -1,4 +1,5 @@
 - [Clinica setup](clinica-setup.md) — Expo 54 web on port 5000 (CI=1 flag required); backend FastAPI port 8000; emergentintegrations removed; yarn fails use npm.
+- [Clinica legacy session policy](clinica-legacy-session-policy.md) — tokenless pre-session saves stay local-only; never mint backend access from an unverified player ID.
 - [Clinica objective grant sites](clinica-objective-grant-sites.md) — 15-step chain; steps 1-8 fire at action sites; university catch-up covers steps 1-12 (all early steps).
 - [Clinica ChapterPartType exhaustiveness](clinica-chapter-part-type.md) — new ChapterPartType values must be added to BOTH Record maps in ChapterJourneyMap.tsx; chapterJourney.ts+journeyRewards.ts are co-owners of node IDs.
 - [Chapter visual maps pattern](clinica-chapter-visual-maps.md) — Ch1-5 use per-chapter XxxVisualMap, Ch6-10 use GenericChapterVisualMap; PartRow fallback is dead code; post-ternary block is the only place closing-state UI (clear card, strip) reaches all types.
@@ -41,6 +42,7 @@
 - [Clinica Clinical Cue tiers/topics](clinica-cue-tiers-topics.md) — 4-tier (chapter-weighted) x 9-topic cue system layered onto existing cue pipeline additively; topic bonuses reuse existing mechanics fields, never a parallel effect path.
 - [Expo Router hidden tabs pattern](expo-router-hidden-tabs.md) — use `Tabs.Screen options={{href:null}}` to hide a tab but keep its route alive; re-export a top-level screen into `(tabs)/` to promote it without duplicating logic.
 - [Clinica economy foundation](clinica-economy-foundation.md) — economy.ts is single source of truth for currencies/pricing/marketplace/guardrails; UI screens render from it, stays display-only until real payments requested.
+- [Clinica Age 1 reward authority](clinica-age1-authority.md) — hybrid authority: validate major gates server-side; ticket and taper ordinary replays.
 - [Clinica Realm map foundation](clinica-realm-map-foundation.md) — Atrium level gates all Realm buildings incl. only nav path to University; default Atrium=3 everywhere (defaultPlayer/backend/normalize) or existing routes silently lock.
 - [Clinica global PlayerHeader](clinica-player-header.md) — shared hub header (identity/stamina/4 wallet currencies/EXP bar), scoped to non-battle hub screens only, never Profile; non-linear Player EXP curve.
 - [Clinica material economy](clinica-material-economy.md) — materials.ts is single catalog for all rewards (source/usedFor/relatedMode) feeding Material Guide + RewardPreview chips; new routes need workflow restart for router.d.ts.

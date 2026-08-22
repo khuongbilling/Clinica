@@ -67,8 +67,8 @@ export function starMultiplierLabel(stars: number): string {
 // ── Loss XP ───────────────────────────────────────────────────────────────────
 /**
  * Small flat XP awarded on a real (non-training, non-prologue) loss.
- * Stamina cost (1 per attempt, 10 min regen) already gates loss-farming:
- * 8 XP per 10 min is far below sustainable progression.
+ * The Age 1 repeat-reward budget and 15-minute stamina recovery prevent loss
+ * farming from becoming a progression shortcut.
  */
 export const LOSS_LEARNING_XP = 8;
 

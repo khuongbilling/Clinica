@@ -8,10 +8,8 @@
  * ──────────────
  *   1. Player may only move to an adjacent hex (axial distance === 1).
  *   2. Destination must be 'visibleNow' or 'exploredButOutOfVision' (not 'unexplored').
- *   3. Every successful move costs exactly 1 stamina.
- *   4. All encounter types (none / battle / treasure / merchant / areaBoss)
- *      share the same 1-stamina cost; the encounter itself is free.
- *   5. Backtracking to a previously-visited exploredButOutOfVision tile costs 1 stamina.
+ *   3. Walking, backtracking, discovery, chests, merchants, and gates are free.
+ *   4. The caller charges only when a battle or authored hazard is committed.
  *
  * ATOMICITY CONTRACT
  * ──────────────────
@@ -20,13 +18,8 @@
  *
  *   The caller (fog-map.tsx) is responsible for:
  *     1. Calling validateMove()
- *     2. Deducting 1 stamina via spendStamina() (store action with
- *        synchronous ref-based critical section — prevents double-spend)
- *     3. Calling applyMoveToRun() and updating React state
- *     4. Persisting the run via repo.saveRun()
- *
- *   If spendStamina() returns false (race condition between validate and
- *   deduct), the caller bails and nothing else changes.
+ *     2. Calling applyMoveToRun() and updating React state
+ *     3. Persisting the run via repo.saveRun()
  */
 
 import { isAdjacent, computeFogAfterMove, REVEAL_RADIUS } from './fogCalculator';
@@ -37,8 +30,7 @@ import type { JourneyRun } from './types';
 export type MoveFailReason =
   | 'NOT_ADJACENT'          // destination is not a hex neighbor of current tile
   | 'NOT_REACHABLE'         // destination is unexplored, or doesn't exist, or no current tile
-  | 'GATE_TILE'             // destination is the boss-gate anchor — interact from adjacent tile
-  | 'INSUFFICIENT_STAMINA'; // player has < 1 stamina
+  | 'GATE_TILE';            // destination is the boss-gate anchor — interact from adjacent tile
 
 export type ValidateResult =
   | { ok: true }
@@ -53,16 +45,15 @@ export type ValidateResult =
  *   • destination must exist in the run's tile array
  *   • destination must be adjacent (axial distance === 1) to the current tile
  *   • destination must be 'visibleNow' or 'exploredButOutOfVision' (never 'unexplored')
- *   • player must have at least 1 stamina
  *
  * @param run      Current journey run state.
  * @param destId   Tile id the player wants to move to.
- * @param stamina  Player's current stamina (live-computed from regen).
+ * @param _stamina Deprecated compatibility argument. Movement is free.
  */
 export function validateMove(
   run:     JourneyRun,
   destId:  string,
-  stamina: number,
+  _stamina?: number,
 ): ValidateResult {
   const current = run.tiles.find(t => t.current);
   const dest    = run.tiles.find(t => t.id === destId);
@@ -88,9 +79,6 @@ export function validateMove(
   if (run.gateAnchorTileId && dest.id === run.gateAnchorTileId) {
     return { ok: false, reason: 'GATE_TILE' };
   }
-
-  // Guard: must have stamina.
-  if (stamina < 1) return { ok: false, reason: 'INSUFFICIENT_STAMINA' };
 
   return { ok: true };
 }
@@ -142,7 +130,7 @@ export function applyMoveToRun(
     tiles,
     exploredTileIds:   [...exploredTileIds],
     currentTileId:     destId,
-    staminaSpent:      run.staminaSpent + 1,
+    staminaSpent:      run.staminaSpent,
     // exploredTileCount counts tiles the player has stepped on (visited).
     // Backtracking to an already-visited tile does not increase the count.
     exploredTileCount: wasAlreadyVisited
@@ -154,5 +142,5 @@ export function applyMoveToRun(
 
 // ── Convenience ───────────────────────────────────────────────────────────────
 
-/** The stamina cost of every single move, regardless of encounter type. */
-export const MOVE_STAMINA_COST = 1 as const;
+/** Ordinary Journey movement is intentionally never a stamina sink. */
+export const MOVE_STAMINA_COST = 0 as const;

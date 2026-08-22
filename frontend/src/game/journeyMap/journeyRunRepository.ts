@@ -27,6 +27,7 @@
  */
 
 import Constants from 'expo-constants';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { generateSecureSeed }           from './secureSeed';
 import { buildInitialJourneyRun, generateRunData } from './journeyRunLifecycle';
@@ -39,6 +40,14 @@ import {
   compareRunGeometryToCanonicalArtifact,
   getCanonicalChapterMapArtifact,
 } from './canonicalMapArtifact';
+
+const PLAYER_STORAGE_KEY = 'clinica.player.v2';
+
+async function journeySessionHeaders(): Promise<Record<string, string>> {
+  const raw = await AsyncStorage.getItem(PLAYER_STORAGE_KEY);
+  const token = raw ? JSON.parse(raw)?.economy_token : undefined;
+  return token ? { 'X-Clinica-Session': token } : {};
+}
 
 // ── HTTP helpers ──────────────────────────────────────────────────────────────
 
@@ -73,9 +82,9 @@ async function http<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 /** Returns null instead of throwing for 404 responses. */
-async function httpOrNull<T>(path: string): Promise<T | null> {
+async function httpOrNull<T>(path: string, init?: RequestInit): Promise<T | null> {
   try {
-    return await http<T>(path);
+    return await http<T>(path, init);
   } catch (err) {
     if (err instanceof Error && err.message.startsWith('API 404')) return null;
     throw err;
@@ -287,6 +296,7 @@ export class JourneyRunRepository implements IJourneyRunRepository {
   async getActiveRun(playerId: string, chapterId: number): Promise<JourneyRun | null> {
     const raw = await httpOrNull<WireRun>(
       `/player/${playerId}/journey-runs/${chapterId}/active`,
+      { headers: await journeySessionHeaders() },
     );
     if (!raw) return null;
     const run = fromWire(raw);
@@ -360,6 +370,7 @@ export class JourneyRunRepository implements IJourneyRunRepository {
   async getLatestRun(playerId: string, chapterId: number): Promise<JourneyRun | null> {
     const raw = await httpOrNull<WireRun>(
       `/player/${playerId}/journey-runs/${chapterId}/latest`,
+      { headers: await journeySessionHeaders() },
     );
     if (!raw) return null;
     // No tile-count guard here.  The lifecycle calls getLatestRun after
@@ -396,6 +407,7 @@ export class JourneyRunRepository implements IJourneyRunRepository {
       `/journey-runs/${run.id}`,
       {
         method: 'PUT',
+        headers: await journeySessionHeaders(),
         body: JSON.stringify({
           tiles:                    run.tiles,
           current_tile_id:          run.currentTileId,
@@ -418,6 +430,7 @@ export class JourneyRunRepository implements IJourneyRunRepository {
   async markRunCleared(runId: string): Promise<JourneyRun> {
     const raw = await http<WireRun>(`/journey-runs/${runId}/cleared`, {
       method: 'PATCH',
+      headers: await journeySessionHeaders(),
     });
     return fromWire(raw);
   }
@@ -425,6 +438,7 @@ export class JourneyRunRepository implements IJourneyRunRepository {
   async abandonRun(runId: string): Promise<void> {
     await http<unknown>(`/journey-runs/${runId}/abandoned`, {
       method: 'PATCH',
+      headers: await journeySessionHeaders(),
     });
   }
 
@@ -471,7 +485,7 @@ export class JourneyRunRepository implements IJourneyRunRepository {
     const wire = toWire(run);
     const raw  = await http<WireRun>(
       `/player/${playerId}/journey-runs`,
-      { method: 'POST', body: JSON.stringify(wire) },
+      { method: 'POST', body: JSON.stringify(wire), headers: await journeySessionHeaders() },
     );
     return fromWire(raw);
   }
@@ -490,7 +504,7 @@ export class JourneyRunRepository implements IJourneyRunRepository {
     try {
       const raw = await http<WireRun>(
         `/player/${playerId}/journey-runs`,
-        { method: 'POST', body: JSON.stringify(wire) },
+        { method: 'POST', body: JSON.stringify(wire), headers: await journeySessionHeaders() },
       );
       return fromWire(raw);
     } catch (err) {
@@ -520,7 +534,7 @@ export class JourneyRunRepository implements IJourneyRunRepository {
     try {
       const raw = await http<WireRun>(
         `/player/${playerId}/journey-runs`,
-        { method: 'POST', body: JSON.stringify(wire) },
+        { method: 'POST', body: JSON.stringify(wire), headers: await journeySessionHeaders() },
       );
       return fromWire(raw);
     } catch (err) {
@@ -601,6 +615,7 @@ export async function claimChapterBossKeyOnServer(
       {
         method: 'POST',
         body: JSON.stringify({ chapter_id: chapterId, tile_id: tileId }),
+        headers: await journeySessionHeaders(),
       },
     );
   } catch (err) {

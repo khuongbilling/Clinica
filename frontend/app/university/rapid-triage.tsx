@@ -41,7 +41,6 @@ import { usePlayer } from "@/src/game/store";
 import { MilestoneRewardItem } from "@/src/components/onboarding/MilestoneReward";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 import { completeObjective } from "@/src/game/objectiveProgress";
-import { playerLevelFromXp } from "@/src/game/progression";
 
 // Per-card patient illustrations — generated from each clinical vignette
 const IMG_DIZZY_APPRENTICE = require("../../assets/images/triage_patient_dizzy_apprentice.png");
@@ -258,7 +257,7 @@ function DonghuaTriageScene({ sceneImg, overlayColor, setting }: {
 
 export default function RapidTriageScreen() {
   const router  = useRouter();
-  const { player, updateState } = usePlayer();
+  const { grantLegacyUniPracticeReward } = usePlayer();
   const { startTutorial, isCompleted, activeTutorialId } = useTutorial();
 
   const [cardIdx,   setCardIdx]   = useState(0);
@@ -286,7 +285,6 @@ export default function RapidTriageScreen() {
     if (gamePhase !== "complete" || creditedRef.current) return;
     creditedRef.current = true;
     const credits = correctCount === CARDS.length ? 30 : correctCount === 2 ? 20 : 10;
-    setCreditsEarned(credits);
     const isPerfect = correctCount === CARDS.length;
     (async () => {
       // C1: grant 10 Player XP for completing Rapid Triage (once only)
@@ -302,29 +300,13 @@ export default function RapidTriageScreen() {
             { icon: "trophy", label: "First Perfect Bonus" },
             ...(isObjNew ? [{ icon: "star-outline" as const, label: "+10 XP — Rapid Triage", amount: "10" }] : []),
           ]);
-          if (player && updateState) {
-            const newXp = (player.xp ?? 0) + objXp;
-            const { level: newLevel } = playerLevelFromXp(newXp);
-            await updateState({
-              ...player,
-              university_credits: (player.university_credits || 0) + credits + bonus,
-              xp: newXp,
-              player_level: newLevel,
-            });
-          }
+          const result = await grantLegacyUniPracticeReward("triage", credits, objXp, isObjNew, bonus);
+          setCreditsEarned(result.universityCredits);
           return;
         }
       }
-      if (player && updateState) {
-        const newXp = (player.xp ?? 0) + objXp;
-        const { level: newLevel } = playerLevelFromXp(newXp);
-        await updateState({
-          ...player,
-          university_credits: (player.university_credits || 0) + credits,
-          xp: newXp,
-          player_level: newLevel,
-        });
-      }
+      const result = await grantLegacyUniPracticeReward("triage", credits, objXp, isObjNew);
+      setCreditsEarned(result.universityCredits);
     })();
   }, [gamePhase]); // eslint-disable-line react-hooks/exhaustive-deps
 

@@ -48,7 +48,9 @@ import {
   CHAPTER_BOSS_KEY_REQUIREMENT,
 } from '@/src/game/journeyMap/chapterBossKeys';
 import { journeyRunRepository }            from '@/src/game/journeyMap/journeyRunRepository';
-import { validateMove, applyMoveToRun, MOVE_STAMINA_COST } from '@/src/game/journeyMap/movement';
+import { validateMove, applyMoveToRun } from '@/src/game/journeyMap/movement';
+import { BOSS_ENCOUNTER_COST, formatCountdown, getJourneyStaminaCost } from '@/src/game/stamina';
+import { ENEMIES } from '@/src/game/content';
 import { calculateVisibleTileIds }         from '@/src/game/journeyMap/fogCalculator';
 import {
   resolveVisionBonuses,
@@ -61,12 +63,6 @@ import {
   TREASURE_REWARDS,
   type TreasureReward,
 } from '@/src/game/journeyMap/encounterResolution';
-import { claimChapterBossKeyOnServer } from '@/src/game/journeyMap/journeyRunRepository';
-import {
-  enqueuePendingBossKeyClaim,
-  getPendingBossKeyClaims,
-  removePendingBossKeyClaims,
-} from '@/src/game/journeyMap/pendingBossKeyClaims';
 import type { JourneyRun, JourneyTile } from '@/src/game/journeyMap/types';
 import { TreasureModal }                  from '@/src/components/journey/TreasureModal';
 import { MerchantModal }                  from '@/src/components/journey/MerchantModal';
@@ -821,7 +817,7 @@ export default function ChapterFogMapShell() {
   }>();
   const router               = useRouter();
   const insets               = useSafeAreaInsets();
-  const { player, spendStamina, applyRewards, updateState, applyFogMapChapterBossRewards, reconcileChapterBossKeys, setCanonicalShift } = usePlayer();
+  const { player, spendStamina, refillStamina, applyRewards, updateState, claimJourneyChapterBoss, claimJourneyAreaBoss, setCanonicalShift } = usePlayer();
 
   // Always-fresh refs for shift resolution — updated every render so the
   // run-load effect and challenge callback never close over stale
@@ -901,6 +897,9 @@ export default function ChapterFogMapShell() {
   const dustTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const movingRef = useRef(false);
+  // Gate entry spends a large one-time commitment. This guard closes the gap
+  // while the async stamina write is in flight, so rapid taps cannot double-pay.
+  const gateEntryRef = useRef(false);
 
   /** Inline error message (insufficient stamina, locked gate). Auto-clears after 2.5 s. */
   const [moveError, setMoveError]   = useState<string | null>(null);
@@ -976,46 +975,6 @@ export default function ChapterFogMapShell() {
   // loadAttempt increments when the user taps Retry, re-triggering this effect.
   }, [player?.id, chNum, debugTiles, loadAttempt]);
 
-  // ── Pending boss-key drain effect (Task 576) ──────────────────────────────
-  // On mount (or when the player / chapter changes), retry any Area Boss key
-  // claims that failed to reach the backend during a previous session.
-  // Claims are sent sequentially (not concurrently) so the server always sees
-  // a stable claimed_tile_ids set between requests.
-  // A ref prevents overlapping drains from the same component instance (e.g.
-  // React Strict Mode double-invoke or a rapid player/chapter change).
-  const drainInProgressRef = useRef(false);
-  useEffect(() => {
-    if (!player?.id) return;
-    if (drainInProgressRef.current) return;
-    const playerId = player.id;
-
-    drainInProgressRef.current = true;
-    getPendingBossKeyClaims(playerId, chNum)
-      .then(async pending => {
-        if (pending.length === 0) return;
-        const drained: string[] = [];
-        // Sequential — one claim at a time so the backend's atomic write
-        // always operates on the fully-settled post-previous-claim state.
-        for (const entry of pending) {
-          const serverKeys = await claimChapterBossKeyOnServer(
-            playerId, entry.chapterId, entry.claimKey,
-          );
-          if (serverKeys) {
-            await reconcileChapterBossKeys(entry.chapterId, serverKeys);
-            drained.push(entry.claimKey);
-          }
-          // If still null, leave in the queue for the next attempt.
-        }
-        if (drained.length > 0) {
-          await removePendingBossKeyClaims(drained);
-        }
-      })
-      .catch(e => console.warn('[fog-map] pending boss-key drain failed:', e))
-      .finally(() => { drainInProgressRef.current = false; });
-  // Only re-run when the player or chapter changes, not on every render.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [player?.id, chNum]);
-
   // ── Post-battle resolution effect ──────────────────────────────────────────
   // When the fog-map is (re)mounted with `resolvedTileId` + `battleOutcome`
   // params (set by result.tsx when the player returns from a battle started
@@ -1031,9 +990,8 @@ export default function ChapterFogMapShell() {
     let updated: JourneyRun;
     if (journeyIsChapterBoss === '1') {
       updated = resolveChapterBossWin(run);
-      // Also mark cleared on the backend.
-      journeyRunRepository.markRunCleared(updated.id)
-        .catch(e => console.warn('[fog-map] markRunCleared failed:', e));
+      claimJourneyChapterBoss(run.id, resolvedTileId)
+        .catch(e => console.warn('[fog-map] chapter boss completion failed:', e));
       // ── Canonical shift (Book I choice chapters) ────────────────────────────
       // First clear of a choice chapter (Ch4/7/9/10) records its shift as the
       // chapter's canonical shift; inherit chapters (Ch5-6, Ch8) read it.
@@ -1042,66 +1000,10 @@ export default function ChapterFogMapShell() {
         setCanonicalShift(chNum, run.shift)
           .catch(e => console.warn('[fog-map] setCanonicalShift failed:', e));
       }
-      // ── Atomic: completion XP + required-node claims in one store write ────
-      // applyFogMapChapterBossRewards reads playerRef.current (always fresh)
-      // and issues a single updateState, avoiding the stale-snapshot race that
-      // occurs when applyRewards + a separate updateState are both fired from
-      // the same effect closure.  The single write also flips the
-      // ChapterCompletion badge (chapterSummary useMemo depends on player).
-      applyFogMapChapterBossRewards(
-        chapter?.requiredCompletionNodes ?? [],
-        chapter?.completionXp ?? 0,
-      ).catch(e => console.warn('[fog-map] applyFogMapChapterBossRewards failed:', e));
     } else if (journeyIsAreaBoss === '1') {
       updated = resolveAreaBossWin(run, resolvedTileId);
-      // ── Chapter-level key update (Task 570) ────────────────────────────────
-      // resolveAreaBossWin updates run-level areaBossKeysCollected; we must
-      // ALSO update the chapter-level ChapterBossKeyState so keys survive
-      // across Rechallenge Map (new runs for the same chapter).
-      //
-      // Claim key is run-scoped ("{runId}:{tileId}") so tile coordinates
-      // ("q,r") cannot collide across different randomised map attempts.
-      // Each new run has a fresh UUID, guaranteeing a unique claim identity
-      // even when a rechallenge map places a boss at the same coordinates.
-      if (player) {
-        const claimKey = `${run.id}:${resolvedTileId}`;
-        const existing = player.chapter_boss_keys?.[String(chNum)];
-        const currentKeyState = existing
-          ? createChapterBossKeyState(chNum, existing.keys_collected, existing.claimed_tile_ids)
-          : createChapterBossKeyState(chNum);
-        const newKeyState = claimAreaBossKey(currentKeyState, claimKey);
-
-        // Optimistic local update — immediately visible in the gate HUD.
-        const newChapterBossKeys = {
-          ...(player.chapter_boss_keys ?? {}),
-          [String(chNum)]: {
-            keys_collected:   newKeyState.keysCollected,
-            claimed_tile_ids: [...newKeyState.claimedTileIds],
-          },
-        };
-        updateState({ ...player, chapter_boss_keys: newChapterBossKeys })
-          .catch(e => console.warn('[fog-map] updateState chapter_boss_keys failed:', e));
-
-        // Durable backend write — idempotent, survives session close + restart.
-        // Capture playerId now to avoid a stale closure after the await gap.
-        const capturedPlayerId = player.id;
-        claimChapterBossKeyOnServer(capturedPlayerId, chNum, claimKey)
-          .then(async serverKeys => {
-            if (serverKeys) {
-              // Reconcile: overwrite the optimistic snapshot with the
-              // authoritative server value.  reconcileChapterBossKeys reads
-              // playerRef.current (always fresh) so it won't clobber any other
-              // writes that happened between the optimistic update and now.
-              await reconcileChapterBossKeys(chNum, serverKeys);
-            } else {
-              // Server returned null — the call failed silently inside
-              // claimChapterBossKeyOnServer.  Queue the claim so it is retried
-              // the next time this chapter's fog-map is opened.
-              await enqueuePendingBossKeyClaim(capturedPlayerId, chNum, claimKey);
-            }
-          })
-          .catch(e => console.warn('[fog-map] boss key reconciliation error:', e));
-      }
+      claimJourneyAreaBoss(run.id, chNum, resolvedTileId)
+        .catch(e => console.warn('[fog-map] Area Boss completion failed:', e));
     } else {
       updated = resolveBattleWin(run, resolvedTileId);
     }
@@ -1410,7 +1312,7 @@ export default function ChapterFogMapShell() {
   const totalShards = chestShards;
 
   // Stamina
-  const { stamina, max: staminaMax } = useLiveStamina(player ?? null);
+  const { stamina, max: staminaMax, msUntilNext } = useLiveStamina(player ?? null);
 
   // ── Move handler ───────────────────────────────────────────────────────────
 
@@ -1438,6 +1340,7 @@ export default function ChapterFogMapShell() {
         journeyTileId:        tileId,
         journeyIsAreaBoss:    isAreaBoss    ? '1' : '0',
         journeyIsChapterBoss: isChapterBoss ? '1' : '0',
+        journeyRunId:         run?.id ?? '',
         // Battle bridge: the run's frozen TimeOfDay travels with the battle
         // so shift-specific orchestration can key off it.
         journeyShift:         run?.shift ?? 'day',
@@ -1447,18 +1350,26 @@ export default function ChapterFogMapShell() {
 
   /**
    * Handle a tap on the chapter-boss gate tile or the "ENTER BOSS GATE" button.
-   * Does NOT consume stamina.  If locked, shows a brief error.
+   * Charges the major-boss commitment once all keys have been earned.
    */
-  const handleGateTap = useCallback(() => {
+  const handleGateTap = useCallback(async () => {
+    if (gateEntryRef.current) return;
     if (!run) return;
     if (!gateUnlocked) {
       const needed = CHAPTER_BOSS_KEY_REQUIREMENT - keysCollected;
       showInlineError(`${needed} key fragment${needed !== 1 ? 's' : ''} still needed to unlock the gate.`);
       return;
     }
+    gateEntryRef.current = true;
+    const paid = await spendStamina(BOSS_ENCOUNTER_COST);
+    if (!paid) {
+      gateEntryRef.current = false;
+      showInlineError(`Not enough Stamina for this boss. Next point in ${formatCountdown(msUntilNext)}.`);
+      return;
+    }
     const bossId = getChapterBossEnemyId(chNum);
     navigateToBattle(bossId, run.gateAnchorTileId ?? 'gate', false, true);
-  }, [run, gateUnlocked, keysCollected, chNum, navigateToBattle, showInlineError]);
+  }, [run, gateUnlocked, keysCollected, chNum, navigateToBattle, showInlineError, spendStamina, msUntilNext]);
 
   /**
    * Confirm and execute a Challenge Chapter run creation.
@@ -1531,10 +1442,18 @@ export default function ChapterFogMapShell() {
     const { run: updated, rewards } = resolveTreasureClaim(run, treasureModalTileId);
     setRun(updated);
     setTreasureModalTileId(null);
-    journeyRunRepository.saveRun(updated).catch(e => console.warn('[fog-map] treasure saveRun:', e));
+    try {
+      // The server validates treasure rewards against the persisted tile claim.
+      // Await this transition so the subsequent reward request cannot race it.
+      await journeyRunRepository.saveRun(updated);
+    } catch (e) {
+      console.warn('[fog-map] treasure saveRun:', e);
+      return;
+    }
     if (rewards.xp > 0 || rewards.crowns > 0 || rewards.shards > 0) {
       applyRewards({ xp: rewards.xp, crowns: rewards.crowns, codexShards: rewards.shards,
-        codex: [], enemyId: 'journey_treasure', enemyName: 'Journey Treasure' })
+        codex: [], enemyId: 'journey_treasure', enemyName: 'Journey Treasure',
+        rewardActivity: 'journey_treasure', contentKey: `${run.id}:${treasureModalTileId}` })
         .catch(e => console.warn('[fog-map] applyRewards:', e));
     }
   // applyRewards is stable from usePlayer()
@@ -1567,16 +1486,18 @@ export default function ChapterFogMapShell() {
 
     try {
       const validation = validateMove(run, tile.id, stamina);
-      if (!validation.ok) {
-        if (validation.reason === 'INSUFFICIENT_STAMINA') {
-          showInlineError('Not enough stamina — wait for it to recover.');
-        }
-        return;
-      }
+      if (!validation.ok) return;
 
-      const spent = await spendStamina(MOVE_STAMINA_COST);
-      if (!spent) {
-        showInlineError('Not enough stamina — wait for it to recover.');
+      // Movement and map interactions are free. Only an unresolved battle tile
+      // asks for stamina, immediately before committing the player to combat.
+      const sourceTile = run.tiles.find(t => t.id === tile.id);
+      const enemyId = sourceTile?.encounter === 'areaBoss'
+        ? getAreaBossEnemyId(chNum)
+        : deriveEnemyId(run.seed, tile.id, chNum);
+      const difficulty = ENEMIES.find(e => e.id === enemyId)?.difficulty ?? 1;
+      const cost = sourceTile?.resolved ? 0 : getJourneyStaminaCost(sourceTile?.encounter ?? 'none', difficulty);
+      if (cost > 0 && !await spendStamina(cost)) {
+        showInlineError(`Not enough Stamina — wait for it to recover. Next point in ${formatCountdown(msUntilNext)}.`);
         return;
       }
 
@@ -1688,19 +1609,16 @@ export default function ChapterFogMapShell() {
             <Pressable
               style={s.plusBtn}
               testID="stamina-refill"
-              onPress={() => {
+              onPress={async () => {
                 if (!player) return;
-                void updateState({
-                  ...player,
-                  stamina: staminaMax,
-                  stamina_updated_at: new Date().toISOString(),
-                });
+                const result = await refillStamina(150, 99);
+                if (!result.ok) showInlineError(result.message);
               }}
             >
               <Text style={s.plusTxt}>＋</Text>
             </Pressable>
           </View>
-          <Text style={s.staminaHint}>Movement costs {ENCOUNTER_COST} stamina</Text>
+          <Text style={s.staminaHint}>Exploration is free · combat costs 1–5 Stamina</Text>
         </View>
 
         <Pressable

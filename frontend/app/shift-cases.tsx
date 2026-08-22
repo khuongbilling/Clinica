@@ -16,10 +16,11 @@ import { usePlayer } from "@/src/game/store";
 import { goBack } from "@/src/utils/navigation";
 import { getLotusNodeForEnemy, isLotusNodeComplete } from "@/src/game/lotusLessons";
 import {
-  BOSS_ENCOUNTER_COST, ENCOUNTER_COST, formatCountdown, useLiveStamina,
+  BOSS_ENCOUNTER_COST, ENCOUNTER_COST, formatCountdown, getWardShiftStaminaCost, useLiveStamina,
 } from "@/src/game/stamina";
 import { getBattleBaseXp, isSweepUnlocked, getSweepXp, getSweepCrowns, SWEEP_STAMINA_COST } from "@/src/game/battleXp";
 import { chapterSimulationLabel } from "@/src/game/modeHub";
+import { isFeatureUnlocked, playerLevelFromXp } from "@/src/game/progression";
 import { COLORS, ELEMENT_COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 
 // ─────────────────────────────────────────────────────────────
@@ -64,10 +65,12 @@ export default function ShiftCasesPage() {
     );
   }
 
-  const bossUnlocked = (player.bosses_defeated?.length ?? 0) > 0 || player.runs_completed >= 1;
-  const canPlay = stamina >= ENCOUNTER_COST;
+  const playerLevel = player.player_level ?? playerLevelFromXp(player.xp ?? 0).level;
+  const bossUnlocked = (player.bosses_defeated?.length ?? 0) > 0 || isFeatureUnlocked("boss", playerLevel);
   const count = dailyShift.length;
   const current = dailyShift[index % Math.max(1, count)];
+  const currentCost = current ? getWardShiftStaminaCost(current.difficulty) : ENCOUNTER_COST;
+  const canPlay = stamina >= currentCost;
 
   const cycle = (dir: number) => {
     if (count === 0) return;
@@ -77,7 +80,9 @@ export default function ShiftCasesPage() {
   const launchEncounter = async (enemyId: string) => {
     if (launchingRef.current) return;
     launchingRef.current = true;
-    const ok = await spendStamina(ENCOUNTER_COST);
+    const encounter = ENEMIES.find((e) => e.id === enemyId);
+    const cost = getWardShiftStaminaCost(encounter?.difficulty ?? current?.difficulty ?? 1);
+    const ok = await spendStamina(cost);
     if (!ok) {
       launchingRef.current = false;
       return;
@@ -185,7 +190,7 @@ export default function ShiftCasesPage() {
           <View style={styles.warn}>
             <Ionicons name="flash-off-outline" size={16} color={COLORS.error} />
             <Text style={styles.warnTxt}>
-              You're out of Shift Challenges. Each case costs {ENCOUNTER_COST}. Next in {formatCountdown(msUntilNext)}.
+              You're out of Shift Challenges. This case costs {currentCost}. Next in {formatCountdown(msUntilNext)}.
             </Text>
           </View>
         )}
@@ -206,7 +211,7 @@ export default function ShiftCasesPage() {
               )}
               <View style={styles.costBadge}>
                 <Ionicons name="flash" size={11} color={COLORS.brand} />
-                <Text style={styles.costBadgeTxt}>{ENCOUNTER_COST}</Text>
+                <Text style={styles.costBadgeTxt}>{currentCost}</Text>
               </View>
               <View style={styles.caseCounter}>
                 <Text style={styles.caseCounterTxt}>{(index % count) + 1} / {count}</Text>
