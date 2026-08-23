@@ -132,3 +132,4 @@
 - [Clinical Simulation Lab authority](clinical-simulation-authority.md) — Package 2 attempts bind server-owned manifest/action/seed state; scores and rewards are never client claims.
 - [Activity registry manifest location](activity-registry-manifest-location.md) — Metro cannot bundle a canonical manifest outside frontend; backend reads the frontend-owned JSON directly.
 - [Daily Rounds V2 authority](daily-rounds-v2-authority.md) — V2 board state is client-persisted; server-owned receipts are required before anti-cheat reward authority.
+- [GitHub push credential fallback](github-push-credential-fallback.md) — Git transport can reject credentials despite a healthy connector; use the configured PAT only through one-shot GIT_ASKPASS, never persist it.
