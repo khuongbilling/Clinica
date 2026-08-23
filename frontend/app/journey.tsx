@@ -48,6 +48,8 @@ import {
 import type { TimeOfDay } from "@/src/game/journeyMap/types";
 import { ensureFreshDailyRounds, claimableCount, checkInAvailable } from "@/src/game/dailyRounds";
 import { usePlayer } from "@/src/game/store";
+import { getDailyEligibleFeatureIds } from "@/src/game/activityRegistry";
+import { ActivityEntryGate } from "@/src/components/FeatureGate";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 import { UI } from "@/src/theme/ui";
@@ -55,6 +57,10 @@ import { getFocusedChapters, buildChapterUiSummary, getChapterTabBadgeState } fr
 
 
 export default function JourneyScreen() {
+  return <ActivityEntryGate activityId="journey" title="Journey" fallback={ROUTES.tabs}><JourneyContent /></ActivityEntryGate>;
+}
+
+function JourneyContent() {
   const router = useRouter();
   const {
     bookId,
@@ -255,7 +261,7 @@ export default function JourneyScreen() {
   const showUniversitySupport = totalFailures >= 3 && !!failureHint && !showFieldPracticeStrip;
 
   // Quests tab
-  const roundsFresh = ensureFreshDailyRounds(player.daily_rounds, [], player.id).state;
+  const roundsFresh = ensureFreshDailyRounds(player.daily_rounds, getDailyEligibleFeatureIds(player), player.id).state;
   const roundsBadge = claimableCount(roundsFresh) + (checkInAvailable(roundsFresh) ? 1 : 0);
 
   // Memories tab — memory fragments from claimed journey nodes

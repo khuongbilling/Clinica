@@ -18,12 +18,17 @@ import { BannerCard } from "@/src/components/ModeBanners";
 import { JOURNEY_SAGAS, isNodeLocked } from "@/src/game/journeyHierarchy";
 import type { ModeCardDef } from "@/src/game/modeHub";
 import { playerLevelFromXp } from "@/src/game/progression";
-import { dynRoute } from "@/src/game/routes";
+import { dynRoute, ROUTES } from "@/src/game/routes";
 import { usePlayer } from "@/src/game/store";
+import { ActivityEntryGate } from "@/src/components/FeatureGate";
 import { COLORS, SPACING } from "@/src/theme/colors";
 import { SERIF, UI } from "@/src/theme/ui";
 
 export default function SagasScreen() {
+  return <ActivityEntryGate activityId="journey" title="Journey" fallback={ROUTES.tabs}><SagasContent /></ActivityEntryGate>;
+}
+
+function SagasContent() {
   const router = useRouter();
   const { player } = usePlayer();
   const playerLevel = player ? playerLevelFromXp(player.xp ?? 0).level : 1;

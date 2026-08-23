@@ -20,23 +20,14 @@ import {
 } from "@/src/game/dailyRounds";
 import { getJourneyNodeDef } from "@/src/game/journeyRewards";
 import {
-  buildGateContext,
-  checkFeatureGate,
   playerLevelFromXp,
 } from "@/src/game/progression";
+import { getDailyEligibleFeatureIds } from "@/src/game/activityRegistry";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 
 // ── constants ─────────────────────────────────────────────────────────────────
 
 const LEVEL_GATE = 2;
-
-const DAILY_ROUNDS_MODES = [
-  "ward_shift",
-  "ward_defense",
-  "university",
-  "lotus_journal",
-  "hall_of_heroes",
-];
 
 const NODE_TYPE_ICON: Record<string, string> = {
   memory_fragment: "film-outline",
@@ -50,13 +41,6 @@ const NODE_TYPE_ICON: Record<string, string> = {
 };
 
 // ── helpers ───────────────────────────────────────────────────────────────────
-
-function unlockedModes(player: any): string[] {
-  const ctx = buildGateContext(player);
-  return DAILY_ROUNDS_MODES.filter(
-    (m) => checkFeatureGate(m, ctx).unlocked,
-  );
-}
 
 /** First unclaimed, reward-def-backed node in the player's current chapter. */
 function getNextJourneyNode(
@@ -89,7 +73,7 @@ export function DailyRhythmCard({ player, onPress }: DailyRhythmCardProps) {
 
   const state: DailyRoundsState = ensureFreshDailyRounds(
     player.daily_rounds,
-    unlockedModes(player),
+    getDailyEligibleFeatureIds(player),
     player.id,
   ).state;
 

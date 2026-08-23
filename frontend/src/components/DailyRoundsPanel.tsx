@@ -7,7 +7,8 @@ import { NarratorGuide } from "@/src/components/NarratorGuide";
 import { InlineNotice, useInlineNotice } from "@/src/components/WebAlert";
 import { usePlayer } from "@/src/game/store";
 import { getUiIcon } from "@/src/game/uiIcons";
-import { buildGateContext, checkFeatureGate, playerLevelFromXp } from "@/src/game/progression";
+import { playerLevelFromXp } from "@/src/game/progression";
+import { getDailyEligibleFeatureIds } from "@/src/game/activityRegistry";
 import {
   DailyReward, DailyRoundsState, WeeklyTaskState, defaultDailyRoundsState, ensureFreshDailyRounds,
   allObjectivesComplete, allWeeklyTasksComplete, ALL_COMPLETE_BONUS, WEEKLY_ALL_COMPLETE_REWARD,
@@ -91,13 +92,7 @@ function getJourneyProximityHint(player: any): string | null {
 }
 
 const SEEN_KEY = "clinica.dailyRounds.seen";
-const DAILY_ROUNDS_MODES = ["ward_shift", "ward_defense", "university", "lotus_journal", "hall_of_heroes"];
 const LEVEL_GATE = 2;
-
-function unlockedModes(player: any): string[] {
-  const ctx = buildGateContext(player);
-  return DAILY_ROUNDS_MODES.filter((m) => checkFeatureGate(m, ctx).unlocked);
-}
 
 /** Reward chips row — supports all currency types. */
 function RewardChips({ reward, dim }: { reward: DailyReward; dim?: boolean }) {
@@ -488,7 +483,7 @@ export function DailyRoundsPanel({ visible, onClose }: { visible: boolean; onClo
 
   const state: DailyRoundsState = useMemo(() => {
     if (!player) return defaultDailyRoundsState();
-    return ensureFreshDailyRounds(player.daily_rounds, unlockedModes(player), player.id).state;
+    return ensureFreshDailyRounds(player.daily_rounds, getDailyEligibleFeatureIds(player), player.id).state;
   }, [player]);
 
   const playerLevel = playerLevelFromXp(player?.xp ?? 0).level;

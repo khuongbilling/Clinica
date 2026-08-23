@@ -70,6 +70,7 @@ import { MerchantModal }                  from '@/src/components/journey/Merchan
 // dynRoute is only used in result.tsx for the return-to-fog-map routing.
 import { ENCOUNTER_COST, useLiveStamina } from '@/src/game/stamina';
 import { usePlayer }                       from '@/src/game/store';
+import { ActivityEntryGate }               from '@/src/components/FeatureGate';
 import { playerLevelFromXp }               from '@/src/game/progression';
 import { buildChapterUiSummary }           from '@/src/features/journey/ui/journeyVisibility';
 import { ChapterCompletion }               from '@/src/features/journey/ui/ChapterCompletion';
@@ -796,6 +797,10 @@ function DevDiagnostics({
 // ── Main screen ───────────────────────────────────────────────────────────────
 
 export default function ChapterFogMapShell() {
+  return <ActivityEntryGate activityId="journey" title="Journey" fallback="/(tabs)"><ChapterFogMapContent /></ActivityEntryGate>;
+}
+
+function ChapterFogMapContent() {
   const {
     chapterId,
     debug,

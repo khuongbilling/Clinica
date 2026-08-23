@@ -20,9 +20,14 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { goBack } from "@/src/utils/navigation";
+import { ActivityEntryGate } from "@/src/components/FeatureGate";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 
 export default function ApplyItScreen() {
+  return <ActivityEntryGate activityId="university-practice" title="University Practice" fallback={ROUTES.UNIVERSITY}><ApplyItContent /></ActivityEntryGate>;
+}
+
+function ApplyItContent() {
   const router = useRouter();
 
   return (

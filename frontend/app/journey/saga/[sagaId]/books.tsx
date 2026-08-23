@@ -23,8 +23,9 @@ import { getChapterStatus } from "@/src/game/chapterJourney";
 import { getBookChapters } from "@/src/game/journeyHierarchy";
 import { ENEMIES } from "@/src/game/content";
 import { playerLevelFromXp } from "@/src/game/progression";
-import { dynRoute, type AppRoute } from "@/src/game/routes";
+import { dynRoute, ROUTES, type AppRoute } from "@/src/game/routes";
 import { usePlayer } from "@/src/game/store";
+import { ActivityEntryGate } from "@/src/components/FeatureGate";
 import { COLORS, SPACING } from "@/src/theme/colors";
 import { SERIF, UI } from "@/src/theme/ui";
 
@@ -127,6 +128,10 @@ const pb = StyleSheet.create({
 });
 
 export default function SagaBooksScreen() {
+  return <ActivityEntryGate activityId="journey" title="Journey" fallback={ROUTES.tabs}><SagaBooksContent /></ActivityEntryGate>;
+}
+
+function SagaBooksContent() {
   const { sagaId } = useLocalSearchParams<{ sagaId: string }>();
   const router     = useRouter();
   const { player } = usePlayer();

@@ -16,6 +16,7 @@ import { RPGTabBar, RPGTab } from "@/src/components/RPGTabBar";
 import { ShiftEmblem, UniversityEmblem, BossWardEmblem, LotusJournalEmblem } from "@/src/components/ClinicaEmblems";
 import { usePlayer } from "@/src/game/store";
 import { ensureFreshDailyRounds, claimableCount, checkInAvailable } from "@/src/game/dailyRounds";
+import { getDailyEligibleFeatureIds } from "@/src/game/activityRegistry";
 import { useTutorial } from "@/src/game/tutorialStore";
 import { useClearTutorialOnExit } from "@/src/hooks/useClearTutorialOnExit";
 import { useWebBackToHub } from "@/src/hooks/useWebBackToHub";
@@ -26,16 +27,6 @@ import {
 } from "@/src/game/modeHub";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 import { UI } from "@/src/theme/ui";
-
-const DAILY_ROUNDS_MODES = ["ward_shift", "ward_defense", "university", "lotus_journal", "hall_of_heroes"];
-function dailyRoundsUnlockedModes(player: any): string[] {
-  const ctx = {
-    level: playerLevelFromXp(player?.xp ?? 0).level,
-    firstWardShiftDone: (player?.runs_completed ?? 0) > 0,
-    lessonsStarted: (player?.lessons_completed?.length ?? 0) > 0,
-  };
-  return DAILY_ROUNDS_MODES.filter((m) => checkFeatureGate(m, ctx).unlocked);
-}
 
 export default function ShiftPage() {
   const router = useRouter();
@@ -49,7 +40,7 @@ export default function ShiftPage() {
   useWebBackToHub("/(tabs)");
 
   const playerLevel = player ? (player.player_level ?? playerLevelFromXp(player.xp ?? 0).level) : 1;
-  const roundsFresh = player ? ensureFreshDailyRounds(player.daily_rounds, dailyRoundsUnlockedModes(player), player.id).state : null;
+  const roundsFresh = player ? ensureFreshDailyRounds(player.daily_rounds, getDailyEligibleFeatureIds(player), player.id).state : null;
   const roundsBadge = roundsFresh ? claimableCount(roundsFresh) + (checkInAvailable(roundsFresh) ? 1 : 0) : 0;
 
   const gateCtx: CompoundGateContext = {

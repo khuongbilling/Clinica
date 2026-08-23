@@ -33,6 +33,7 @@ import { ACTIVE_WORLD_EVENT, WORLD_EVENT_ACTIVE } from "@/src/game/worldEvent";
 import { DailyRoundsPanel } from "@/src/components/DailyRoundsPanel";
 import { Lv2UnlockModal } from "@/src/components/Lv2UnlockModal";
 import { ensureFreshDailyRounds, claimableCount, checkInAvailable } from "@/src/game/dailyRounds";
+import { getDailyEligibleFeatureIds } from "@/src/game/activityRegistry";
 import { nextAutoStoryScene } from "@/src/game/storyScenes";
 import { getHeroPortrait } from "@/src/components/HeroPortraits";
 import { playerLevelFromXp, isFeatureUnlocked, buildGateContext, checkFeatureGate, heroXpCostForLevel } from "@/src/game/progression";
@@ -55,12 +56,6 @@ const EMBLEM_IMAGES = {
   study:       require("../../assets/ui-icons/tab-inventory.png"),
   realm:       require("../../assets/ui-icons/tab-realm.png"),
 } as const;
-
-const DAILY_ROUNDS_MODES = ["ward_shift", "ward_defense", "university", "lotus_journal", "hall_of_heroes"];
-function dailyRoundsUnlockedModes(player: any): string[] {
-  const ctx = buildGateContext(player);
-  return DAILY_ROUNDS_MODES.filter((m) => checkFeatureGate(m, ctx).unlocked);
-}
 
 const INTRO_KEY = "clinica.intro.seen";
 const WORLD_EVENT_BANNER_KEY = `clinica.worldEventBanner.dismissed.${ACTIVE_WORLD_EVENT.id}`;
@@ -485,7 +480,7 @@ export default function RunHome() {
 
   // Daily Ward Rounds — free daily engagement loop. Hidden until the player has
   // begun (post-University), then shows a badge for pending check-in/claims.
-  const roundsFresh = ensureFreshDailyRounds(player.daily_rounds, dailyRoundsUnlockedModes(player), player.id).state;
+  const roundsFresh = ensureFreshDailyRounds(player.daily_rounds, getDailyEligibleFeatureIds(player), player.id).state;
   const roundsBadge = claimableCount(roundsFresh) + (checkInAvailable(roundsFresh) ? 1 : 0);
 
   // Push 26 — Community board banner is hidden while the tutorial chain is active.

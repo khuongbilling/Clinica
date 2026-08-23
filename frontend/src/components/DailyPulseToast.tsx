@@ -6,7 +6,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { usePlayer } from "@/src/game/store";
 import { playRewardCue } from "@/src/game/cues";
-import { buildGateContext, checkFeatureGate } from "@/src/game/progression";
+import { getDailyEligibleFeatureIds } from "@/src/game/activityRegistry";
 import {
   allObjectivesComplete, ensureFreshDailyRounds, summarizeReward,
   WEEKLY_GOAL_TARGET,
@@ -50,18 +50,11 @@ type Claimable =
   | { kind: "all" }
   | { kind: "weekly" };
 
-const DAILY_ROUNDS_MODES = ["ward_shift", "ward_defense", "university", "lotus_journal", "hall_of_heroes"];
-
-function unlockedModes(player: any): string[] {
-  const ctx = buildGateContext(player);
-  return DAILY_ROUNDS_MODES.filter((m) => checkFeatureGate(m, ctx).unlocked);
-}
-
 // Enumerate everything currently claimable from a freshly-rolled state, so the
 // toast can decide between an in-place claim and a fall-back to the panel.
 function claimableItems(player: any): Claimable[] {
   if (!player) return [];
-  const state = ensureFreshDailyRounds(player.daily_rounds, unlockedModes(player), player.id).state;
+  const state = ensureFreshDailyRounds(player.daily_rounds, getDailyEligibleFeatureIds(player), player.id).state;
   const items: Claimable[] = [];
   for (const o of state.objectives) {
     if (o.progress >= o.target && !o.claimed) items.push({ kind: "objective", id: o.id });
