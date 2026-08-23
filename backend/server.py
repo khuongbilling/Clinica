@@ -39,6 +39,7 @@ db = client[os.environ.get('DB_NAME', 'clinica')]
 
 app = FastAPI(title="Clinica: Kingdom of Healing API")
 api_router = APIRouter(prefix="/api")
+FACULTY_ID_PATTERN = re.compile(r"^[A-Za-z0-9_-]{1,128}$")
 
 ACTIVITY_REGISTRY_PATH = ROOT_DIR.parent / "frontend" / "src" / "game" / "activityRegistry.manifest.json"
 with ACTIVITY_REGISTRY_PATH.open(encoding="utf-8") as activity_registry_file:
@@ -714,6 +715,13 @@ class LegacyDailyRoundsSettlementRequest(BaseModel):
     legacy_snapshot: Dict[str, Any] = Field(default_factory=dict)
 
 
+class LegacyDailyRoundsAuthorizationRequest(BaseModel):
+    """Administrative approval of an externally audited, historical V1 state."""
+    model_config = ConfigDict(extra="forbid")
+    player_id: str = Field(min_length=1, max_length=120)
+    reviewed_state_hash: str = Field(min_length=64, max_length=64, pattern=r"^[a-f0-9]{64}$")
+
+
 # ---------- Player Hero foundation ----------
 # These definitions intentionally live beside the API models rather than in the
 # roster/equipment models. Only the baseline and Level 35 sidegrade are
@@ -1251,6 +1259,13 @@ def _legacy_daily_settlement_increments(entitlement_ids: List[str]) -> Dict[str,
     return increments
 
 
+def _legacy_daily_state_hash(state: Dict[str, Any]) -> str:
+    """Hash the exact persisted V1 record an administrator has reviewed."""
+    return hashlib.sha256(
+        json.dumps(state, sort_keys=True, separators=(",", ":"), default=str).encode()
+    ).hexdigest()
+
+
 def _apply_legacy_hero_xp(player: Dict[str, Any], total_xp: int) -> Dict[str, Dict[str, int]]:
     """Persist the historical reward's total hero XP without trusting hero levels."""
     progression = {hero_id: dict(progress) for hero_id, progress in (player.get("hero_progression") or {}).items()}
@@ -1264,6 +1279,25 @@ def _apply_legacy_hero_xp(player: Dict[str, Any], total_xp: int) -> Dict[str, Di
         progress["xp"] = max(0, int(progress.get("xp") or 0)) + per_hero
         progression[hero_id] = progress
     return progression
+
+
+def _canonical_daily_rounds_after_legacy_settlement(settlement_id: str) -> Dict[str, Any]:
+    return {
+        "version": 2,
+        "legacy_claims_settled": True,
+        "legacy_settlement_id": settlement_id,
+        "daily_date": "",
+        "weekly_key": "",
+        "objectives": [],
+        "weekly_tasks": [],
+        "weekly_credited_dates": [],
+        "weekly_days_completed": 0,
+        "all_complete_claimed": False,
+        "weekly_claimed": False,
+        "weekly_all_complete_claimed": False,
+        "weekly_momentum_claimed": [],
+        "weekly_material_earned": 0,
+    }
 
 
 @api_router.put("/player/{player_id}", response_model=Player)
@@ -1292,6 +1326,10 @@ async def update_player(
         "heroes_owned", "codex_unlocked", "kingdom_levels", "owned_equipment",
         "owned_skins", "owned_upgrades", "owned_units", "unit_shards",
         "summon_history", "equipped_cards", "hero_equipment", "wellness",
+        # Skill Academy ranks are combat-affecting progression. The former
+        # client-only material check is not authority; a dedicated conditional
+        # upgrade endpoint must own future rank changes.
+        "hero_skill_upgrades",
         # The University completion endpoint owns these counters. Never accept
         # them from a snapshot or a stale client could turn repeat rewards back
         # into first-clear rewards.
@@ -1322,6 +1360,7 @@ async def update_player(
         "identity_restored", "class_tree_id", "class_progress", "class_specialization",
     ):
         updates.pop(field, None)
+    daily_candidate: Optional[Dict[str, Any]] = None
     if "daily_rounds" in updates:
         # A V1 snapshot is historical evidence, not an import format. Let only
         # the settlement endpoint retire it, otherwise a forged/stale generic
@@ -1329,25 +1368,34 @@ async def update_player(
         if _daily_version(dict(existing.get("daily_rounds") or {})) != 2:
             updates.pop("daily_rounds", None)
         else:
-            updates["daily_rounds"] = _merge_daily_rounds_state(
-                dict(existing.get("daily_rounds") or {}),
-                dict(updates["daily_rounds"] or {}),
-            )
-    # Legacy Skill Academy purchases predate the Ward Aegis feature and still
-    # use the existing client-validated material flow. Preserve those ranks,
-    # but never let the generic endpoint grant the protected Aegis sidegrade.
-    if "hero_skill_upgrades" in updates:
-        requested_upgrades = dict(updates["hero_skill_upgrades"] or {})
-        requested_upgrades.pop("aegis_clinical_resonance", None)
-        if (existing.get("hero_skill_upgrades") or {}).get("aegis_clinical_resonance"):
-            requested_upgrades["aegis_clinical_resonance"] = 1
-        updates["hero_skill_upgrades"] = requested_upgrades
+            daily_candidate = dict(updates.pop("daily_rounds") or {})
     # class_specialization is immutable once set; refuse any attempt to overwrite
     # it through the generic update path — use POST /claim-specialization instead.
     updates.pop("class_specialization", None)
     if "mastery" in updates and isinstance(updates["mastery"], dict) is False:
         updates["mastery"] = updates["mastery"].model_dump()
     updates["updated_at"] = now_iso()
+    if daily_candidate is not None:
+        # Compare-and-set is required here: two stale devices may both merge
+        # against the same snapshot, and an unconditional write would let the
+        # second response erase monotonic progress from the first.
+        latest = existing
+        for _ in range(4):
+            current_daily = dict(latest.get("daily_rounds") or {})
+            if _daily_version(current_daily) != 2:
+                raise HTTPException(status_code=409, detail="Daily Rounds state changed; retry")
+            merged_daily = _merge_daily_rounds_state(current_daily, daily_candidate)
+            committed = await db.players.update_one(
+                {"id": player_id, "daily_rounds": current_daily},
+                {"$set": {**updates, "daily_rounds": merged_daily, "updated_at": now_iso()}},
+            )
+            if committed.matched_count == 1:
+                refreshed = await db.players.find_one({"id": player_id}, {"_id": 0})
+                return Player(**refreshed)
+            latest = await db.players.find_one({"id": player_id}, {"_id": 0})
+            if not latest:
+                raise HTTPException(status_code=404, detail="player not found")
+        raise HTTPException(status_code=409, detail="Daily Rounds changed concurrently; retry")
     await db.players.update_one({"id": player_id}, {"$set": updates})
     refreshed = await db.players.find_one({"id": player_id}, {"_id": 0})
     return Player(**refreshed)
@@ -1377,11 +1425,40 @@ async def settle_legacy_daily_rounds(
         return {"player": Player(**player).model_dump(), "settled": False, "entitlement_ids": []}
 
     entitlement_ids = _legacy_daily_entitlement_ids(legacy)
+    legacy_state_hash = _legacy_daily_state_hash(legacy)
+    settlement_id = f"daily-rounds-v1:{player_id}:{legacy_state_hash}"
+    if not entitlement_ids:
+        # A V1 record with no earned claim has no economic ambiguity. Retire it
+        # directly so normal accounts do not retry an unnecessary review path.
+        await db.players.update_one(
+            {"id": player_id, "daily_rounds": legacy},
+            {"$set": {
+                "daily_rounds": _canonical_daily_rounds_after_legacy_settlement(f"{settlement_id}:empty"),
+                "updated_at": now_iso(),
+            }},
+        )
+        refreshed = await db.players.find_one({"id": player_id}, {"_id": 0})
+        return {"player": Player(**refreshed).model_dump(), "settled": False, "entitlement_ids": []}
+    authorization = await db.daily_rounds_legacy_authorizations.find_one({
+        "player_id": player_id,
+        "state_hash": legacy_state_hash,
+        "status": "approved",
+    }, {"_id": 0})
+    if not authorization:
+        # V1 was historically client-writable. Preserve the record in place
+        # until an administrator approves a hash matched against a trusted
+        # export/backup; never convert ambiguous data into currency.
+        return {
+            "player": Player(**player).model_dump(),
+            "settled": False,
+            "entitlement_ids": [],
+            "authorization_required": True,
+        }
     snapshot_hash = hashlib.sha256(json.dumps(payload.legacy_snapshot, sort_keys=True, separators=(",", ":"), default=str).encode()).hexdigest()
-    settlement_id = f"daily-rounds-v1:{player_id}"
     receipt = {
         "settlement_id": settlement_id,
         "player_id": player_id,
+        "legacy_state_hash": legacy_state_hash,
         "entitlement_ids": entitlement_ids,
         "increments": _legacy_daily_settlement_increments(entitlement_ids),
         "legacy_snapshot_hash": snapshot_hash,
@@ -1392,27 +1469,12 @@ async def settle_legacy_daily_rounds(
         await db.daily_rounds_legacy_settlements.insert_one(receipt)
     except DuplicateKeyError:
         receipt = await db.daily_rounds_legacy_settlements.find_one({"settlement_id": settlement_id}, {"_id": 0})
-        if not receipt:
+        if not receipt or receipt.get("legacy_state_hash") != legacy_state_hash:
             raise HTTPException(status_code=409, detail="legacy settlement is being prepared; retry")
 
     increments = dict(receipt["increments"])
     hero_xp = increments.pop("hero_xp", 0)
-    canonical_daily = {
-        "version": 2,
-        "legacy_claims_settled": True,
-        "legacy_settlement_id": settlement_id,
-        "daily_date": "",
-        "weekly_key": "",
-        "objectives": [],
-        "weekly_tasks": [],
-        "weekly_credited_dates": [],
-        "weekly_days_completed": 0,
-        "all_complete_claimed": False,
-        "weekly_claimed": False,
-        "weekly_all_complete_claimed": False,
-        "weekly_momentum_claimed": [],
-        "weekly_material_earned": 0,
-    }
+    canonical_daily = _canonical_daily_rounds_after_legacy_settlement(settlement_id)
     update: Dict[str, Any] = {
         "$set": {
             "daily_rounds": canonical_daily,
@@ -1423,7 +1485,7 @@ async def settle_legacy_daily_rounds(
     if increments:
         update["$inc"] = increments
     committed = await db.players.update_one(
-        {"id": player_id, "daily_rounds.version": {"$ne": 2}},
+        {"id": player_id, "daily_rounds": legacy},
         update,
     )
     refreshed = await db.players.find_one({"id": player_id}, {"_id": 0})
@@ -1441,6 +1503,42 @@ async def settle_legacy_daily_rounds(
         "settled": committed.modified_count == 1,
         "entitlement_ids": entitlement_ids if committed.modified_count == 1 else [],
     }
+
+
+@api_router.post("/faculty/admin/daily-rounds/legacy-authorizations", response_model=Dict[str, Any])
+async def authorize_legacy_daily_rounds_settlement(
+    payload: LegacyDailyRoundsAuthorizationRequest,
+    x_clinica_curriculum_admin_key: Optional[str] = Header(default=None),
+):
+    """Seal a V1 payout only after an administrator reviews a trusted export.
+
+    The request cannot select rewards. It must name the exact hash of the
+    current persisted state; the server re-derives every entitlement/value.
+    """
+    administrator = curriculum_admin_principal(x_clinica_curriculum_admin_key)
+    player = await db.players.find_one({"id": payload.player_id}, {"_id": 0, "daily_rounds": 1})
+    if not player:
+        raise HTTPException(status_code=404, detail="player not found")
+    legacy = dict(player.get("daily_rounds") or {})
+    if _daily_version(legacy) == 2:
+        raise HTTPException(status_code=409, detail="player no longer has a V1 Daily record")
+    state_hash = _legacy_daily_state_hash(legacy)
+    if not hmac.compare_digest(payload.reviewed_state_hash, state_hash):
+        raise HTTPException(status_code=409, detail="reviewed state does not match the current server record")
+    entitlement_ids = _legacy_daily_entitlement_ids(legacy)
+    await db.daily_rounds_legacy_authorizations.update_one(
+        {"player_id": payload.player_id},
+        {"$set": {
+            "player_id": payload.player_id,
+            "state_hash": state_hash,
+            "entitlement_ids": entitlement_ids,
+            "status": "approved",
+            "approved_by": administrator["id"],
+            "approved_at": now_iso(),
+        }},
+        upsert=True,
+    )
+    return {"player_id": payload.player_id, "state_hash": state_hash, "entitlement_ids": entitlement_ids}
 
 
 @api_router.post("/player/{player_id}/economy", response_model=Dict[str, Any])
@@ -5137,6 +5235,11 @@ async def startup_db():
         [("settlement_id", ASCENDING)],
         unique=True,
         name="one_legacy_daily_settlement_per_player",
+    )
+    await db.daily_rounds_legacy_authorizations.create_index(
+        [("player_id", ASCENDING)],
+        unique=True,
+        name="one_legacy_daily_authorization_per_player",
     )
     await db.activity_analytics.create_index(
         [("receipt_key", ASCENDING)],

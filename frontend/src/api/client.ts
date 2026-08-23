@@ -60,7 +60,7 @@ export const api = {
       headers: economyToken ? { 'X-Clinica-Session': economyToken, 'X-Clinica-Economy-Token': economyToken } : {},
     }),
   settleLegacyDailyRounds: (id: string, legacySnapshot: unknown, economyToken?: string) =>
-    http<{ player: PlayerState; settled: boolean; entitlement_ids: string[] }>(
+    http<{ player: PlayerState; settled: boolean; entitlement_ids: string[]; authorization_required?: boolean }>(
       `/player/${id}/daily-rounds/legacy-settlement`,
       {
         method: 'POST',
