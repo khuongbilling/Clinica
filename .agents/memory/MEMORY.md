@@ -131,3 +131,4 @@
 - [Player Hero authority rails](player-hero-authority.md) — one-time Hero outcomes use conditional server writes; Journey opportunity rolls derive only from persisted validated visits and reconcile cleared-run retries.
 - [Clinical Simulation Lab authority](clinical-simulation-authority.md) — Package 2 attempts bind server-owned manifest/action/seed state; scores and rewards are never client claims.
 - [Activity registry manifest location](activity-registry-manifest-location.md) — Metro cannot bundle a canonical manifest outside frontend; backend reads the frontend-owned JSON directly.
+- [Daily Rounds V2 authority](daily-rounds-v2-authority.md) — V2 board state is client-persisted; server-owned receipts are required before anti-cheat reward authority.

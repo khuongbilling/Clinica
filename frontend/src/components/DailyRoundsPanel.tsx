@@ -8,7 +8,7 @@ import { InlineNotice, useInlineNotice } from "@/src/components/WebAlert";
 import { usePlayer } from "@/src/game/store";
 import { getUiIcon } from "@/src/game/uiIcons";
 import { playerLevelFromXp } from "@/src/game/progression";
-import { getDailyEligibleFeatureIds } from "@/src/game/activityRegistry";
+import { getDailyEligibleActivities, getDailyEligibleFeatureIds } from "@/src/game/activityRegistry";
 import {
   DailyReward, DailyRoundsState, WeeklyTaskState, defaultDailyRoundsState, ensureFreshDailyRounds,
   allObjectivesComplete, allWeeklyTasksComplete, ALL_COMPLETE_BONUS, WEEKLY_ALL_COMPLETE_REWARD,
@@ -18,6 +18,7 @@ import {
 import { CHAPTERS } from "@/src/game/chapterJourney";
 import { getJourneyNodeDef } from "@/src/game/journeyRewards";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
+import { DailyRoundsV2Panel } from "@/src/components/DailyRoundsV2Panel";
 
 // ── Journey-map helpers (P3) ──────────────────────────────────────────────────
 
@@ -433,7 +434,7 @@ function LockedPreview() {
 }
 
 // ── Main Panel ────────────────────────────────────────────────────────────────
-export function DailyRoundsPanel({ visible, onClose }: { visible: boolean; onClose: () => void }) {
+function LegacyDailyRoundsPanel({ visible, onClose }: { visible: boolean; onClose: () => void }) {
   const {
     player, checkInDailyRounds, claimDailyObjective, claimDailyAllComplete,
     claimWeeklyTask, claimWeeklyAllComplete, claimQuestMilestone,
@@ -1196,3 +1197,21 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
 });
+
+/** Package 5B replaces the legacy per-objective reward sheet without changing
+ * the public component contract used by the hub and notification surfaces. */
+export function DailyRoundsPanel(props: { visible: boolean; onClose: () => void }) {
+  const { player } = usePlayer();
+  const state = useMemo(() => player
+    ? ensureFreshDailyRounds(
+      player.daily_rounds,
+      getDailyEligibleActivities(player),
+      player.id,
+      new Date(),
+      playerLevelFromXp(player.xp ?? 0).level >= 5,
+    ).state
+    : defaultDailyRoundsState(), [player]);
+  return state.version === 2
+    ? <DailyRoundsV2Panel {...props} />
+    : <LegacyDailyRoundsPanel {...props} />;
+}

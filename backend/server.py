@@ -213,9 +213,13 @@ class DailyObjectiveState(BaseModel):
     description: str = ""
     icon: str = ""
     reward: Dict[str, int] = Field(default_factory=dict)
+    activity_id: Optional[str] = None
+    category: Optional[str] = None
+    route: Optional[str] = None
 
 
 class DailyRoundsState(BaseModel):
+    version: Optional[int] = None
     streak_count: int = 0
     last_checkin_date: str = ""
     daily_date: str = ""
@@ -230,6 +234,8 @@ class DailyRoundsState(BaseModel):
     weekly_tasks: List[Dict[str, Any]] = Field(default_factory=list)
     weekly_all_complete_claimed: bool = False
     weekly_material_earned: int = 0
+    required_count: Optional[int] = None
+    weekly_momentum_claimed: List[str] = Field(default_factory=list)
 
 
 class Player(BaseModel):
@@ -500,8 +506,8 @@ AGE1_STAMINA_BONUSES: dict[str, tuple[str, int]] = {
     "practice:cue_lab": ("day", 1),
     "practice:triage": ("day", 1),
     "practice:stack": ("day", 1),
-    "daily_rounds_complete": ("day", 2),
-    "weekly_rounds_complete": ("week", 3),
+    "daily_rounds_v2_complete": ("day", 1),
+    "weekly_momentum_complete": ("week", 5),
 }
 AGE1_REFILL_PACKS: dict[int, int] = {2: 60, 99: 150}
 
@@ -1204,6 +1210,31 @@ async def mutate_age1_economy(
         expected_period, amount = rule
         if payload.period != expected_period:
             raise HTTPException(status_code=422, detail="invalid stamina bonus period")
+        # Daily Rounds recoveries are only available after server-verified
+        # lifecycle receipts, never from the client-persisted board snapshot.
+        if source in {"daily_rounds_v2_complete", "weekly_momentum_complete"}:
+            target = 3 if level >= 5 else 2
+            receipts = await db.activity_completion_receipts.find(
+                {"player_id": player_id, "daily_eligible": True},
+                {"_id": 0, "activity_id": 1, "completed_at": 1},
+            ).to_list(length=500)
+            by_day: Dict[str, set] = {}
+            for receipt in receipts:
+                try:
+                    receipt_day = age1_day_key(datetime.fromisoformat(str(receipt.get("completed_at") or "").replace("Z", "+00:00")))
+                except (TypeError, ValueError):
+                    continue
+                by_day.setdefault(receipt_day, set()).add(str(receipt.get("activity_id") or ""))
+            if source == "daily_rounds_v2_complete":
+                if len(by_day.get(day, set())) < target:
+                    raise HTTPException(status_code=409, detail="verified Daily Rounds target not complete")
+            else:
+                completed_days = sum(
+                    1 for receipt_day, activities in by_day.items()
+                    if age1_week_key(datetime.fromisoformat(f"{receipt_day}T00:00:00+00:00")) == week and len(activities) >= target
+                )
+                if completed_days < 5:
+                    raise HTTPException(status_code=409, detail="verified Weekly Momentum target not complete")
         if expected_period == "week":
             if existing.get("age1_stamina_bonus_week") == week:
                 raise HTTPException(status_code=409, detail="weekly stamina bonus already claimed")
@@ -1219,10 +1250,8 @@ async def mutate_age1_economy(
         # Completion rewards are derived here rather than accepted from the
         # Daily Rounds client payload. The same period marker makes both the
         # educational stamina and the power reward idempotent.
-        if source == "daily_rounds_complete":
-            reward_increments = {"xp": 10, "crowns": 25, "codex_shards": 25}
-        elif source == "weekly_rounds_complete":
-            reward_increments = {"crowns": 100, "codex_shards": 150, "refined_lotus_gems": 5}
+        # Daily Rounds V2 is intentionally stamina-only. It replaces the old
+        # objective/weekly currency ladder rather than stacking on top of it.
         if reward_increments:
             result["round_reward"] = reward_increments
 

@@ -33,6 +33,24 @@ export interface ActivityAccess {
   route?: string;
 }
 
+/** A Daily board entry is deliberately activity-specific, rather than a generic
+ * feature mode. This preserves the canonical registry as the authority for both
+ * eligibility and the GO destination. */
+export interface DailyEligibleActivity {
+  id: string;
+  label: string;
+  category: ActivityCategory;
+  route?: string;
+  dailyMode: string;
+  completionKind: ActivityCompletionKind;
+}
+// These are the only V2 opportunities whose completion lifecycle is currently
+// verified by the backend receipt boundary. Do not display a card that cannot
+// later settle its advertised Stamina recovery.
+const DAILY_RECEIPT_ACTIVITY_IDS = new Set([
+  'university-practice', 'clinical-simulation', 'grand-rounds', 'crisis-drill',
+]);
+
 export interface ActivityRegistryRuntime {
   activityRegistry?: boolean;
   apothecaryPreview?: boolean;
@@ -169,6 +187,26 @@ export function getDailyEligibleFeatureIds(
     }
   }
   return [...features];
+}
+
+/** Registry-backed opportunity discovery for Daily Rounds V2. */
+export function getDailyEligibleActivities(
+  player: ActivityPlayerSnapshot | null | undefined,
+  runtime?: ActivityRegistryRuntime,
+): DailyEligibleActivity[] {
+  return ACTIVITY_REGISTRY.flatMap((activity) => {
+    if (!activity.dailyEligible || !activity.dailyMode || !DAILY_RECEIPT_ACTIVITY_IDS.has(activity.id)) return [];
+    const access = resolveActivityAccess(activity.id, player, runtime);
+    if (!access.allowed || !hasCompletedActivityIntroduction(activity.id, player)) return [];
+    return [{
+      id: activity.id,
+      label: activity.label,
+      category: activity.category,
+      route: access.route,
+      dailyMode: activity.dailyMode,
+      completionKind: activity.completionKind,
+    }];
+  });
 }
 
 /** Safe public analytics metadata. No player identity, note, answer, or wellness values are included. */

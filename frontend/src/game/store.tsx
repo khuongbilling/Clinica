@@ -22,7 +22,7 @@ import {
   recordWeeklyProgress, QUEST_MILESTONES, CheckInResult, allObjectivesComplete, allWeeklyTasksComplete,
 } from './dailyRounds';
 import { buildGateContext, checkFeatureGate } from './progression';
-import { getDailyEligibleFeatureIds } from './activityRegistry';
+import { getDailyEligibleActivities, getDailyEligibleFeatureIds } from './activityRegistry';
 import {
   defaultOwnedUnits, sanitizeLoadout, rollGachaUnit, STARTER_UNIT_IDS,
   GACHA_COST, MASTERY_LEVEL_CAP, WARD_UNIT_META, getMasteryRequirement,
@@ -799,8 +799,8 @@ function makeLocalId(): string {
 // Modes a Daily Rounds objective can be drawn from. Filtered per-player through
 // the same compound feature gate the rest of the app uses, so a brand-new
 // player only ever gets objectives for the systems they have actually unlocked.
-function dailyRoundsUnlockedModes(p: PlayerState): string[] {
-  return getDailyEligibleFeatureIds(p);
+function dailyRoundsUnlockedModes(p: PlayerState) {
+  return getDailyEligibleActivities(p);
 }
 
 // Credit currency reward from a claimed daily/weekly/streak/milestone reward.
@@ -1046,10 +1046,11 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   // Credit daily-objective progress AND emit a pulse describing what advanced,
   // so screens can surface an instant cue. Wraps the pure `foldDailyProgress`
   // by diffing the objective set before/after. Never throws on a no-op event.
-  const foldDaily = useCallback((p: PlayerState, event: DailyEventType, amount: number = 1): PlayerState => {
+  const foldDaily = useCallback((p: PlayerState, event: DailyEventType, amount: number = 1, activityId?: string): PlayerState => {
     const modes = dailyRoundsUnlockedModes(p);
-    const before = ensureFreshDailyRounds(p.daily_rounds, modes, p.id).state;
-    const rec = recordObjectiveProgress(before, event, amount);
+    const mature = playerLevelFromXp(p.xp ?? 0).level >= 5;
+    const before = ensureFreshDailyRounds(p.daily_rounds, modes, p.id, new Date(), mature).state;
+    const rec = recordObjectiveProgress(before, event, amount, new Date(), activityId);
     // Fix 9 — also update weekly task progress for the same event.
     const weeklyRec = recordWeeklyProgress(rec.state, event, amount);
     const finalState = weeklyRec.changed ? weeklyRec.state : rec.state;
@@ -1840,7 +1841,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     const base = playerRef.current;
     if (!base) return null;
     const modes = dailyRoundsUnlockedModes(base);
-    const fresh = ensureFreshDailyRounds(base.daily_rounds, modes, base.id).state;
+    const fresh = ensureFreshDailyRounds(base.daily_rounds, modes, base.id, new Date(), (base.player_level ?? 1) >= 5).state;
     const result = computeCheckIn(fresh);
     let next: PlayerState = { ...base, daily_rounds: result.state };
     if (result.reward) next = addDailyReward(next, result.reward);
@@ -1853,7 +1854,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     const base = playerRef.current;
     if (!base) return { ok: false, message: 'No player loaded.' };
     const modes = dailyRoundsUnlockedModes(base);
-    const fresh = ensureFreshDailyRounds(base.daily_rounds, modes, base.id).state;
+    const fresh = ensureFreshDailyRounds(base.daily_rounds, modes, base.id, new Date(), (base.player_level ?? 1) >= 5).state;
     const res = claimObjectiveReward(fresh, objectiveId);
     if (!res.reward) return { ok: false, message: res.message };
     const next = addDailyReward({ ...base, daily_rounds: res.state }, res.reward);
@@ -1866,42 +1867,42 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     const base = playerRef.current;
     if (!base) return { ok: false, message: 'No player loaded.' };
     const modes = dailyRoundsUnlockedModes(base);
-    const fresh = ensureFreshDailyRounds(base.daily_rounds, modes, base.id).state;
+    const fresh = ensureFreshDailyRounds(base.daily_rounds, modes, base.id, new Date(), (base.player_level ?? 1) >= 5).state;
     const res = claimAllCompleteBonus(fresh);
     if (!res.reward) return { ok: false, message: res.message };
-    let next = addDailyReward({ ...base, daily_rounds: res.state }, res.reward);
-    let staminaBonus = 0;
     try {
       const economy = await api.mutateEconomy(base.id, {
-        kind: 'grant_stamina_bonus', source: 'daily_rounds_complete', amount: 2,
+        kind: 'grant_stamina_bonus', source: 'daily_rounds_v2_complete', amount: 1,
       }, base.economy_token);
-      staminaBonus = economy.stamina_bonus ?? 0;
-      next = await mergeEconomyState(next, economy.player);
-    } catch { /* already claimed or offline: the visible round reward remains */ }
-    playerRef.current = next;
-    await updateState(next);
-    return { ok: true, message: res.message, reward: { ...res.reward, stamina: staminaBonus } };
+      let next = await mergeEconomyState(base, economy.player);
+      next = addDailyReward({ ...next, daily_rounds: res.state }, res.reward);
+      playerRef.current = next;
+      await updateState(next);
+      return { ok: true, message: res.message, reward: { ...res.reward, stamina: economy.stamina_bonus ?? 0 } };
+    } catch {
+      return { ok: false, message: 'Could not recover Stamina. Please try again.' };
+    }
   }, [updateState, mergeEconomyState]);
 
   const claimWeeklyGoal = useCallback(async () => {
     const base = playerRef.current;
     if (!base) return { ok: false, message: 'No player loaded.' };
     const modes = dailyRoundsUnlockedModes(base);
-    const fresh = ensureFreshDailyRounds(base.daily_rounds, modes, base.id).state;
+    const fresh = ensureFreshDailyRounds(base.daily_rounds, modes, base.id, new Date(), (base.player_level ?? 1) >= 5).state;
     const res = claimWeeklyReward(fresh);
     if (!res.reward) return { ok: false, message: res.message };
-    let next = addDailyReward({ ...base, daily_rounds: res.state }, res.reward);
-    let staminaBonus = 0;
     try {
       const economy = await api.mutateEconomy(base.id, {
-        kind: 'grant_stamina_bonus', source: 'weekly_rounds_complete', period: 'week',
+        kind: 'grant_stamina_bonus', source: 'weekly_momentum_complete', amount: 5, period: 'week',
       }, base.economy_token);
-      staminaBonus = economy.stamina_bonus ?? 0;
-      next = await mergeEconomyState(next, economy.player);
-    } catch { /* already claimed or offline: preserve the non-stamina claim */ }
-    playerRef.current = next;
-    await updateState(next);
-    return { ok: true, message: res.message, reward: { ...res.reward, stamina: staminaBonus } };
+      let next = await mergeEconomyState(base, economy.player);
+      next = addDailyReward({ ...next, daily_rounds: res.state }, res.reward);
+      playerRef.current = next;
+      await updateState(next);
+      return { ok: true, message: res.message, reward: { ...res.reward, stamina: economy.stamina_bonus ?? 0 } };
+    } catch {
+      return { ok: false, message: 'Could not recover Weekly Momentum. Please try again.' };
+    }
   }, [updateState, mergeEconomyState]);
 
   const purchaseItem = useCallback(async (itemName: string, price: number, qty: number = 1) => {
@@ -2393,13 +2394,11 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     // The server advances the normalized University Practice event with the
     // completion attempt ID. This makes a response loss recoverable and
     // prevents a close/reopen from silently missing the daily objective.
-    const next = authoritative;
+    await api.recordActivityCompletion(base.id, 'clinical-simulation', attemptId, base.economy_token);
+    const next = foldDaily(authoritative, 'university_lesson', 1, 'clinical-simulation');
     playerRef.current = next;
     setPlayer(next);
     await saveLocal(next);
-    // This non-rewarding receipt is intentionally best-effort: the simulation
-    // endpoint above remains the only source of rewards and Daily progress.
-    void api.recordActivityCompletion(base.id, 'clinical-simulation', attemptId, base.economy_token).catch(() => undefined);
     return { debrief: response.debrief, alreadyCompleted: response.already_completed };
   }, []);
 
@@ -2456,9 +2455,9 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     const base = playerRef.current;
     if (!base) throw new Error('No player loaded.');
     const response = await api.completeGrandRounds(base.id, attemptId, base.economy_token);
-    const next = normalizeProgression(response.player);
+    await api.recordActivityCompletion(base.id, 'grand-rounds', attemptId, base.economy_token);
+    const next = foldDaily(normalizeProgression(response.player), 'university_lesson', 1, 'grand-rounds');
     playerRef.current = next; setPlayer(next); await saveLocal(next);
-    void api.recordActivityCompletion(base.id, 'grand-rounds', attemptId, base.economy_token).catch(() => undefined);
     return { debrief: response.debrief, alreadyCompleted: response.already_completed };
   }, []);
 
@@ -2511,9 +2510,9 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     const base = playerRef.current;
     if (!base) throw new Error('No player loaded.');
     const response = await api.completeCrisisDrill(base.id, attemptId, base.economy_token);
-    const next = normalizeProgression(response.player);
+    await api.recordActivityCompletion(base.id, 'crisis-drill', attemptId, base.economy_token);
+    const next = foldDaily(normalizeProgression(response.player), 'university_lesson', 1, 'crisis-drill');
     playerRef.current = next; setPlayer(next); await saveLocal(next);
-    void api.recordActivityCompletion(base.id, 'crisis-drill', attemptId, base.economy_token).catch(() => undefined);
     return { debrief: response.debrief, alreadyCompleted: response.already_completed };
   }, []);
 
@@ -2551,7 +2550,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       },
       base.economy_token,
     );
-    void api.recordActivityCompletion(base.id, 'university-practice', attempt.attempt_id, base.economy_token).catch(() => undefined);
+    await api.recordActivityCompletion(base.id, 'university-practice', attempt.attempt_id, base.economy_token);
     const isFirstComplete = grant.first_completion;
     const rawRewardDef = (isFirstComplete ? PRACTICE_REWARDS : PRACTICE_REPEAT_REWARDS)[activityType][difficulty];
     const rewardDef = {
@@ -2580,7 +2579,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
 
     // Daily rounds — counts as a university_lesson event + material_earned
     // (practice sessions always grant at least 1 learning material scroll).
-    next = foldDaily(next, 'university_lesson');
+    next = foldDaily(next, 'university_lesson', 1, 'university-practice');
     next = foldDaily(next, 'material_earned');
 
     playerRef.current = next;
@@ -3557,7 +3556,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     const base = playerRef.current;
     if (!base) return { ok: false, message: 'No player.' };
     const modes = dailyRoundsUnlockedModes(base);
-    const fresh = ensureFreshDailyRounds(base.daily_rounds, modes, base.id).state;
+    const fresh = ensureFreshDailyRounds(base.daily_rounds, modes, base.id, new Date(), (base.player_level ?? 1) >= 5).state;
     const res = claimWeeklyTaskPure(fresh, taskId);
     if (!res.reward) return { ok: false, message: res.message };
     const next = addDailyReward({ ...base, daily_rounds: res.state }, res.reward);
@@ -3570,21 +3569,21 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     const base = playerRef.current;
     if (!base) return { ok: false, message: 'No player.' };
     const modes = dailyRoundsUnlockedModes(base);
-    const fresh = ensureFreshDailyRounds(base.daily_rounds, modes, base.id).state;
+    const fresh = ensureFreshDailyRounds(base.daily_rounds, modes, base.id, new Date(), (base.player_level ?? 1) >= 5).state;
     const res = claimWeeklyAllCompletePure(fresh);
     if (!res.reward) return { ok: false, message: res.message };
-    let next = addDailyReward({ ...base, daily_rounds: res.state }, res.reward);
-    let staminaBonus = 0;
     try {
       const economy = await api.mutateEconomy(base.id, {
-        kind: 'grant_stamina_bonus', source: 'weekly_rounds_complete', amount: 3, period: 'week',
+        kind: 'grant_stamina_bonus', source: 'weekly_momentum_complete', amount: 5, period: 'week',
       }, base.economy_token);
-      staminaBonus = economy.stamina_bonus ?? 0;
-      next = await mergeEconomyState(next, economy.player);
-    } catch { /* only one weekly recovery bonus is available */ }
-    playerRef.current = next;
-    await updateState(next);
-    return { ok: true, message: res.message, reward: { ...res.reward, stamina: staminaBonus } };
+      let next = await mergeEconomyState(base, economy.player);
+      next = addDailyReward({ ...next, daily_rounds: res.state }, res.reward);
+      playerRef.current = next;
+      await updateState(next);
+      return { ok: true, message: res.message, reward: { ...res.reward, stamina: economy.stamina_bonus ?? 0 } };
+    } catch {
+      return { ok: false, message: 'Could not recover Weekly Momentum. Please try again.' };
+    }
   }, [updateState, mergeEconomyState]);
 
   const claimQuestMilestone = useCallback(async (milestoneId: string) => {

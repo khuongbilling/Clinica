@@ -23,6 +23,7 @@ import {
   playerLevelFromXp,
 } from "@/src/game/progression";
 import { getDailyEligibleFeatureIds } from "@/src/game/activityRegistry";
+import { getDailyEligibleActivities } from "@/src/game/activityRegistry";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 
 // ── constants ─────────────────────────────────────────────────────────────────
@@ -73,14 +74,16 @@ export function DailyRhythmCard({ player, onPress }: DailyRhythmCardProps) {
 
   const state: DailyRoundsState = ensureFreshDailyRounds(
     player.daily_rounds,
-    getDailyEligibleFeatureIds(player),
+    getDailyEligibleActivities(player),
     player.id,
+    new Date(),
+    level >= 5,
   ).state;
 
   const streak  = state.streak_count;
   const done    = state.objectives.filter((o) => o.progress >= o.target).length;
-  const total   = state.objectives.length;
-  const allDone = total > 0 && done === total;
+  const total   = state.required_count ?? state.objectives.length;
+  const allDone = total > 0 && done >= total;
   const allClaimed = allDone && state.all_complete_claimed;
 
   const nextNode = getNextJourneyNode(player);
@@ -101,7 +104,7 @@ export function DailyRhythmCard({ player, onPress }: DailyRhythmCardProps) {
       {/* ── Duty dots + label ── */}
       <View style={styles.dutyCol}>
         <View style={styles.dutyDots}>
-          {Array.from({ length: Math.max(total, 3) }).map((_, i) => (
+          {Array.from({ length: total }).map((_, i) => (
             <View
               key={i}
               style={[styles.dot, i < done ? styles.dotDone : styles.dotEmpty]}
@@ -116,11 +119,11 @@ export function DailyRhythmCard({ player, onPress }: DailyRhythmCardProps) {
           numberOfLines={1}
         >
           {allClaimed
-            ? "Duties claimed"
+            ? "Daily Rounds claimed"
             : allDone
-            ? "Claim rewards!"
+            ? "Claim +1 Stamina"
             : total > 0
-            ? `${done}/${total} duties`
+            ? `${Math.min(done, total)}/${total} rounds`
             : "Duties today"}
         </Text>
       </View>

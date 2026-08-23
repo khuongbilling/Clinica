@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { usePlayer } from "@/src/game/store";
 import { playRewardCue } from "@/src/game/cues";
 import { getDailyEligibleFeatureIds } from "@/src/game/activityRegistry";
+import { getDailyEligibleActivities } from "@/src/game/activityRegistry";
 import {
   allObjectivesComplete, ensureFreshDailyRounds, summarizeReward,
   WEEKLY_GOAL_TARGET,
@@ -54,13 +55,16 @@ type Claimable =
 // toast can decide between an in-place claim and a fall-back to the panel.
 function claimableItems(player: any): Claimable[] {
   if (!player) return [];
-  const state = ensureFreshDailyRounds(player.daily_rounds, getDailyEligibleFeatureIds(player), player.id).state;
+  const state = ensureFreshDailyRounds(player.daily_rounds, getDailyEligibleActivities(player), player.id, new Date(), (player.player_level ?? 1) >= 5).state;
   const items: Claimable[] = [];
-  for (const o of state.objectives) {
+  if (state.version !== 2) for (const o of state.objectives) {
     if (o.progress >= o.target && !o.claimed) items.push({ kind: "objective", id: o.id });
   }
   if (allObjectivesComplete(state) && !state.all_complete_claimed) items.push({ kind: "all" });
-  if (state.weekly_days_completed >= WEEKLY_GOAL_TARGET && !state.weekly_claimed) items.push({ kind: "weekly" });
+  const weeklyClaimed = state.version === 2
+    ? (state.weekly_momentum_claimed ?? []).includes("5")
+    : state.weekly_claimed;
+  if (state.weekly_days_completed >= WEEKLY_GOAL_TARGET && !weeklyClaimed) items.push({ kind: "weekly" });
   return items;
 }
 
@@ -68,8 +72,8 @@ function toastFromPulse(pulse: NonNullable<ReturnType<typeof usePlayer>["dailyPu
   if (pulse.allJustCompleted) {
     return {
       id: pulse.id,
-      headline: "All daily duties complete!",
-      sub: "Tap Claim to collect your rewards",
+      headline: "Daily Rounds complete!",
+      sub: "Tap Claim for your Stamina recovery",
       celebrate: true,
       claimable: true,
     };

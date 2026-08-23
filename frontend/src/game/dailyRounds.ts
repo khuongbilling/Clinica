@@ -455,6 +455,10 @@ export function streakRewardForDay(streak: number): DailyReward {
 // ---------- Persisted state ----------
 export interface DailyObjectiveState {
   id: string;
+  /** Canonical registry activity ID for V2 GO navigation. */
+  activity_id?: string;
+  category?: string;
+  route?: string;
   mode: string;
   event: DailyEventType;
   target: number;
@@ -467,6 +471,8 @@ export interface DailyObjectiveState {
 }
 
 export interface DailyRoundsState {
+  /** V2 retires per-objective payouts in favour of a single completion receipt. */
+  version?: 2;
   streak_count: number;
   last_checkin_date: string;
   daily_date: string;
@@ -480,6 +486,10 @@ export interface DailyRoundsState {
   weekly_tasks: WeeklyTaskState[];
   weekly_all_complete_claimed: boolean;
   weekly_material_earned: number; // accumulated material events toward w_hero fallback
+  /** Number of distinct opportunities needed today (2 early, 3 mature). */
+  required_count?: number;
+  /** Weekly Momentum acknowledgement markers: "2", "4", and "5". */
+  weekly_momentum_claimed?: string[];
 }
 
 export function defaultDailyRoundsState(): DailyRoundsState {
@@ -496,7 +506,70 @@ export function defaultDailyRoundsState(): DailyRoundsState {
     weekly_tasks: [],
     weekly_all_complete_claimed: false,
     weekly_material_earned: 0,
+    // Leave the version absent until a registry-backed board is first created.
+    // That preserves old in-flight saves/tests until ensureFreshDailyRounds can
+    // migrate them atomically into V2.
   };
+}
+
+export interface DailyOpportunityInput {
+  id: string;
+  label: string;
+  category: string;
+  route?: string;
+  dailyMode: string;
+}
+
+const ACTIVITY_EVENT: Record<string, DailyEventType> = {
+  'university-practice': 'university_lesson',
+  'clinical-simulation': 'university_lesson',
+  'grand-rounds': 'university_lesson',
+  'crisis-drill': 'university_lesson',
+  'ward-shift': 'ward_shift_win',
+  'ward-defense': 'ward_defense_wave',
+  journey: 'journey_node',
+  'lotus-journal': 'wellness_log',
+  'hero-growth': 'hero_action',
+};
+
+function opportunityObjective(input: DailyOpportunityInput): DailyObjectiveState {
+  const event = ACTIVITY_EVENT[input.id];
+  return {
+    id: `activity:${input.id}`,
+    activity_id: input.id,
+    category: input.category,
+    route: input.route,
+    mode: input.dailyMode,
+    event: event ?? 'university_lesson',
+    target: 1,
+    progress: 0,
+    claimed: false,
+    label: input.label,
+    description: `Complete a meaningful ${input.label} activity.`,
+    icon: input.category === 'learning' ? 'school' : input.category === 'wellness' ? 'leaf' : input.category === 'adventure' ? 'map' : 'medkit',
+    reward: {},
+  };
+}
+
+/** Deterministically choose a 4–6 activity board while taking one activity from
+ * each available category before filling the remaining slots. */
+export function rollDailyOpportunities(
+  eligible: DailyOpportunityInput[],
+  seed: number,
+): DailyObjectiveState[] {
+  const rand = mulberry32(seed);
+  const shuffled = [...eligible].sort(() => rand() - 0.5);
+  const seenCategories = new Set<string>();
+  const varied = shuffled.filter((item) => {
+    if (seenCategories.has(item.category)) return false;
+    seenCategories.add(item.category);
+    return true;
+  });
+  // Never put two cards that listen to the same completion event on a board:
+  // one real completion must only credit one displayed opportunity.
+  const rest = shuffled.filter((item) => !varied.includes(item));
+  const desired = Math.min(6, Math.max(4, Math.min(eligible.length, 4)));
+  return [...varied, ...rest].slice(0, Math.min(desired, eligible.length)).map(opportunityObjective);
 }
 
 // ---------- Seeded RNG (stable per player per day) ----------
@@ -534,6 +607,14 @@ function initWeeklyTasks(): WeeklyTaskState[] {
  */
 export function rollDailyObjectives(unlockedModes: string[], seed: number): DailyObjectiveState[] {
   const pool = DAILY_OBJECTIVE_POOL.filter((t) => unlockedModes.includes(t.mode));
+  // A legacy account with exactly one unlocked mode must receive one achievable
+  // objective, not two variants of the same mode that its old UI described as
+  // a single destination.
+  if (unlockedModes.length === 1) {
+    return pool.slice(0, 1).map((template) => toObjectiveState(
+      template.mode === 'ward_shift' ? { ...template, target: 2 } : template,
+    ));
+  }
   const rand = mulberry32(seed);
   const arr = [...pool];
   for (let i = arr.length - 1; i > 0; i--) {
@@ -550,20 +631,36 @@ export function rollDailyObjectives(unlockedModes: string[], seed: number): Dail
  */
 export function ensureFreshDailyRounds(
   state: DailyRoundsState | undefined,
-  unlockedModes: string[],
+  unlockedModes: string[] | DailyOpportunityInput[],
   playerId: string,
   now: Date = new Date(),
+  matureAccount: boolean = false,
 ): { state: DailyRoundsState; changed: boolean } {
   let s: DailyRoundsState = state ? { ...state } : defaultDailyRoundsState();
   let changed = !state;
   const today = dateKey(now);
   const week = weekKey(now);
+  const opportunities = unlockedModes.filter((entry): entry is DailyOpportunityInput => typeof entry !== 'string');
+  const legacyModes = unlockedModes.filter((entry): entry is string => typeof entry === 'string');
+  // Do not show an attainable-looking V2 board until the receipt-backed pool
+  // can meet the exact target the economy service will later verify.
+  const target = matureAccount ? 3 : 2;
+  const isV2 = opportunities.length >= target;
 
-  if (s.daily_date !== today) {
+  const migratingLegacyThisWeek = isV2 && s.version !== 2 && s.weekly_key === week;
+  const legacyHadWeeklyPayout = !!s.weekly_claimed || !!s.weekly_all_complete_claimed;
+  if (s.daily_date !== today || (isV2 && s.version !== 2)) {
     const seed = hashSeed(`${playerId || 'clinica'}:${today}`);
-    s.objectives = rollDailyObjectives(unlockedModes, seed);
-    s.all_complete_claimed = false;
+    s.objectives = isV2 ? rollDailyOpportunities(opportunities, seed) : rollDailyObjectives(legacyModes, seed);
+    // A legacy all-complete receipt remains settled during migration; never
+    // reopen a same-day bonus just because the board presentation changed.
+    s.all_complete_claimed = s.daily_date === today ? !!s.all_complete_claimed : false;
     s.daily_date = today;
+    s.required_count = Math.min(target, s.objectives.length);
+    s.version = isV2 ? 2 : s.version;
+    if (migratingLegacyThisWeek && legacyHadWeeklyPayout) {
+      s.weekly_momentum_claimed = ['2', '4', '5'];
+    }
     changed = true;
   }
 
@@ -575,6 +672,7 @@ export function ensureFreshDailyRounds(
     s.weekly_tasks = initWeeklyTasks();
     s.weekly_all_complete_claimed = false;
     s.weekly_material_earned = 0;
+    s.weekly_momentum_claimed = [];
     changed = true;
   }
 
@@ -643,10 +741,12 @@ export function hasCheckedInToday(state: DailyRoundsState | undefined, now: Date
 
 // ---------- Objective progress ----------
 export function allObjectivesComplete(state: DailyRoundsState): boolean {
-  return state.objectives.length > 0 && state.objectives.every((o) => o.progress >= o.target);
+  const required = state.required_count ?? state.objectives.length;
+  return required > 0 && state.objectives.filter((o) => o.progress >= o.target).length >= required;
 }
 
 export function allWeeklyTasksComplete(state: DailyRoundsState): boolean {
+  if (state.version === 2) return state.weekly_days_completed >= WEEKLY_GOAL_TARGET;
   return (state.weekly_tasks ?? []).length > 0 && (state.weekly_tasks ?? []).every(t => t.progress >= t.target);
 }
 
@@ -659,13 +759,14 @@ export function recordObjectiveProgress(
   event: DailyEventType,
   amount: number = 1,
   now: Date = new Date(),
+  activityId?: string,
 ): { state: DailyRoundsState; changed: boolean } {
   if (amount <= 0) return { state, changed: false };
   let changed = false;
 
   // Daily objectives
   const objectives = state.objectives.map((o) => {
-    if (o.event !== event || o.progress >= o.target) return o;
+    if (o.event !== event || (state.version === 2 && o.activity_id !== activityId) || o.progress >= o.target) return o;
     changed = true;
     return { ...o, progress: Math.min(o.target, o.progress + amount) };
   });
@@ -759,6 +860,9 @@ export interface ClaimResult {
 }
 
 export function claimObjectiveReward(state: DailyRoundsState, objectiveId: string): ClaimResult {
+  if (state.version === 2) {
+    return { state, reward: null, message: 'V2 opportunities grant credit when completed; finish the daily target for its one reward.' };
+  }
   const idx = state.objectives.findIndex((o) => o.id === objectiveId);
   if (idx < 0) return { state, reward: null, message: 'Unknown objective.' };
   const obj = state.objectives[idx];
@@ -770,12 +874,19 @@ export function claimObjectiveReward(state: DailyRoundsState, objectiveId: strin
 }
 
 export function claimAllCompleteBonus(state: DailyRoundsState): ClaimResult {
-  if (!allObjectivesComplete(state)) return { state, reward: null, message: 'Finish all objectives first.' };
+  if (!allObjectivesComplete(state)) return { state, reward: null, message: 'Complete the required opportunities first.' };
   if (state.all_complete_claimed) return { state, reward: null, message: 'Bonus already claimed.' };
-  return { state: { ...state, all_complete_claimed: true }, reward: ALL_COMPLETE_BONUS, message: 'Daily bonus claimed!' };
+  return {
+    state: { ...state, all_complete_claimed: true },
+    reward: state.version === 2 ? { stamina: 1 } : ALL_COMPLETE_BONUS,
+    message: state.version === 2 ? 'Daily Rounds complete!' : 'Daily bonus claimed!',
+  };
 }
 
 export function claimWeeklyTask(state: DailyRoundsState, taskId: string): ClaimResult {
+  if (state.version === 2) {
+    return { state, reward: null, message: 'Weekly Momentum is based on distinct completed days.' };
+  }
   const tasks = state.weekly_tasks ?? [];
   const idx = tasks.findIndex(t => t.id === taskId);
   if (idx < 0) return { state, reward: null, message: 'Unknown weekly task.' };
@@ -788,6 +899,15 @@ export function claimWeeklyTask(state: DailyRoundsState, taskId: string): ClaimR
 }
 
 export function claimWeeklyAllComplete(state: DailyRoundsState): ClaimResult {
+  if (state.version === 2) {
+    if (state.weekly_days_completed < WEEKLY_GOAL_TARGET) return { state, reward: null, message: 'Complete Daily Rounds on 5 distinct days first.' };
+    if ((state.weekly_momentum_claimed ?? []).includes('5')) return { state, reward: null, message: 'Weekly Momentum already claimed.' };
+    return {
+      state: { ...state, weekly_momentum_claimed: [...(state.weekly_momentum_claimed ?? []), '5'] },
+      reward: { stamina: 5 },
+      message: 'Weekly Momentum complete!',
+    };
+  }
   if (!allWeeklyTasksComplete(state)) return { state, reward: null, message: 'Complete all weekly tasks first.' };
   if (state.weekly_all_complete_claimed) return { state, reward: null, message: 'Weekly completion bonus already claimed.' };
   return { state: { ...state, weekly_all_complete_claimed: true }, reward: WEEKLY_ALL_COMPLETE_REWARD, message: 'Weekly completion bonus claimed!' };
@@ -795,6 +915,17 @@ export function claimWeeklyAllComplete(state: DailyRoundsState): ClaimResult {
 
 // Keep for backward-compat; now delegates to claimWeeklyAllComplete.
 export function claimWeeklyReward(state: DailyRoundsState): ClaimResult {
+  // Pre-V2 saves used a five-distinct-day weekly claim marker before the
+  // fixed-task sheet was added. Keep that settlement path readable so a legacy
+  // save cannot become permanently unclaimable during migration.
+  if (state.version !== 2 && state.weekly_days_completed >= WEEKLY_GOAL_TARGET) {
+    if (state.weekly_claimed) return { state, reward: null, message: 'Weekly reward already claimed.' };
+    return {
+      state: { ...state, weekly_claimed: true },
+      reward: WEEKLY_GOAL_REWARD,
+      message: 'Weekly reward claimed!',
+    };
+  }
   return claimWeeklyAllComplete(state);
 }
 
@@ -802,9 +933,9 @@ export function claimWeeklyReward(state: DailyRoundsState): ClaimResult {
 export function claimableCount(state: DailyRoundsState | undefined): number {
   if (!state) return 0;
   let n = 0;
-  for (const o of state.objectives) if (o.progress >= o.target && !o.claimed) n++;
+  if (state.version !== 2) for (const o of state.objectives) if (o.progress >= o.target && !o.claimed) n++;
   if (allObjectivesComplete(state) && !state.all_complete_claimed) n++;
-  for (const t of state.weekly_tasks ?? []) if (t.progress >= t.target && !t.claimed) n++;
+  if (state.version !== 2) for (const t of state.weekly_tasks ?? []) if (t.progress >= t.target && !t.claimed) n++;
   if (allWeeklyTasksComplete(state) && !state.weekly_all_complete_claimed) n++;
   return n;
 }
