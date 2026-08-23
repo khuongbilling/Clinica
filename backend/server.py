@@ -56,6 +56,24 @@ ACTIVITY_COMPLETION_SOURCES = {
     "crisis-drill": "crisis_drill_attempts",
 }
 
+# Retired Daily Rounds V1 claims can be settled exactly once, but their values
+# must be derived from this server-owned ledger rather than a client reward
+# payload.  Keep this small, explicit table until every V1 save has migrated.
+LEGACY_DAILY_REWARD_LEDGER: Dict[str, Dict[str, int]] = {
+    "obj_uni_practice": {"university_credits": 15, "xp": 10},
+    "obj_ward_battle": {"crowns": 50, "xp": 15, "hero_xp": 10},
+    "obj_material": {"university_credits": 10, "xp": 10},
+    "obj_ward_defense": {"crowns": 50, "xp": 15, "hero_xp": 10},
+    "obj_hero": {"university_credits": 10, "xp": 10},
+    "obj_journey_node": {"crowns": 60, "xp": 20, "hero_xp": 10},
+    "daily_all_complete": {"codex_shards": 25, "crowns": 25, "xp": 10},
+    "w_university": {"university_credits": 100, "xp": 50},
+    "w_battles": {"crowns": 200, "xp": 75, "hero_xp": 75},
+    "w_daily_sets": {"codex_shards": 75, "xp": 50},
+    "w_hero": {"university_credits": 50, "crowns": 50, "xp": 25},
+    "weekly_all_complete": {"codex_shards": 150, "refined_lotus_gems": 5, "crowns": 100},
+}
+
 
 def activity_analytics_key(player_id: str, activity_id: str, completion_key: str) -> str:
     """Create an analytics-only, non-joinable receipt identifier."""
@@ -285,6 +303,9 @@ class DailyRoundsState(BaseModel):
     weekly_material_earned: int = 0
     required_count: Optional[int] = None
     weekly_momentum_claimed: List[str] = Field(default_factory=list)
+    # Permanent audit marker for the one-time V1 entitlement settlement.
+    legacy_claims_settled: bool = False
+    legacy_settlement_id: Optional[str] = None
 
 
 class Player(BaseModel):
@@ -681,6 +702,16 @@ class ActivityCompletionRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
     activity_id: str
     completion_key: str = Field(min_length=1, max_length=160)
+
+
+class LegacyDailyRoundsSettlementRequest(BaseModel):
+    """The client may supply a legacy snapshot for audit matching only.
+
+    Currency amounts and entitlement identifiers are derived exclusively from
+    the persisted server snapshot and ``LEGACY_DAILY_REWARD_LEDGER``.
+    """
+    model_config = ConfigDict(extra="forbid")
+    legacy_snapshot: Dict[str, Any] = Field(default_factory=dict)
 
 
 # ---------- Player Hero foundation ----------
@@ -1116,6 +1147,125 @@ async def award_player_hero_proficiency(
     }
 
 
+def _daily_version(state: Dict[str, Any]) -> int:
+    try:
+        return int(state.get("version") or 0)
+    except (TypeError, ValueError):
+        return 0
+
+
+def _merge_daily_rounds_state(current: Dict[str, Any], candidate: Dict[str, Any]) -> Dict[str, Any]:
+    """Merge only monotonic V2 state so an old device cannot erase progress.
+
+    This is intentionally an account-state merge, not a reward authority:
+    the economy endpoint still derives Daily/Weekly Stamina from server-issued
+    activity receipts. Objective progress is merged for presentation and
+    continuity across devices, while every protected economy field remains
+    outside the generic player snapshot.
+    """
+    current = dict(current or {})
+    candidate = dict(candidate or {})
+    if _daily_version(current) != 2:
+        return candidate
+    if _daily_version(candidate) != 2:
+        return current
+
+    merged = dict(current)
+    current_day, candidate_day = str(current.get("daily_date") or ""), str(candidate.get("daily_date") or "")
+    if candidate_day > current_day:
+        merged.update(candidate)
+    elif candidate_day == current_day:
+        current_objectives = {str(row.get("id")): dict(row) for row in current.get("objectives") or [] if row.get("id")}
+        candidate_objectives = {str(row.get("id")): dict(row) for row in candidate.get("objectives") or [] if row.get("id")}
+        if not current_objectives:
+            merged["objectives"] = list(candidate_objectives.values())
+        else:
+            objective_rows: List[Dict[str, Any]] = []
+            for objective_id, existing_objective in current_objectives.items():
+                incoming = candidate_objectives.get(objective_id, {})
+                target = max(0, int(existing_objective.get("target") or 0))
+                progress = min(target, max(
+                    int(existing_objective.get("progress") or 0),
+                    int(incoming.get("progress") or 0),
+                ))
+                row = dict(existing_objective)
+                row["progress"] = progress
+                row["claimed"] = bool(existing_objective.get("claimed")) or (
+                    bool(incoming.get("claimed")) and progress >= target
+                )
+                objective_rows.append(row)
+            merged["objectives"] = objective_rows
+        merged["all_complete_claimed"] = bool(current.get("all_complete_claimed")) or bool(candidate.get("all_complete_claimed"))
+
+    current_week, candidate_week = str(current.get("weekly_key") or ""), str(candidate.get("weekly_key") or "")
+    if candidate_week > current_week:
+        for key in ("weekly_key", "weekly_days_completed", "weekly_credited_dates", "weekly_claimed", "weekly_momentum_claimed"):
+            if key in candidate:
+                merged[key] = candidate[key]
+    elif candidate_week == current_week:
+        dates = sorted({str(date) for date in (current.get("weekly_credited_dates") or []) + (candidate.get("weekly_credited_dates") or []) if date})
+        merged["weekly_credited_dates"] = dates
+        merged["weekly_days_completed"] = max(int(current.get("weekly_days_completed") or 0), int(candidate.get("weekly_days_completed") or 0), len(dates))
+        merged["weekly_claimed"] = bool(current.get("weekly_claimed")) or bool(candidate.get("weekly_claimed"))
+        merged["weekly_momentum_claimed"] = sorted({
+            str(marker) for marker in (current.get("weekly_momentum_claimed") or []) + (candidate.get("weekly_momentum_claimed") or [])
+        })
+
+    merged["version"] = 2
+    merged["legacy_claims_settled"] = bool(current.get("legacy_claims_settled")) or bool(candidate.get("legacy_claims_settled"))
+    merged["legacy_settlement_id"] = current.get("legacy_settlement_id") or candidate.get("legacy_settlement_id")
+    return merged
+
+
+def _legacy_daily_entitlement_ids(state: Dict[str, Any]) -> List[str]:
+    """Return only fully-earned, unclaimed V1 entries from a persisted snapshot."""
+    result: List[str] = []
+    objectives = state.get("objectives") or []
+    for objective in objectives:
+        objective_id = str(objective.get("id") or "")
+        if objective_id in LEGACY_DAILY_REWARD_LEDGER and not objective.get("claimed") and int(objective.get("progress") or 0) >= int(objective.get("target") or 0):
+            result.append(objective_id)
+    if objectives and not state.get("all_complete_claimed") and all(int(row.get("progress") or 0) >= int(row.get("target") or 0) for row in objectives):
+        result.append("daily_all_complete")
+
+    weekly_tasks = state.get("weekly_tasks") or []
+    for task in weekly_tasks:
+        task_id = str(task.get("id") or "")
+        if task_id in LEGACY_DAILY_REWARD_LEDGER and not task.get("claimed") and int(task.get("progress") or 0) >= int(task.get("target") or 0):
+            result.append(task_id)
+    if (
+        weekly_tasks
+        and not state.get("weekly_all_complete_claimed")
+        and not state.get("weekly_claimed")
+        and all(int(row.get("progress") or 0) >= int(row.get("target") or 0) for row in weekly_tasks)
+    ):
+        result.append("weekly_all_complete")
+    return sorted(set(result))
+
+
+def _legacy_daily_settlement_increments(entitlement_ids: List[str]) -> Dict[str, int]:
+    increments: Dict[str, int] = {}
+    for entitlement_id in entitlement_ids:
+        for field, amount in LEGACY_DAILY_REWARD_LEDGER[entitlement_id].items():
+            increments[field] = increments.get(field, 0) + int(amount)
+    return increments
+
+
+def _apply_legacy_hero_xp(player: Dict[str, Any], total_xp: int) -> Dict[str, Dict[str, int]]:
+    """Persist the historical reward's total hero XP without trusting hero levels."""
+    progression = {hero_id: dict(progress) for hero_id, progress in (player.get("hero_progression") or {}).items()}
+    team = [hero_id for hero_id in (player.get("active_team") or []) if hero_id]
+    pool = team or list(player.get("heroes_owned") or [])[:3]
+    if total_xp <= 0 or not pool:
+        return progression
+    per_hero = max(1, round(total_xp / len(pool)))
+    for hero_id in pool:
+        progress = dict(progression.get(hero_id) or {"star": 1, "copies": 0, "level": 1, "xp": 0})
+        progress["xp"] = max(0, int(progress.get("xp") or 0)) + per_hero
+        progression[hero_id] = progress
+    return progression
+
+
 @api_router.put("/player/{player_id}", response_model=Player)
 async def update_player(
     player_id: str,
@@ -1138,6 +1288,10 @@ async def update_player(
         "age1_stamina_bonus_week", "age1_refill_day", "age1_refill_amount",
         "xp", "player_level", "mastery", "hero_progression", "inventory",
         "codex_shards", "crowns", "epidemic_tokens", "university_credits",
+        "insight_crystals", "refined_lotus_gems", "lotus_gems_paid",
+        "heroes_owned", "codex_unlocked", "kingdom_levels", "owned_equipment",
+        "owned_skins", "owned_upgrades", "owned_units", "unit_shards",
+        "summon_history", "equipped_cards", "hero_equipment", "wellness",
         # The University completion endpoint owns these counters. Never accept
         # them from a snapshot or a stale client could turn repeat rewards back
         # into first-clear rewards.
@@ -1168,6 +1322,17 @@ async def update_player(
         "identity_restored", "class_tree_id", "class_progress", "class_specialization",
     ):
         updates.pop(field, None)
+    if "daily_rounds" in updates:
+        # A V1 snapshot is historical evidence, not an import format. Let only
+        # the settlement endpoint retire it, otherwise a forged/stale generic
+        # PUT could manufacture a legacy payout or race it out of existence.
+        if _daily_version(dict(existing.get("daily_rounds") or {})) != 2:
+            updates.pop("daily_rounds", None)
+        else:
+            updates["daily_rounds"] = _merge_daily_rounds_state(
+                dict(existing.get("daily_rounds") or {}),
+                dict(updates["daily_rounds"] or {}),
+            )
     # Legacy Skill Academy purchases predate the Ward Aegis feature and still
     # use the existing client-validated material flow. Preserve those ranks,
     # but never let the generic endpoint grant the protected Aegis sidegrade.
@@ -1186,6 +1351,96 @@ async def update_player(
     await db.players.update_one({"id": player_id}, {"$set": updates})
     refreshed = await db.players.find_one({"id": player_id}, {"_id": 0})
     return Player(**refreshed)
+
+
+@api_router.post("/player/{player_id}/daily-rounds/legacy-settlement", response_model=Dict[str, Any])
+async def settle_legacy_daily_rounds(
+    player_id: str,
+    payload: LegacyDailyRoundsSettlementRequest,
+    x_clinica_session: Optional[str] = Header(default=None),
+    x_clinica_economy_token: Optional[str] = Header(default=None),
+):
+    """Settle V1 earned-but-unclaimed rewards exactly once from server state.
+
+    The payload is retained only as an audit hash. The server uses its persisted
+    legacy Daily snapshot and fixed reward ledger, so a caller cannot nominate
+    currencies, reward values, or a fabricated completion.
+    """
+    player = await db.players.find_one({"id": player_id}, {"_id": 0})
+    if not player:
+        raise HTTPException(status_code=404, detail="player not found")
+    if not player_access_ok(player, player_id, x_clinica_session or x_clinica_economy_token, None):
+        raise HTTPException(status_code=401, detail="invalid player credential")
+
+    legacy = dict(player.get("daily_rounds") or {})
+    if _daily_version(legacy) == 2:
+        return {"player": Player(**player).model_dump(), "settled": False, "entitlement_ids": []}
+
+    entitlement_ids = _legacy_daily_entitlement_ids(legacy)
+    snapshot_hash = hashlib.sha256(json.dumps(payload.legacy_snapshot, sort_keys=True, separators=(",", ":"), default=str).encode()).hexdigest()
+    settlement_id = f"daily-rounds-v1:{player_id}"
+    receipt = {
+        "settlement_id": settlement_id,
+        "player_id": player_id,
+        "entitlement_ids": entitlement_ids,
+        "increments": _legacy_daily_settlement_increments(entitlement_ids),
+        "legacy_snapshot_hash": snapshot_hash,
+        "status": "pending",
+        "created_at": now_iso(),
+    }
+    try:
+        await db.daily_rounds_legacy_settlements.insert_one(receipt)
+    except DuplicateKeyError:
+        receipt = await db.daily_rounds_legacy_settlements.find_one({"settlement_id": settlement_id}, {"_id": 0})
+        if not receipt:
+            raise HTTPException(status_code=409, detail="legacy settlement is being prepared; retry")
+
+    increments = dict(receipt["increments"])
+    hero_xp = increments.pop("hero_xp", 0)
+    canonical_daily = {
+        "version": 2,
+        "legacy_claims_settled": True,
+        "legacy_settlement_id": settlement_id,
+        "daily_date": "",
+        "weekly_key": "",
+        "objectives": [],
+        "weekly_tasks": [],
+        "weekly_credited_dates": [],
+        "weekly_days_completed": 0,
+        "all_complete_claimed": False,
+        "weekly_claimed": False,
+        "weekly_all_complete_claimed": False,
+        "weekly_momentum_claimed": [],
+        "weekly_material_earned": 0,
+    }
+    update: Dict[str, Any] = {
+        "$set": {
+            "daily_rounds": canonical_daily,
+            "hero_progression": _apply_legacy_hero_xp(player, hero_xp),
+            "updated_at": now_iso(),
+        },
+    }
+    if increments:
+        update["$inc"] = increments
+    committed = await db.players.update_one(
+        {"id": player_id, "daily_rounds.version": {"$ne": 2}},
+        update,
+    )
+    refreshed = await db.players.find_one({"id": player_id}, {"_id": 0})
+    if (refreshed.get("daily_rounds") or {}).get("legacy_settlement_id") != settlement_id:
+        # A V2 record without this receipt predates the migration path. Do not
+        # invent a reward from a client payload; retain the pending audit record
+        # so an operator can reconcile the historical server snapshot.
+        return {"player": Player(**refreshed).model_dump(), "settled": False, "entitlement_ids": []}
+    await db.daily_rounds_legacy_settlements.update_one(
+        {"settlement_id": settlement_id},
+        {"$set": {"status": "settled", "settled_at": now_iso()}},
+    )
+    return {
+        "player": Player(**refreshed).model_dump(),
+        "settled": committed.modified_count == 1,
+        "entitlement_ids": entitlement_ids if committed.modified_count == 1 else [],
+    }
 
 
 @api_router.post("/player/{player_id}/economy", response_model=Dict[str, Any])
@@ -1379,6 +1634,16 @@ class FacultyCredentialIssueRequest(BaseModel):
     faculty_id: str = Field(min_length=3, max_length=80, pattern=r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
     role: Literal["author", "reviewer", "approver"]
 
+
+class FacultyCredentialRotateRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    role: Literal["author", "reviewer", "approver"]
+    reason: str = Field(min_length=3, max_length=500)
+
+
+class FacultyCredentialRevokeRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    reason: str = Field(min_length=3, max_length=500)
 
 class FacultyGrandRoundsRetireRequest(BaseModel):
     reason: str = Field(min_length=3, max_length=1000)
@@ -4868,6 +5133,11 @@ async def startup_db():
         [("player_id", ASCENDING), ("activity_id", ASCENDING), ("completion_key", ASCENDING)],
         unique=True,
     )
+    await db.daily_rounds_legacy_settlements.create_index(
+        [("settlement_id", ASCENDING)],
+        unique=True,
+        name="one_legacy_daily_settlement_per_player",
+    )
     await db.activity_analytics.create_index(
         [("receipt_key", ASCENDING)],
         unique=True,
@@ -5280,11 +5550,7 @@ async def list_faculty_credentials(
         credentials.append(faculty_credential_view(credential))
     return {"administrator": {"id": administrator["id"]}, "credentials": credentials}
 
-class FacultyCredentialRotateRequest(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-    role: Literal["author", "reviewer", "approver"]
-    reason: str = Field(min_length=3, max_length=500)
 
-class FacultyCredentialRevokeRequest(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-    reason: str = Field(min_length=3, max_length=500)
+# Register after every route declaration. Keeping this at the end prevents
+# late-defined authority routes from being omitted from the mounted API.
+app.include_router(api_router)

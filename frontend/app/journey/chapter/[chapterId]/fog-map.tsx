@@ -1461,7 +1461,7 @@ function ChapterFogMapContent() {
       return;
     }
     if (rewards.xp > 0 || rewards.crowns > 0 || rewards.shards > 0 || Object.keys(rewards.inventory ?? {}).length > 0) {
-      applyRewards({ xp: rewards.xp, crowns: rewards.crowns, codexShards: rewards.shards,
+      applyRewards({ source: 'journey_treasure', xp: rewards.xp, crowns: rewards.crowns, codexShards: rewards.shards,
         codex: [], enemyId: 'journey_treasure', enemyName: 'Journey Treasure',
         inventoryDelta: rewards.inventory,
         rewardActivity: 'journey_treasure', contentKey: `${run.id}:${treasureModalTileId}` })

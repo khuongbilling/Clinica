@@ -148,7 +148,7 @@ export default function PostRecall() {
     completeObjective("obj_diagnostic_done").then(async (isNew) => {
       if (isNew) {
         await markObjectiveXpGranted("obj_diagnostic_done");
-        await applyRewards({ xp: 10, codexShards: 0, crowns: 0, codex: [], enemyId: "", enemyName: "" });
+        await applyRewards({ source: 'narrative_objective', xp: 10, codexShards: 0, crowns: 0, codex: [], enemyId: "", enemyName: "" });
       }
     });
   }, [view, isReplay]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -192,7 +192,7 @@ export default function PostRecall() {
           const isNew = await completeObjective("obj_class_result");
           if (isNew) {
             await markObjectiveXpGranted("obj_class_result");
-            await applyRewards({ xp: 10, codexShards: 0, crowns: 0, codex: [], enemyId: "", enemyName: "" });
+            await applyRewards({ source: 'narrative_objective', xp: 10, codexShards: 0, crowns: 0, codex: [], enemyId: "", enemyName: "" });
           }
         }
         if (isReplay) router.replace(ROUTES.tabProfile);
@@ -218,7 +218,7 @@ export default function PostRecall() {
       const isNew = await completeObjective("obj_identity_done");
       if (isNew) {
         await markObjectiveXpGranted("obj_identity_done");
-        await applyRewards({ xp: 10, codexShards: 0, crowns: 0, codex: [], enemyId: "", enemyName: "" });
+        await applyRewards({ source: 'narrative_objective', xp: 10, codexShards: 0, crowns: 0, codex: [], enemyId: "", enemyName: "" });
       }
     } finally {
       setSubmitting(false);

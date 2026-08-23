@@ -473,8 +473,10 @@ export interface DailyObjectiveState {
 export interface DailyRoundsState {
   /** The sole recurring Daily/Weekly system. Legacy state migrates here once. */
   version: 2;
-  /** One-way marker proving legacy recurring claims were retired during migration. */
-  legacy_claims_settled?: true;
+  /** Server-authoritative V1 entitlement settlement completed. */
+  legacy_claims_settled?: boolean;
+  /** Immutable server receipt identifier once V1 settlement has completed. */
+  legacy_settlement_id?: string;
   streak_count: number;
   last_checkin_date: string;
   daily_date: string;
@@ -652,17 +654,25 @@ export function ensureFreshDailyRounds(
     || !!state?.weekly_tasks?.some((task) => task.claimed);
   const legacyDailySettled = !!state?.all_complete_claimed
     || !!state?.objectives?.some((objective) => objective.claimed);
+  const legacyEarnedUnclaimed = wasLegacy && (
+    !!state?.objectives?.some((objective) => !objective.claimed && objective.progress >= objective.target)
+    || !!state?.weekly_tasks?.some((task) => !task.claimed && task.progress >= task.target)
+    || (!!state?.objectives?.length && !state?.all_complete_claimed
+      && state.objectives.every((objective) => objective.progress >= objective.target))
+    || (!!state?.weekly_tasks?.length && !state?.weekly_all_complete_claimed
+      && state.weekly_tasks.every((task) => task.progress >= task.target))
+  );
   if (s.daily_date !== today || wasLegacy) {
     const seed = hashSeed(`${playerId || 'clinica'}:${today}`);
     s.objectives = opportunities.length >= target ? rollDailyOpportunities(opportunities, seed) : [];
-    // Already-settled legacy receipts remain settled. Legacy objective/task
-    // reward records are intentionally not copied into the canonical V2 board:
-    // they would re-open an independent recurring currency payout.
+    // V2 never re-opens legacy reward cards. Earned-but-unclaimed V1 rewards
+    // remain explicitly pending until the signed backend settlement records
+    // its one-time receipt; clients never apply that currency locally.
     s.all_complete_claimed = s.daily_date === today && legacyDailySettled;
     s.daily_date = today;
     s.required_count = Math.min(target, s.objectives.length);
     s.version = 2;
-    s.legacy_claims_settled = true;
+    s.legacy_claims_settled = !legacyEarnedUnclaimed;
     s.weekly_tasks = [];
     s.weekly_all_complete_claimed = legacyWeeklySettled;
     s.weekly_material_earned = 0;

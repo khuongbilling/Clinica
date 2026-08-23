@@ -224,7 +224,7 @@ export default function RunHome() {
             // Apply the reward FIRST. Only mark objectives as paid after it
             // succeeds so a failure or early exit leaves the flags unset and
             // the grant retries on the next hub focus.
-            await applyRewards({ xp: bonus });
+            await applyRewards({ source: 'narrative_objective', xp: bonus });
             for (const { id } of unpaid) await markObjectiveXpGranted(id);
           }
         }

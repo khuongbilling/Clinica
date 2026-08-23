@@ -30,7 +30,7 @@ export default function ClassResultScreen() {
     completeObjective("obj_class_result").then(async (isNew) => {
       if (isNew) {
         await markObjectiveXpGranted("obj_class_result");
-        await applyRewards({ xp: 10, codexShards: 0, crowns: 0, codex: [], enemyId: "", enemyName: "" });
+        await applyRewards({ source: 'narrative_objective', xp: 10, codexShards: 0, crowns: 0, codex: [], enemyId: "", enemyName: "" });
       }
     });
   }, [player?.id]); // eslint-disable-line react-hooks/exhaustive-deps

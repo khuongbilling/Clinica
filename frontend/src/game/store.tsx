@@ -547,6 +547,8 @@ type Ctx = {
     /** Server reward endpoint selected by a trusted gameplay flow. */
     rewardActivity?: 'clinical_battle' | 'journey_treasure' | 'auto_sweep' | 'ward_defense' | 'university_practice' | 'world_event';
     contentKey?: string;
+    /** Explicit, reviewed origin for a local presentation update. */
+    source: 'narrative_objective' | 'battle_resolution' | 'journey_treasure' | 'auto_sweep';
   }) => Promise<{
     playerLevelUp: { fromLevel: number; toLevel: number } | null;
     heroLevelUps: { heroId: string; fromLevel: number; toLevel: number }[];
@@ -1098,7 +1100,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     try {
       const local = await loadLocal();
       if (!local) { setPlayer(null); setLoading(false); return; }
-        const normalized = normalizeProgression(local);
+        let normalized = normalizeProgression(local);
         // Persist canonical V2 Daily state before any UI can render it. This
         // covers offline/relaunch migration and prevents presentation-only
         // boards from rerolling on the next boot.
@@ -1127,6 +1129,26 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
         // that could either 401 or bind someone else's account.
         if (!sessionToken) {
           return;
+        }
+        // Settle fully earned V1 Daily/Weekly claims before replacing the old
+        // snapshot with V2. The backend derives every awarded amount from its
+        // persisted legacy record and records an immutable one-time receipt.
+        if ((local.daily_rounds as any)?.version !== 2 || (local.daily_rounds as any)?.legacy_claims_settled !== true) {
+          try {
+            const settlement = await api.settleLegacyDailyRounds(local.id, local.daily_rounds, sessionToken);
+            normalized = normalizeProgression({
+              ...normalized,
+              ...settlement.player,
+              economy_token: sessionToken,
+            });
+            playerRef.current = normalized;
+            setPlayer(normalized);
+            await saveLocal(normalized);
+          } catch {
+            // Offline migration remains local-only. It never applies legacy
+            // currency locally, so a later signed settlement cannot double-pay.
+            return;
+          }
         }
         const remote = normalizeProgression(await api.getPlayer(local.id, sessionToken));
         // One-way completion flags: never regress a locally-advanced value
@@ -1232,6 +1254,25 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   const applyRewards = useCallback(async (rewards: Parameters<Ctx['applyRewards']>[0] & { regionId?: string }) => {
     const base = playerRef.current ?? player;
     if (!base) return { playerLevelUp: null, heroLevelUps: [] };
+    const protectedValueRequested = Boolean(
+      rewards.heroXp || rewards.codexShards || rewards.crowns || rewards.epidemicTokens
+      || rewards.inventoryDelta || rewards.mastery || rewards.heroes || rewards.buildings,
+    );
+    if (!rewards.source) {
+      throw new Error('A recognized reward source is required.');
+    }
+    if (rewards.source === 'narrative_objective' && protectedValueRequested) {
+      throw new Error('Narrative objectives may only present their fixed Player XP reward.');
+    }
+    if (rewards.source === 'battle_resolution' && !rewards.enemyId) {
+      throw new Error('Battle rewards require an encountered enemy identity.');
+    }
+    if (rewards.source === 'journey_treasure' && !rewards.contentKey) {
+      throw new Error('Journey treasure requires its immutable claim key.');
+    }
+    if (rewards.source === 'auto_sweep' && !rewards.rewardActivity) {
+      throw new Error('Auto-sweep rewards require their dedicated activity authority.');
+    }
     let next = { ...base };
     // Repeatable rewards are settled only by their server-owned activity
     // completions (University practice, simulations, Grand Rounds, Crisis Drill
@@ -3174,6 +3215,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     const xp = getSweepXp(baseXp, bestStars);
     const sweepCrowns = getSweepCrowns(baseXp);
     await applyRewards({
+      source: 'auto_sweep',
       xp, codexShards: 0, crowns: sweepCrowns, codex: [],
       enemyId, enemyName: enemyId, repeatable: true, progressionValue: 1, rewardActivity: 'auto_sweep',
     });

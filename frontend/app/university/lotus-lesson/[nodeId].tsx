@@ -89,7 +89,7 @@ export default function LotusLessonScreen() {
       if (isNew) {
         const alreadyGranted = await isObjectiveXpGranted('obj_lotus_first_lesson');
         if (!alreadyGranted) {
-          await applyRewards({ xp: 10 });
+          await applyRewards({ source: 'narrative_objective', xp: 10 });
           await markObjectiveXpGranted('obj_lotus_first_lesson');
         }
       }

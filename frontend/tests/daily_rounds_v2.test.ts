@@ -75,8 +75,13 @@ const legacyFixture = {
   }],
 } as any;
 const migrated = ensureFreshDailyRounds(legacyFixture, universityOnly, 'legacy-account', day, false);
-expect('legacy state migrates one-way to canonical V2', migrated.state.version === 2 && migrated.state.legacy_claims_settled === true);
+expect('legacy state migrates to canonical V2 without locally settling rewards', migrated.state.version === 2 && migrated.state.legacy_claims_settled === false);
 expect('migration clears legacy recurring objectives and tasks', migrated.state.objectives.every((o) => !!o.activity_id) && migrated.state.weekly_tasks.length === 0);
 expect('legacy objective and task claims cannot reopen a payout', claimObjectiveReward(migrated.state, 'legacy-complete').reward === null && claimWeeklyTask(migrated.state, 'legacy-weekly').reward === null);
 expect('migration is idempotent after persistence', ensureFreshDailyRounds(migrated.state, universityOnly, 'legacy-account', day, false).changed === false);
+const deterministicA = ensureFreshDailyRounds(defaultDailyRoundsState(), early, 'same-player', day, false).state;
+const deterministicB = ensureFreshDailyRounds(defaultDailyRoundsState(), early, 'same-player', day, false).state;
+expect('same player, day, and pool always receive the same board', JSON.stringify(deterministicA.objectives) === JSON.stringify(deterministicB.objectives));
+const relaunched = ensureFreshDailyRounds(JSON.parse(JSON.stringify(deterministicA)), early, 'same-player', day, false);
+expect('serialized relaunch retains the same-day board', relaunched.changed === false && JSON.stringify(relaunched.state.objectives) === JSON.stringify(deterministicA.objectives));
 console.log('Daily Rounds V2 tests passed');

@@ -305,7 +305,7 @@ export default function ReminiscenceScreen() {
     if (!isReplay) {
       const isNew = await completeObjective("obj_memory_seen");
       if (isNew) {
-        await applyRewards({ xp: 10, codexShards: 0, crowns: 0, codex: [], enemyId: "", enemyName: "" });
+        await applyRewards({ source: 'narrative_objective', xp: 10, codexShards: 0, crowns: 0, codex: [], enemyId: "", enemyName: "" });
         await markObjectiveXpGranted("obj_memory_seen");
       }
     }

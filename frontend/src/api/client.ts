@@ -59,6 +59,15 @@ export const api = {
       body: JSON.stringify(patch),
       headers: economyToken ? { 'X-Clinica-Session': economyToken, 'X-Clinica-Economy-Token': economyToken } : {},
     }),
+  settleLegacyDailyRounds: (id: string, legacySnapshot: unknown, economyToken?: string) =>
+    http<{ player: PlayerState; settled: boolean; entitlement_ids: string[] }>(
+      `/player/${id}/daily-rounds/legacy-settlement`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ legacy_snapshot: legacySnapshot }),
+        headers: economyToken ? { 'X-Clinica-Session': economyToken, 'X-Clinica-Economy-Token': economyToken } : {},
+      },
+    ),
   claimSpecialization: (id: string, specializationId: string, sessionToken?: string) =>
     http<PlayerState>(`/player/${id}/claim-specialization`, {
       method: 'POST',

@@ -371,7 +371,7 @@ export default function UniversityHubScreen() {
         const isFANew = await completeObjective("obj_fading_apprentice_done");
         if (isFANew) { await markObjectiveXpGranted("obj_fading_apprentice_done"); bonus += 10; }
       }
-      if (bonus > 0) await applyRewards({ xp: bonus });
+      if (bonus > 0) await applyRewards({ source: 'narrative_objective', xp: bonus });
     })();
   }, [player?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 

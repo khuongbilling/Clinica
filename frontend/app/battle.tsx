@@ -1064,7 +1064,7 @@ function BattleInner({ enemyId, training, prologue, replay, journeyReturn, journ
     if (isFirstBattleLoss.current) {
       await recordFailure(enemy.id);
       if (!isTraining) {
-        await applyRewards({ xp: LOSS_LEARNING_XP, codexShards: 0, crowns: 0, codex: [], enemyId: enemy.id, enemyName: enemy.name, repeatable: true, progressionValue: 1 });
+        await applyRewards({ source: 'battle_resolution', xp: LOSS_LEARNING_XP, codexShards: 0, crowns: 0, codex: [], enemyId: enemy.id, enemyName: enemy.name, repeatable: true, progressionValue: 1 });
       }
       if (state.cuesTopicsCorrect.length > 0) {
         await recordCueTopics(state.cuesTopicsCorrect);
@@ -1082,7 +1082,7 @@ function BattleInner({ enemyId, training, prologue, replay, journeyReturn, journ
       const isPrologueNew = await completeObjective("obj_prologue_done");
       if (isPrologueNew) {
         await markObjectiveXpGranted("obj_prologue_done");
-        await applyRewards({ xp: 10, codexShards: 0, crowns: 0, codex: [], enemyId: "", enemyName: "prologue" });
+        await applyRewards({ source: 'narrative_objective', xp: 10, codexShards: 0, crowns: 0, codex: [], enemyId: "", enemyName: "prologue" });
       }
       try { await advanceProloguePhase("lotus_recall_cinematic"); } catch {}
       router.replace("/opening-prologue" as any);
@@ -1113,6 +1113,7 @@ function BattleInner({ enemyId, training, prologue, replay, journeyReturn, journ
       const replayStarsPct = state.outcome === "win" ? Math.round(starXpMultiplier(replayStarResult.stars) * 100) : 0;
       if (replayXp > 0) {
         await applyRewards({
+          source: 'battle_resolution',
           xp: replayXp, codexShards: 0, crowns: 0, codex: [],
           enemyId: enemy.id, enemyName: enemy.name,
           repeatable: true,
@@ -1245,6 +1246,7 @@ function BattleInner({ enemyId, training, prologue, replay, journeyReturn, journ
         : !!enemy.worldBoss
           ? await completeVerdantha()
         : await applyRewards({
+          source: 'battle_resolution',
           xp: playerXpEarned, codex: enemy.teaches, enemyId: enemy.id, enemyName: enemy.name, codexShards: shards, crowns, epidemicTokens: epidemicTokensEarned, inventoryDelta,
           contentKey: enemy.id,
           mastery: enemy.bestCounters.reduce((acc, c) => {
@@ -1272,7 +1274,7 @@ function BattleInner({ enemyId, training, prologue, replay, journeyReturn, journ
       // Stamina gate (1 per attempt, 10 min regen) prevents farming.
       if (!isTraining && !isPrologueTutorial) {
         playerXpEarned = LOSS_LEARNING_XP;
-        await applyRewards({ xp: LOSS_LEARNING_XP, codexShards: 0, crowns: 0, codex: [], enemyId: enemy.id, enemyName: enemy.name, repeatable: true, progressionValue: journeyIsChapterBoss || isBossEnemy ? 5 : journeyIsAreaBoss ? 3 : journeyIsElite === '1' ? 2 : 1, prepaidStamina: journeyReturn === '1' });
+        await applyRewards({ source: 'battle_resolution', xp: LOSS_LEARNING_XP, codexShards: 0, crowns: 0, codex: [], enemyId: enemy.id, enemyName: enemy.name, repeatable: true, progressionValue: journeyIsChapterBoss || isBossEnemy ? 5 : journeyIsAreaBoss ? 3 : journeyIsElite === '1' ? 2 : 1, prepaidStamina: journeyReturn === '1' });
       }
     }
     if (state.cuesTopicsCorrect.length > 0) {
