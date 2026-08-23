@@ -7,7 +7,9 @@ import type {
 import type {
   GrandRoundsAttempt, GrandRoundsCaseCard, GrandRoundsDebrief, GrandRoundsGate,
 } from '@/src/game/grandRounds';
-import type { FacultyGrandRoundsBoard, FacultyGrandRoundsDraft } from '@/src/game/facultyGrandRounds';
+import type {
+  FacultyCredential, FacultyCredentialBoard, FacultyGrandRoundsBoard, FacultyGrandRoundsDraft, FacultyGrandRoundsRole,
+} from '@/src/game/facultyGrandRounds';
 import type {
   CrisisDrillAttempt, CrisisDrillCaseCard, CrisisDrillDebrief, CrisisDrillGate, CrisisDrillDifficulty,
 } from '@/src/game/crisisDrill';
@@ -260,6 +262,35 @@ export const api = {
     http<{ caseId: string; status: 'retired' }>(`/faculty/grand-rounds/cases/${caseId}/retire`, {
       method: 'POST', body: JSON.stringify({ reason }), headers: { 'X-Clinica-Faculty-Key': facultyKey },
     }),
+  getFacultyCredentials: (adminKey: string) =>
+    http<FacultyCredentialBoard>('/faculty/admin/credentials', {
+      headers: { 'X-Clinica-Curriculum-Admin-Key': adminKey },
+    }),
+  issueFacultyCredential: (adminKey: string, facultyId: string, role: FacultyGrandRoundsRole) =>
+    http<{ credential: FacultyCredential; oneTimeCredential: string }>('/faculty/admin/credentials', {
+      method: 'POST',
+      body: JSON.stringify({ faculty_id: facultyId, role }),
+      headers: { 'X-Clinica-Curriculum-Admin-Key': adminKey },
+    }),
+  rotateFacultyCredential: (
+    adminKey: string, credentialId: string, role: FacultyGrandRoundsRole, reason: string,
+  ) => http<{ credential: FacultyCredential; oneTimeCredential: string }>(
+    `/faculty/admin/credentials/${credentialId}/rotate`,
+    {
+      method: 'POST',
+      body: JSON.stringify({ role, reason }),
+      headers: { 'X-Clinica-Curriculum-Admin-Key': adminKey },
+    },
+  ),
+  revokeFacultyCredential: (adminKey: string, credentialId: string, reason: string) =>
+    http<{ credential: FacultyCredential; alreadyRevoked: boolean }>(
+      `/faculty/admin/credentials/${credentialId}/revoke`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ reason }),
+        headers: { 'X-Clinica-Curriculum-Admin-Key': adminKey },
+      },
+    ),
   beginUniversityPracticeAttempt: (
     id: string,
     attempt: {

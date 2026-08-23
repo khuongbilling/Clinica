@@ -221,11 +221,84 @@ async def _exercise_faculty_publication_lifecycle() -> None:
             os.environ["CLINICA_FACULTY_TOKENS"] = old_registry
 
 
+async def _exercise_faculty_credential_governance() -> None:
+    """Issued credentials are one-time secrets, revocable, and role-authoritative."""
+    old_admin_registry = os.environ.get("CLINICA_CURRICULUM_ADMIN_TOKENS")
+    os.environ["CLINICA_CURRICULUM_ADMIN_TOKENS"] = json.dumps({
+        "curriculum-admin-key": {"id": "curriculum-admin", "role": "curriculum_admin"},
+    })
+    faculty_id = "governed-faculty-author"
+    transport = httpx.ASGITransport(app=app)
+    try:
+        async with httpx.AsyncClient(transport=transport, base_url="http://rounds-test") as client:
+            denied = await client.get("/api/faculty/admin/credentials")
+            assert denied.status_code == 401
+            admin_headers = {"X-Clinica-Curriculum-Admin-Key": "curriculum-admin-key"}
+            issued = await client.post(
+                "/api/faculty/admin/credentials", headers=admin_headers,
+                json={"faculty_id": faculty_id, "role": "author"},
+            )
+            assert issued.status_code == 200, issued.text
+            issued_body = issued.json()
+            original_key = issued_body["oneTimeCredential"]
+            credential = issued_body["credential"]
+            assert original_key.startswith("cln_fac_")
+            assert "tokenHash" not in credential and original_key not in str(credential)
+            stored = await db.faculty_credentials.find_one({"credentialId": credential["credentialId"]}, {"_id": 0})
+            assert stored and stored["tokenHash"] != original_key and original_key not in str(stored)
+
+            # A dynamically-issued author receives the exact same server-side
+            # faculty role enforcement as a legacy registry author.
+            faculty_headers = {"X-Clinica-Faculty-Key": original_key}
+            board = await client.get("/api/faculty/grand-rounds/cases", headers=faculty_headers)
+            assert board.status_code == 200 and board.json()["faculty"] == {"id": faculty_id, "role": "author"}
+
+            listed = await client.get("/api/faculty/admin/credentials", headers=admin_headers)
+            assert listed.status_code == 200 and original_key not in str(listed.json())
+            assert listed.json()["credentials"][0]["audit"][0]["event"] == "credential_issued"
+
+            rotated = await client.post(
+                f"/api/faculty/admin/credentials/{credential['credentialId']}/rotate", headers=admin_headers,
+                json={"role": "reviewer", "reason": "Expanded independent review assignment."},
+            )
+            assert rotated.status_code == 200, rotated.text
+            replacement_key = rotated.json()["oneTimeCredential"]
+            assert replacement_key != original_key
+            assert (await client.get("/api/faculty/grand-rounds/cases", headers=faculty_headers)).status_code == 401
+            replacement_board = await client.get(
+                "/api/faculty/grand-rounds/cases", headers={"X-Clinica-Faculty-Key": replacement_key},
+            )
+            assert replacement_board.status_code == 200
+            assert replacement_board.json()["faculty"] == {"id": faculty_id, "role": "reviewer"}
+
+            revoked = await client.post(
+                f"/api/faculty/admin/credentials/{credential['credentialId']}/revoke", headers=admin_headers,
+                json={"reason": "Faculty assignment ended."},
+            )
+            assert revoked.status_code == 200 and revoked.json()["alreadyRevoked"] is False
+            assert (await client.get(
+                "/api/faculty/grand-rounds/cases", headers={"X-Clinica-Faculty-Key": replacement_key},
+            )).status_code == 401
+            final = await client.get("/api/faculty/admin/credentials", headers=admin_headers)
+            events = final.json()["credentials"][0]["audit"]
+            assert [event["event"] for event in events] == [
+                "credential_issued", "credential_rotated", "credential_revoked",
+            ]
+            assert original_key not in str(final.json()) and replacement_key not in str(final.json())
+    finally:
+        await db.faculty_credentials.delete_many({"facultyId": faculty_id})
+        if old_admin_registry is None:
+            os.environ.pop("CLINICA_CURRICULUM_ADMIN_TOKENS", None)
+        else:
+            os.environ["CLINICA_CURRICULUM_ADMIN_TOKENS"] = old_admin_registry
+
+
 async def _exercise_all_grand_rounds_authority() -> None:
     # Motor binds its client to the active event loop. Keep the two authority
     # journeys in one loop so the faculty lifecycle test mirrors production.
     await _exercise_authority_boundary()
     await _exercise_faculty_publication_lifecycle()
+    await _exercise_faculty_credential_governance()
 
 
 def test_round_state_is_filtered_paused_and_exactly_once() -> None:
