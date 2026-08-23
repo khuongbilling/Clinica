@@ -159,12 +159,13 @@ export const CLINICAL_CHALLENGE_MODES: ModeCardDef[] = [
   {
     id: "grand-rounds",
     title: "Grand Rounds",
-    subtitle: "Solve layered clinical cases through cues, decisions, and reassessment.",
+    subtitle: "University faculty cases with authoritative patient state and debrief.",
     icon: "document-text",
     accentColor: "#F59E0B",
-    status: "coming_soon",
+    status: "active",
     size: "small",
-    unlockChapter: 2,
+    route: "/university/grand-rounds",
+    entryLabel: "Enter Grand Rounds",
     artBrief:
       "A scholar-healer reviewing floating case scrolls beside a patient bed under soft jade-and-gold light.",
   },
@@ -276,17 +277,6 @@ export const UNIVERSITY_FUTURE_MODES: ModeCardDef[] = [
     size: "small",
     artBrief:
       "An academy study hall with category seals glowing softly above open textbooks.",
-  },
-  {
-    id: "grand-rounds-library",
-    title: "Grand Rounds Library",
-    subtitle: "Review case-based lessons and clinical reasoning examples.",
-    icon: "library-outline",
-    accentColor: "#5B9BD5",
-    status: "coming_soon",
-    size: "small",
-    artBrief:
-      "A scholar-healer paging through a floating archive of case scrolls in a jade-lit library.",
   },
   {
     id: "case-study-archive",

@@ -550,6 +550,21 @@ export default function UniversityHubScreen() {
               </Pressable>
 
               <Text style={styles.sectionHeading}>PRACTICE LABS</Text>
+              <Pressable style={[pracStyles.curriculumCard, { borderColor: "#FBBF2455", backgroundColor: "#261C0C" }]}
+                onPress={() => router.push(ROUTES.UNI_GRAND_ROUNDS)}
+                testID="university-grand-rounds">
+                <View style={pracStyles.curriculumLeft}>
+                  <View style={[pracStyles.curriculumBadge, { backgroundColor: "#FBBF241D" }]}>
+                    <Ionicons name="document-text-outline" size={14} color="#FBBF24" />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[pracStyles.curriculumKicker, { color: "#FBBF24" }]}>FORMAL FACULTY CASEWORK</Text>
+                    <Text style={pracStyles.curriculumTitle}>Grand Rounds</Text>
+                    <Text style={pracStyles.curriculumSub}>15–30 minute integrated cases · zero Stamina · safe debrief</Text>
+                  </View>
+                </View>
+                <Ionicons name="arrow-forward" size={16} color="#FBBF24" />
+              </Pressable>
               <Pressable style={[pracStyles.curriculumCard, { borderColor: "#A78BFA55", backgroundColor: "#19132A" }]}
                 onPress={() => router.push(dynRoute.simulation(recommendedSimulation(player.clinical_simulation_history).id))}
                 testID="university-clinical-simulation-lab">

@@ -5,6 +5,7 @@ from motor.motor_asyncio import AsyncIOMotorClient
 from pymongo import ASCENDING, DESCENDING
 from pymongo.errors import DuplicateKeyError
 import os
+import asyncio
 import random
 import secrets
 import logging
@@ -16,7 +17,10 @@ from pathlib import Path
 from pydantic import BaseModel, Field
 from typing import Any, Dict, List, Optional, Literal
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
+from grand_rounds import GRAND_ROUNDS_CASES, public_attempt as grand_round_public_attempt
+
+GRAND_ROUNDS_ADVANCED_LEVEL_GATE = 12
 
 
 ROOT_DIR = Path(__file__).parent
@@ -335,6 +339,15 @@ class Player(BaseModel):
     clinical_simulation_first_clear_claims: Dict[str, str] = Field(default_factory=dict)
     clinical_simulation_family_bests: Dict[str, int] = Field(default_factory=dict)
     clinical_simulation_daily_event_ids: List[str] = Field(default_factory=list)
+    # Grand Rounds stores its full case state in a separate collection. These
+    # compact receipts are only for board discovery, resumable entry, and
+    # bounded progression; no hidden finding or answer key is copied here.
+    grand_rounds_history: List[Dict[str, Any]] = Field(default_factory=list)
+    grand_rounds_active_attempt_id: Optional[str] = None
+    grand_rounds_reservation_at: Optional[str] = None
+    grand_rounds_first_clear_claims: Dict[str, str] = Field(default_factory=dict)
+    grand_rounds_case_bests: Dict[str, int] = Field(default_factory=dict)
+    grand_rounds_daily_event_ids: List[str] = Field(default_factory=list)
     realm_layout: Dict[str, str] = Field(default_factory=dict)
     realm_decor: Dict[str, str] = Field(default_factory=dict)
     realm_assignments: Dict[str, List[str]] = Field(default_factory=dict)
@@ -1215,6 +1228,21 @@ class ClinicalSimulationStartRequest(BaseModel):
 
 class ClinicalSimulationActionRequest(BaseModel):
     action_id: str
+
+
+class GrandRoundsStartRequest(BaseModel):
+    case_id: str
+    case_version: int = Field(ge=1)
+    retry_mode: Literal["same_case", "fresh_case", "guided"] = "fresh_case"
+    prior_attempt_id: Optional[str] = None
+
+
+class GrandRoundsResponseRequest(BaseModel):
+    response_id: str
+
+
+class GrandRoundsNotesRequest(BaseModel):
+    notes: str = Field(max_length=2000)
 
 
 # This is deliberately small, explicit, and server-owned. The frontend may
@@ -2314,6 +2342,377 @@ async def complete_clinical_simulation(
         # in-flight first submissions both receive the same canonical result.
         "already_completed": False,
     }
+
+
+def grand_rounds_eligible(player: Dict[str, Any]) -> bool:
+    return simulation_eligible(player)
+
+
+def grand_round_progress(player: Dict[str, Any]) -> int:
+    return sum(int(player.get(key, 0)) for key in ("uni_cue_lab_count", "uni_triage_count", "uni_stack_count"))
+
+
+def grand_round_catalog(player: Dict[str, Any]) -> List[Dict[str, Any]]:
+    history = player.get("grand_rounds_history") or []
+    completed = {}
+    for item in history:
+        completed[item.get("caseId")] = completed.get(item.get("caseId"), 0) + 1
+    level = int(player.get("player_level") or player_level_from_xp(int(player.get("xp", 0))))
+    progress = grand_round_progress(player)
+    catalog = []
+    for case_id, manifest in GRAND_ROUNDS_CASES.items():
+        level_ok = manifest["difficulty"] not in {"advanced", "expert"} or level >= GRAND_ROUNDS_ADVANCED_LEVEL_GATE
+        practice_ok = progress >= int(manifest["unlockPractice"])
+        available = bool(grand_rounds_eligible(player) and level_ok and practice_ok)
+        reason = None
+        if not grand_rounds_eligible(player):
+            reason = "Complete one Lotus Lesson and one Cue, Triage, and Stack practice session to enter Grand Rounds."
+        elif not practice_ok:
+            reason = f"Complete {manifest['unlockPractice']} University practice sessions across Cue, Triage, and Stack Labs."
+        elif not level_ok:
+            reason = f"Player Level {GRAND_ROUNDS_ADVANCED_LEVEL_GATE} is required for this reviewed case."
+        catalog.append({
+            "id": case_id, "version": manifest["version"], "variantFamilyId": manifest["family"],
+            "title": manifest["title"], "subtitle": manifest["subtitle"], "domain": manifest["domain"],
+            "difficulty": manifest["difficulty"], "estimatedMinutes": manifest["estimatedMinutes"], "reviewed": True,
+            "available": available, "lockedReason": reason,
+            "personalBest": (player.get("grand_rounds_case_bests") or {}).get(case_id),
+            "completedCount": completed.get(case_id, 0),
+        })
+    return catalog
+
+
+async def get_grand_round_player(player_id: str, session: Optional[str]) -> Dict[str, Any]:
+    player = await db.players.find_one({"id": player_id}, {"_id": 0})
+    if not player:
+        raise HTTPException(status_code=404, detail="player not found")
+    if not player_access_ok(player, player_id, session, None):
+        raise HTTPException(status_code=401, detail="invalid player session")
+    return player
+
+
+@api_router.get("/player/{player_id}/grand-rounds")
+async def list_grand_rounds(player_id: str, x_clinica_session: Optional[str] = Header(default=None)):
+    player = await get_grand_round_player(player_id, x_clinica_session)
+    catalog = grand_round_catalog(player)
+    recommendation = next((item["id"] for item in catalog if item["available"] and not item["completedCount"]), None)
+    return {
+        "cases": catalog, "recommended_id": recommendation,
+        "gate": {
+            "eligible": grand_rounds_eligible(player),
+            "reason": None if grand_rounds_eligible(player) else "Complete one Lotus Lesson and one Cue, Triage, and Stack practice session to enter Grand Rounds.",
+            "requiredPractice": {"lessons": 1, "cueLab": 1, "triage": 1, "stack": 1},
+        },
+    }
+
+
+@api_router.post("/player/{player_id}/grand-rounds/attempts")
+async def start_grand_rounds(
+    player_id: str, payload: GrandRoundsStartRequest, x_clinica_session: Optional[str] = Header(default=None),
+):
+    player = await get_grand_round_player(player_id, x_clinica_session)
+    if not grand_rounds_eligible(player):
+        raise HTTPException(status_code=409, detail="Complete the University foundation practices before entering Grand Rounds")
+    manifest = GRAND_ROUNDS_CASES.get(payload.case_id)
+    if not manifest:
+        raise HTTPException(status_code=422, detail="unknown reviewed Grand Rounds case")
+    if int(payload.case_version) != int(manifest["version"]):
+        raise HTTPException(status_code=409, detail="this reviewed case version has changed; refresh the case board")
+    selected = next((row for row in grand_round_catalog(player) if row["id"] == payload.case_id), None)
+    if not selected or not selected["available"]:
+        raise HTTPException(status_code=409, detail=(selected or {}).get("lockedReason") or "this case is not yet available")
+    if payload.retry_mode == "guided" and not any(
+        row.get("caseId") == payload.case_id for row in (player.get("grand_rounds_history") or [])
+    ):
+        raise HTTPException(status_code=422, detail="guided review is available after you complete this reviewed case once")
+    active_id = player.get("grand_rounds_active_attempt_id")
+    if active_id:
+        active = await db.grand_rounds_attempts.find_one(
+            {"attemptId": active_id, "player_id": player_id}, {"_id": 0}
+        )
+        if not active:
+            # A reservation has a short fenced lease. A live competing insert
+            # is never cleared; an interrupted process can be safely recovered
+            # after its lease, and the original writer verifies its fence after
+            # insertion before exposing any attempt.
+            stale_before = (datetime.now(timezone.utc) - timedelta(seconds=30)).isoformat()
+            released = await db.players.update_one(
+                {"id": player_id, "grand_rounds_active_attempt_id": active_id, "$or": [
+                    {"grand_rounds_reservation_at": {"$lt": stale_before}},
+                    {"grand_rounds_reservation_at": {"$exists": False}},
+                ]},
+                {"$set": {"grand_rounds_active_attempt_id": None, "grand_rounds_reservation_at": None, "updated_at": now_iso()}},
+            )
+            if released.modified_count != 1:
+                raise HTTPException(status_code=409, detail="a Grand Rounds case reservation is being created; retry shortly")
+        else:
+            if active.get("status") in {"active", "paused"}:
+                raise HTTPException(status_code=409, detail=f"an active Grand Rounds case is in progress; resume {active_id} before starting another")
+            await db.players.update_one(
+                {"id": player_id, "grand_rounds_active_attempt_id": active_id},
+                {"$set": {"grand_rounds_active_attempt_id": None, "grand_rounds_reservation_at": None}},
+            )
+    seed = secrets.randbelow(2_000_000_000) + 1
+    if payload.retry_mode == "same_case":
+        if not payload.prior_attempt_id:
+            raise HTTPException(status_code=422, detail="same-case retry requires a prior case receipt")
+        prior = await db.grand_rounds_attempts.find_one({"attemptId": payload.prior_attempt_id, "player_id": player_id}, {"_id": 0})
+        if not prior or prior.get("caseId") != payload.case_id or not prior.get("completion"):
+            raise HTTPException(status_code=422, detail="same-case retry must reference one of your completed matching cases")
+        seed = int(prior["seed"])
+    attempt = {
+        "attemptId": str(uuid.uuid4()), "player_id": player_id, "caseId": payload.case_id, "version": manifest["version"],
+        "seed": seed, "branchId": f"round-{(seed ^ sum(map(ord, manifest['family']))) & 0xffffffff:08x}",
+        "difficulty": manifest["difficulty"], "stageId": "observe",
+        "patient": {**manifest["initial"], "concern": manifest["concern"]}, "known": [], "timeline": [],
+        "responseIds": [], "safety": "safe", "status": "active", "notes": "",
+        # A guided review is deliberately educational-only. It reuses the
+        # authoritative stations but never becomes a progression/reward claim.
+        "reviewMode": payload.retry_mode == "guided", "created_at": now_iso(), "updated_at": now_iso(),
+    }
+    # Reserve the sole active-case slot before inserting the attempt. The
+    # compare-and-set predicate is the authority boundary for concurrent start
+    # requests: only one can hold the pointer, and a failed insert releases it.
+    reserved = await db.players.update_one(
+        {"id": player_id, "$or": [
+            {"grand_rounds_active_attempt_id": None},
+            {"grand_rounds_active_attempt_id": {"$exists": False}},
+        ]},
+        {"$set": {"grand_rounds_active_attempt_id": attempt["attemptId"], "grand_rounds_reservation_at": now_iso(), "updated_at": now_iso()}},
+    )
+    if reserved.modified_count != 1:
+        current = await db.players.find_one({"id": player_id}, {"_id": 0, "grand_rounds_active_attempt_id": 1})
+        raise HTTPException(status_code=409, detail=f"an active Grand Rounds case is in progress; resume {(current or {}).get('grand_rounds_active_attempt_id')} before starting another")
+    try:
+        await db.grand_rounds_attempts.insert_one(attempt)
+    except Exception:
+        await db.players.update_one(
+            {"id": player_id, "grand_rounds_active_attempt_id": attempt["attemptId"]},
+            {"$set": {"grand_rounds_active_attempt_id": None, "grand_rounds_reservation_at": None, "updated_at": now_iso()}},
+        )
+        raise
+    # Fence the insert: if a crashed/slow writer lost an expired reservation
+    # while inserting, remove its attempt instead of leaving an orphan active
+    # case that could be completed outside the player pointer.
+    fenced = await db.players.update_one(
+        {"id": player_id, "grand_rounds_active_attempt_id": attempt["attemptId"]},
+        {"$set": {"grand_rounds_reservation_at": None, "updated_at": now_iso()}},
+    )
+    if fenced.modified_count != 1:
+        await db.grand_rounds_attempts.delete_one({"attemptId": attempt["attemptId"], "player_id": player_id})
+        raise HTTPException(status_code=409, detail="the Grand Rounds reservation expired; retry the case")
+    return {"attempt": grand_round_public_attempt(attempt)}
+
+
+@api_router.get("/player/{player_id}/grand-rounds/attempts/{attempt_id}")
+async def get_grand_round_attempt(player_id: str, attempt_id: str, x_clinica_session: Optional[str] = Header(default=None)):
+    await get_grand_round_player(player_id, x_clinica_session)
+    attempt = await db.grand_rounds_attempts.find_one({"attemptId": attempt_id, "player_id": player_id}, {"_id": 0})
+    if not attempt:
+        raise HTTPException(status_code=404, detail="Grand Rounds attempt not found")
+    return {"attempt": grand_round_public_attempt(attempt)}
+
+
+@api_router.post("/player/{player_id}/grand-rounds/attempts/{attempt_id}/responses")
+async def submit_grand_round_response(
+    player_id: str, attempt_id: str, payload: GrandRoundsResponseRequest, x_clinica_session: Optional[str] = Header(default=None),
+):
+    await get_grand_round_player(player_id, x_clinica_session)
+    attempt = await db.grand_rounds_attempts.find_one({"attemptId": attempt_id, "player_id": player_id}, {"_id": 0})
+    if not attempt:
+        raise HTTPException(status_code=404, detail="Grand Rounds attempt not found")
+    if attempt.get("status") != "active":
+        raise HTTPException(status_code=409, detail="resume this case before making a clinical decision")
+    manifest = GRAND_ROUNDS_CASES.get(attempt["caseId"])
+    station = (manifest or {}).get("stations", {}).get(attempt.get("stageId"))
+    response = (station or {}).get("responses", {}).get(payload.response_id)
+    if not response:
+        raise HTTPException(status_code=422, detail="that response is not legal at this clinical station")
+    if payload.response_id in attempt.get("responseIds", []):
+        raise HTTPException(status_code=409, detail="this station response was already submitted")
+    before, patient = dict(attempt["patient"]), dict(attempt["patient"])
+    for key, value in response.get("delta", {}).items():
+        patient[key] = max(0, min(100, int(patient.get(key, 0)) + int(value)))
+    if patient["stability"] < 45:
+        patient["acuity"] = "critical"
+    elif patient["stability"] < 65:
+        patient["acuity"] = "high"
+    revealed_ids = response.get("reveal", [])
+    existing = {item["id"] for item in attempt.get("known", [])}
+    known = [*attempt.get("known", []), *[
+        item for item in manifest["hidden"] if item["id"] in revealed_ids and item["id"] not in existing
+    ]]
+    delta = " · ".join(
+        f"{key} {'+' if patient[key] > before[key] else ''}{patient[key] - before[key]}"
+        for key in ("stability", "oxygenation", "perfusion") if patient[key] != before[key]
+    ) or "no measurable patient-state change"
+    timeline = [*attempt.get("timeline", []), {
+        "responseId": payload.response_id, "stageId": attempt["stageId"], "announcement": response["announcement"],
+        "stateDelta": delta, "knownIds": revealed_ids,
+    }]
+    next_stage = response.get("next")
+    next_attempt = {**attempt, "patient": patient, "known": known, "timeline": timeline,
+                    "responseIds": [*attempt.get("responseIds", []), payload.response_id],
+                    "safety": "unsafe" if response.get("unsafe") else attempt.get("safety", "safe"),
+                    "stageId": next_stage, "status": "completed" if next_stage is None else "active", "updated_at": now_iso()}
+    write = await db.grand_rounds_attempts.update_one(
+        {"attemptId": attempt_id, "player_id": player_id, "status": "active", "stageId": attempt["stageId"], "responseIds": attempt.get("responseIds", [])},
+        {"$set": next_attempt},
+    )
+    if write.modified_count != 1:
+        raise HTTPException(status_code=409, detail="the case state changed; reload before responding")
+    return {"attempt": grand_round_public_attempt(next_attempt)}
+
+
+@api_router.post("/player/{player_id}/grand-rounds/attempts/{attempt_id}/pause")
+async def pause_grand_round(player_id: str, attempt_id: str, x_clinica_session: Optional[str] = Header(default=None)):
+    await get_grand_round_player(player_id, x_clinica_session)
+    await db.grand_rounds_attempts.update_one({"attemptId": attempt_id, "player_id": player_id, "status": "active"}, {"$set": {"status": "paused", "updated_at": now_iso()}})
+    attempt = await db.grand_rounds_attempts.find_one({"attemptId": attempt_id, "player_id": player_id}, {"_id": 0})
+    if not attempt:
+        raise HTTPException(status_code=404, detail="Grand Rounds attempt not found")
+    return {"attempt": grand_round_public_attempt(attempt)}
+
+
+@api_router.post("/player/{player_id}/grand-rounds/attempts/{attempt_id}/resume")
+async def resume_grand_round(player_id: str, attempt_id: str, x_clinica_session: Optional[str] = Header(default=None)):
+    await get_grand_round_player(player_id, x_clinica_session)
+    await db.grand_rounds_attempts.update_one({"attemptId": attempt_id, "player_id": player_id, "status": "paused"}, {"$set": {"status": "active", "updated_at": now_iso()}})
+    attempt = await db.grand_rounds_attempts.find_one({"attemptId": attempt_id, "player_id": player_id}, {"_id": 0})
+    if not attempt:
+        raise HTTPException(status_code=404, detail="Grand Rounds attempt not found")
+    return {"attempt": grand_round_public_attempt(attempt)}
+
+
+@api_router.put("/player/{player_id}/grand-rounds/attempts/{attempt_id}/notes")
+async def save_grand_round_notes(
+    player_id: str, attempt_id: str, payload: GrandRoundsNotesRequest, x_clinica_session: Optional[str] = Header(default=None),
+):
+    await get_grand_round_player(player_id, x_clinica_session)
+    await db.grand_rounds_attempts.update_one(
+        {"attemptId": attempt_id, "player_id": player_id, "status": {"$in": ["active", "paused"]}},
+        {"$set": {"notes": payload.notes.strip(), "updated_at": now_iso()}},
+    )
+    attempt = await db.grand_rounds_attempts.find_one({"attemptId": attempt_id, "player_id": player_id}, {"_id": 0})
+    if not attempt:
+        raise HTTPException(status_code=404, detail="Grand Rounds attempt not found")
+    return {"attempt": grand_round_public_attempt(attempt)}
+
+
+@api_router.post("/player/{player_id}/grand-rounds/attempts/{attempt_id}/abandon")
+async def abandon_grand_round(player_id: str, attempt_id: str, x_clinica_session: Optional[str] = Header(default=None)):
+    await get_grand_round_player(player_id, x_clinica_session)
+    await db.grand_rounds_attempts.update_one(
+        {"attemptId": attempt_id, "player_id": player_id, "status": {"$in": ["active", "paused"]}},
+        {"$set": {"status": "abandoned", "stageId": None, "updated_at": now_iso()}},
+    )
+    await db.players.update_one({"id": player_id, "grand_rounds_active_attempt_id": attempt_id}, {"$set": {"grand_rounds_active_attempt_id": None, "updated_at": now_iso()}})
+    current = await db.players.find_one({"id": player_id}, {"_id": 0})
+    return {"player": Player(**current).model_dump()}
+
+
+@api_router.post("/player/{player_id}/grand-rounds/attempts/{attempt_id}/complete")
+async def complete_grand_round(player_id: str, attempt_id: str, x_clinica_session: Optional[str] = Header(default=None)):
+    player = await get_grand_round_player(player_id, x_clinica_session)
+    attempt = await db.grand_rounds_attempts.find_one({"attemptId": attempt_id, "player_id": player_id}, {"_id": 0})
+    if not attempt:
+        raise HTTPException(status_code=404, detail="Grand Rounds attempt not found")
+    if attempt.get("completion"):
+        return {"player": Player(**player).model_dump(), "debrief": attempt["completion"], "already_completed": True}
+    if attempt.get("status") != "completed" or attempt.get("stageId") is not None:
+        raise HTTPException(status_code=409, detail="complete every authored station before opening the debrief")
+    # A single request claims receipt construction. Concurrent callers wait for
+    # the canonical receipt instead of recalculating a competing reward. The
+    # owner marker is recoverable: it contains only this attempt ID and the
+    # player mutation is still guarded by the attempt history receipt.
+    claim_token = str(uuid.uuid4())
+    stale_claim_before = (datetime.now(timezone.utc) - timedelta(seconds=30)).isoformat()
+    claimed = await db.grand_rounds_attempts.update_one(
+        {"attemptId": attempt_id, "completion": {"$exists": False}, "$or": [
+            {"completion_claim": {"$exists": False}},
+            {"completion_claimed_at": {"$lt": stale_claim_before}},
+        ]},
+        {"$set": {"completion_claim": claim_token, "completion_claimed_at": now_iso()}},
+    )
+    if claimed.modified_count != 1:
+        for _ in range(40):
+            pending = await db.grand_rounds_attempts.find_one({"attemptId": attempt_id, "player_id": player_id}, {"_id": 0})
+            if pending and pending.get("completion"):
+                current = await db.players.find_one({"id": player_id}, {"_id": 0})
+                return {"player": Player(**current).model_dump(), "debrief": pending["completion"], "already_completed": True}
+            await asyncio.sleep(0.05)
+        raise HTTPException(status_code=409, detail="Grand Rounds receipt is being finalized; retry to receive the canonical debrief")
+    manifest = GRAND_ROUNDS_CASES[attempt["caseId"]]
+    patient = attempt["patient"]
+    raw_score = round(sum(
+        (manifest["stations"][entry["stageId"]]["responses"][entry["responseId"]].get("points", 0))
+        for entry in attempt.get("timeline", [])
+    ) / 0.9)  # complication recovery has 15 points; normalize to 100
+    raw_score = max(0, min(100, raw_score))
+    unsafe = attempt.get("safety") == "unsafe" or int(patient["stability"]) < 35
+    score = min(raw_score, 55) if unsafe else raw_score
+    outcome = "unsafe" if unsafe else "excellent" if score >= 90 else "competent" if score >= 60 else "needs_review"
+    patient_outcome = "deteriorated" if int(patient["stability"]) < 45 else "stabilized" if int(patient["stability"]) >= 70 else "guarded"
+    history = list(player.get("grand_rounds_history") or [])
+    review_mode = bool(attempt.get("reviewMode"))
+    first_clear = False
+    if not review_mode and outcome in {"excellent", "competent"}:
+        path = f"grand_rounds_first_clear_claims.{attempt['caseId']}"
+        claim = await db.players.update_one({"id": player_id, path: {"$exists": False}}, {"$set": {path: attempt_id}})
+        first_clear = claim.modified_count == 1
+        if not first_clear:
+            current_claim = await db.players.find_one({"id": player_id}, {"_id": 0, "grand_rounds_first_clear_claims": 1})
+            first_clear = (current_claim or {}).get("grand_rounds_first_clear_claims", {}).get(attempt["caseId"]) == attempt_id
+    completed_count = sum(1 for row in history if row.get("caseId") == attempt["caseId"])
+    rewardable = outcome in {"excellent", "competent"} and not review_mode
+    xp, credits, mastery = (25, 30, 4) if rewardable and first_clear else (3, 3, 1) if rewardable and completed_count < 2 else (0, 0, 0)
+    domain_scores = {domain: max(0, min(100, score if domain == manifest["domain"] else score - 15)) for domain in ("airway", "assessment", "stabilization", "pharmacology", "judgment", "systems")}
+    timeline = attempt.get("timeline", [])
+    debrief = {
+        "outcome": outcome, "patientOutcome": patient_outcome, "score": score, "rawScore": raw_score, "safety": "unsafe" if unsafe else "safe",
+        "domainBreakdown": domain_scores, "strongestDecision": (timeline[0]["announcement"] if timeline else "No completed clinical decision."),
+        "missedOpportunity": "Review the safety change and return through the related practice." if unsafe else "None — your reassessment closed the loop.",
+        "patientEvolution": f"Final stability {patient['stability']}, oxygenation {patient['oxygenation']}, perfusion {patient['perfusion']}.",
+        "clinicalPrinciple": manifest["principle"], "relatedPractice": manifest["relatedPractice"], "timeline": timeline,
+        "firstClear": first_clear, "personalBest": not review_mode and score > int((player.get("grand_rounds_case_bests") or {}).get(attempt["caseId"], -1)),
+        "reward": {"xp": xp, "universityCredits": credits, "mastery": mastery, "message": "Review mode pays no reward or progression." if review_mode else "A safety result needs review before rewards." if not rewardable else "First reviewed clear." if first_clear else "Repeat evidence is sharply tapered."},
+    }
+    daily = dict(player.get("daily_rounds") or {})
+    daily_ids = list(player.get("grand_rounds_daily_event_ids") or [])
+    if not review_mode and attempt_id not in daily_ids:
+        for objective in daily.get("objectives", []):
+            if objective.get("event") == "university_lesson":
+                objective["progress"] = min(int(objective.get("target", 0)), int(objective.get("progress", 0)) + 1)
+        for task in daily.get("weekly_tasks", []):
+            if task.get("id") == "w_university":
+                task["progress"] = min(int(task.get("target", 0)), int(task.get("progress", 0)) + 1)
+        daily_ids = [*daily_ids, attempt_id][-365:]
+    record = {"attemptId": attempt_id, "caseId": attempt["caseId"], "variantFamilyId": manifest["family"], "score": score, "outcome": outcome, "safety": debrief["safety"], "completedAt": now_iso()}
+    if review_mode:
+        # A guided review has a durable debrief receipt, but never alters
+        # progression evidence: no first clear, history, best, mastery,
+        # reward, or Daily/Weekly University event.
+        await db.players.update_one(
+            {"id": player_id, "grand_rounds_active_attempt_id": attempt_id},
+            {"$set": {"grand_rounds_active_attempt_id": None, "updated_at": now_iso()}},
+        )
+    else:
+        await db.players.update_one(
+            {"id": player_id, "grand_rounds_history.attemptId": {"$ne": attempt_id}},
+            {"$set": {"daily_rounds": daily, "grand_rounds_daily_event_ids": daily_ids, "grand_rounds_active_attempt_id": None, "updated_at": now_iso()},
+             "$push": {"grand_rounds_history": {"$each": [record], "$slice": -60}},
+             "$max": {f"grand_rounds_case_bests.{attempt['caseId']}": score},
+             "$inc": {"xp": xp, "university_credits": credits, f"grand_rounds_mastery.{manifest['domain']}": mastery}},
+        )
+    await db.grand_rounds_attempts.update_one(
+        {"attemptId": attempt_id, "completion_claim": claim_token, "completion": {"$exists": False}},
+        {"$set": {"completion": debrief, "completed_at": now_iso()}},
+    )
+    current = await db.players.find_one({"id": player_id}, {"_id": 0})
+    await db.players.update_one({"id": player_id, "xp": current.get("xp", 0)}, {"$set": {"player_level": player_level_from_xp(int(current.get("xp", 0)))}})
+    current = await db.players.find_one({"id": player_id}, {"_id": 0})
+    receipt = await db.grand_rounds_attempts.find_one({"attemptId": attempt_id}, {"_id": 0, "completion": 1})
+    return {"player": Player(**current).model_dump(), "debrief": (receipt or {}).get("completion") or debrief, "already_completed": False}
 
 
 @api_router.post("/player/{player_id}/activity-attempts/{activity}", response_model=Dict[str, Any])

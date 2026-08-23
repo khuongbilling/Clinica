@@ -4,6 +4,9 @@ import type { PlayerHeroEligibility, PlayerHeroRecord, PlayerHeroAppearance } fr
 import type {
   SimulationConfig, SimulationDebrief, SimulationManifest, SimulationAttemptState,
 } from '@/src/game/clinicalSimulation';
+import type {
+  GrandRoundsAttempt, GrandRoundsCaseCard, GrandRoundsDebrief, GrandRoundsGate,
+} from '@/src/game/grandRounds';
 
 const BASE_URL = (process.env.EXPO_PUBLIC_BACKEND_URL || (Constants?.expoConfig?.extra as any)?.backendUrl || '').replace(/\/$/, '');
 const API = `${BASE_URL}/api`;
@@ -202,6 +205,69 @@ export const api = {
         method: 'POST',
         headers: sessionToken ? { 'X-Clinica-Session': sessionToken } : {},
       },
+    ),
+  getGrandRounds: (id: string, sessionToken?: string) =>
+    http<{ cases: GrandRoundsCaseCard[]; gate: GrandRoundsGate; recommended_id?: string }>(
+      `/player/${id}/grand-rounds`,
+      { headers: sessionToken ? { 'X-Clinica-Session': sessionToken } : {} },
+    ),
+  beginGrandRounds: (
+    id: string,
+    caseId: string,
+    caseVersion: number,
+    retryMode: 'same_case' | 'fresh_case' | 'guided' = 'fresh_case',
+    priorAttemptId?: string,
+    sessionToken?: string,
+  ) => http<{ attempt: GrandRoundsAttempt }>(
+    `/player/${id}/grand-rounds/attempts`,
+    {
+      method: 'POST',
+      body: JSON.stringify({ case_id: caseId, case_version: caseVersion, retry_mode: retryMode, prior_attempt_id: priorAttemptId }),
+      headers: sessionToken ? { 'X-Clinica-Session': sessionToken } : {},
+    },
+  ),
+  getGrandRoundsAttempt: (id: string, attemptId: string, sessionToken?: string) =>
+    http<{ attempt: GrandRoundsAttempt }>(
+      `/player/${id}/grand-rounds/attempts/${attemptId}`,
+      { headers: sessionToken ? { 'X-Clinica-Session': sessionToken } : {} },
+    ),
+  submitGrandRoundsResponse: (id: string, attemptId: string, responseId: string, sessionToken?: string) =>
+    http<{ attempt: GrandRoundsAttempt }>(
+      `/player/${id}/grand-rounds/attempts/${attemptId}/responses`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ response_id: responseId }),
+        headers: sessionToken ? { 'X-Clinica-Session': sessionToken } : {},
+      },
+    ),
+  pauseGrandRounds: (id: string, attemptId: string, sessionToken?: string) =>
+    http<{ attempt: GrandRoundsAttempt }>(
+      `/player/${id}/grand-rounds/attempts/${attemptId}/pause`,
+      { method: 'POST', headers: sessionToken ? { 'X-Clinica-Session': sessionToken } : {} },
+    ),
+  resumeGrandRounds: (id: string, attemptId: string, sessionToken?: string) =>
+    http<{ attempt: GrandRoundsAttempt }>(
+      `/player/${id}/grand-rounds/attempts/${attemptId}/resume`,
+      { method: 'POST', headers: sessionToken ? { 'X-Clinica-Session': sessionToken } : {} },
+    ),
+  abandonGrandRounds: (id: string, attemptId: string, sessionToken?: string) =>
+    http<{ player: PlayerState }>(
+      `/player/${id}/grand-rounds/attempts/${attemptId}/abandon`,
+      { method: 'POST', headers: sessionToken ? { 'X-Clinica-Session': sessionToken } : {} },
+    ),
+  saveGrandRoundsNotes: (id: string, attemptId: string, notes: string, sessionToken?: string) =>
+    http<{ attempt: GrandRoundsAttempt }>(
+      `/player/${id}/grand-rounds/attempts/${attemptId}/notes`,
+      {
+        method: 'PUT',
+        body: JSON.stringify({ notes }),
+        headers: sessionToken ? { 'X-Clinica-Session': sessionToken } : {},
+      },
+    ),
+  completeGrandRounds: (id: string, attemptId: string, sessionToken?: string) =>
+    http<{ player: PlayerState; debrief: GrandRoundsDebrief; already_completed: boolean }>(
+      `/player/${id}/grand-rounds/attempts/${attemptId}/complete`,
+      { method: 'POST', headers: sessionToken ? { 'X-Clinica-Session': sessionToken } : {} },
     ),
   beginUniversityPracticeAttempt: (
     id: string,

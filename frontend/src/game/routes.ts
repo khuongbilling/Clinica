@@ -78,6 +78,9 @@ const UNI_STABILIZE_COMPLETE:   AppRoute = "/university/stabilize-complete";
 const UNI_TRIAGE_COMPLETE:      AppRoute = "/university/triage-complete";
 const UNI_CAREER_EXPLORER:      AppRoute = "/university/career-explorer";
 const UNI_SCHOOLS:              AppRoute = "/university/schools";
+// Expo Router's generated route union is refreshed by the application workflow.
+// Keep this explicit cast until that generator has seen the new screen.
+const UNI_GRAND_ROUNDS:         AppRoute = "/university/grand-rounds" as AppRoute;
 
 // ── Other screens ─────────────────────────────────────────────────────────────
 const TITLE:               AppRoute = "/title";
@@ -177,6 +180,7 @@ export const ROUTES = {
   UNI_TRIAGE_COMPLETE,
   UNI_CAREER_EXPLORER,
   UNI_SCHOOLS,
+  UNI_GRAND_ROUNDS,
 
   // ── Other screens ─────────────────────────────────────────────────────────
   TITLE,
@@ -287,6 +291,7 @@ export const ROUTES = {
   universityStackLab:             UNI_STACK_LAB,
   universityUniMilestones:        UNI_MILESTONES,
   universityUniShop:              UNI_SHOP,
+  universityGrandRounds:         UNI_GRAND_ROUNDS,
   universityLotusLessonHydration: "/university/lotus-lesson/recognizing-cues-hydration" as AppRoute,
 
   // ── Prologue ───────────────────────────────────────────────────────────────

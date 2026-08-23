@@ -470,6 +470,24 @@ export interface PlayerState {
   clinical_simulation_first_clear_claims?: Record<string, string>;
   clinical_simulation_family_bests?: Record<string, number>;
   clinical_simulation_daily_event_ids?: string[];
+  /**
+   * Grand Rounds is an independent, server-authoritative integrated case mode.
+   * Only compact receipt/history metadata is held on PlayerState; the full
+   * patient and branch state stays in the attempt collection.
+   */
+  grand_rounds_history?: Array<{
+    attemptId: string;
+    caseId: string;
+    variantFamilyId: string;
+    score: number;
+    outcome: import('./grandRounds').GrandRoundsOutcome;
+    safety: import('./grandRounds').GrandRoundsSafety;
+    completedAt: string;
+  }>;
+  grand_rounds_active_attempt_id?: string | null;
+  grand_rounds_first_clear_claims?: Record<string, string>;
+  grand_rounds_case_bests?: Record<string, number>;
+  grand_rounds_daily_event_ids?: string[];
   // J4 — Hero Skill Academy upgrade ranks. Keyed by upgradeId (see heroSkillAcademy.ts).
   // Value = current rank (0 = not purchased; 1 = Rank I active; 2 = Rank II active).
   // Backfilled as {} for existing players in normalizeProgression.
