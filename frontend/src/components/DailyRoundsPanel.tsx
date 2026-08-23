@@ -1201,17 +1201,5 @@ const styles = StyleSheet.create({
 /** Package 5B replaces the legacy per-objective reward sheet without changing
  * the public component contract used by the hub and notification surfaces. */
 export function DailyRoundsPanel(props: { visible: boolean; onClose: () => void }) {
-  const { player } = usePlayer();
-  const state = useMemo(() => player
-    ? ensureFreshDailyRounds(
-      player.daily_rounds,
-      getDailyEligibleActivities(player),
-      player.id,
-      new Date(),
-      playerLevelFromXp(player.xp ?? 0).level >= 5,
-    ).state
-    : defaultDailyRoundsState(), [player]);
-  return state.version === 2
-    ? <DailyRoundsV2Panel {...props} />
-    : <LegacyDailyRoundsPanel {...props} />;
+  return <DailyRoundsV2Panel {...props} />;
 }

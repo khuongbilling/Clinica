@@ -1344,6 +1344,16 @@ class GrandRoundsNotesRequest(BaseModel):
 class FacultyGrandRoundsDraftCreateRequest(BaseModel):
     case_id: Optional[str] = Field(default=None, min_length=3, max_length=80, pattern=r"^[a-z0-9][a-z0-9-]*$")
     manifest: Dict[str, Any]
+
+
+class FacultyGrandRoundsRetireRequest(BaseModel):
+    reason: str = Field(min_length=3, max_length=1000)
+
+
+class FacultyGrandRoundsApproveRequest(BaseModel):
+    expected_revision: int = Field(ge=1)
+
+
 class CrisisDrillStartRequest(BaseModel):
     drill_id: str
     drill_version: int = Field(ge=1)
@@ -3802,7 +3812,12 @@ async def begin_activity_attempt(
     payload: ActivityAttemptRequest,
     x_clinica_session: Optional[str] = Header(default=None),
 ):
-    """Register a one-use repeatable activity before its reward can be claimed."""
+    """Deprecated: generic client-created reward attempts are never trustworthy."""
+    raise HTTPException(
+        status_code=410,
+        detail="generic activity attempts are retired; complete the activity through its server-owned route",
+    )
+    """
     player = await db.players.find_one({"id": player_id}, {"_id": 0})
     if not player:
         raise HTTPException(status_code=404, detail="player not found")
@@ -3829,6 +3844,7 @@ async def begin_activity_attempt(
     }
     await db.activity_attempts.insert_one(attempt)
     return {"attempt_id": attempt["id"], "activity": activity, "tier": payload.tier}
+    """
 
 
 @api_router.post("/player/{player_id}/activity-attempts/{attempt_id}/claim", response_model=Dict[str, Any])
@@ -3837,7 +3853,12 @@ async def claim_activity_attempt(
     attempt_id: str,
     x_clinica_session: Optional[str] = Header(default=None),
 ):
-    """Consume one recorded repeatable attempt and derive its grant server-side."""
+    """Deprecated: generic client-created reward attempts are never trustworthy."""
+    raise HTTPException(
+        status_code=410,
+        detail="generic activity claims are retired; complete the activity through its server-owned route",
+    )
+    """
     player = await db.players.find_one({"id": player_id}, {"_id": 0})
     if not player:
         raise HTTPException(status_code=404, detail="player not found")
@@ -3872,6 +3893,7 @@ async def claim_activity_attempt(
         raise HTTPException(status_code=409, detail="player state changed; retry")
     refreshed = await db.players.find_one({"id": player_id}, {"_id": 0})
     return {"player": Player(**refreshed).model_dump(), "multiplier": multiplier, "units": units, "granted": increments}
+    """
 
 
 @api_router.post("/player/{player_id}/rewards/{activity}", response_model=Dict[str, Any])
@@ -3882,13 +3904,16 @@ async def grant_activity_reward(
     x_clinica_session: Optional[str] = Header(default=None),
     x_clinica_economy_token: Optional[str] = Header(default=None),
 ):
-    """Apply a bounded activity reward and its shared repeat taper atomically.
+    """Deprecated generic reward endpoint.
 
-    Reward values never travel through the generic player snapshot. The activity
-    path, tier ladder, per-field ceilings, and current daily budget are all
-    validated from the persisted player document before a single conditional
-    write commits the reward.
+    Meaningful activity rewards must be derived by the activity's own
+    server-owned completion route. A claim key supplied by a client is not
+    evidence of a completed encounter.
     """
+    raise HTTPException(
+        status_code=410,
+        detail="generic activity rewards are retired; use the activity's server-owned completion route",
+    )
     if payload.activity != activity:
         raise HTTPException(status_code=422, detail="activity path and payload do not match")
     existing = await db.players.find_one({"id": player_id}, {"_id": 0})
@@ -4944,9 +4969,6 @@ async def list_faculty_grand_rounds(x_clinica_faculty_key: Optional[str] = Heade
         catalog.append(item)
     return {"faculty": {"id": principal["id"], "role": principal["role"]}, "drafts": drafts, "catalog": catalog}
 
-class FacultyGrandRoundsApproveRequest(BaseModel):
-    expected_revision: int = Field(ge=1)
-
 async def active_grand_round_manifests() -> Dict[str, Dict[str, Any]]:
     """Overlay governed approved versions over the legacy Age 1 catalog."""
     manifests = dict(GRAND_ROUNDS_CASES)
@@ -5044,9 +5066,6 @@ async def approve_faculty_grand_round(
     )
     updated = await db.grand_rounds_case_drafts.find_one({"draftId": draft_id}, {"_id": 0})
     return {"draft": faculty_grand_round_view(updated), "published": {"caseId": draft["caseId"], "version": draft["version"]}}
-
-class FacultyGrandRoundsRetireRequest(BaseModel):
-    reason: str = Field(min_length=3, max_length=1000)
 
 @api_router.put("/faculty/grand-rounds/cases/drafts/{draft_id}")
 async def update_faculty_grand_round_draft(

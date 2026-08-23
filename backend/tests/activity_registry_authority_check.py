@@ -95,6 +95,24 @@ async def _exercise_activity_receipts() -> None:
                 json={"activity_id": "lotus-journal", "completion_key": "any"},
             )
             assert lotus.status_code == 422
+
+            # Client-created generic attempts and claim keys cannot be used to
+            # mint repeat or first-clear rewards. Purpose-built completion
+            # routes remain the sole authority for their respective activities.
+            before = await db.players.find_one({"id": player_id}, {"_id": 0, "crowns": 1, "xp": 1})
+            generic_attempt = await client.post(
+                f"/api/player/{player_id}/activity-attempts/ward_defense",
+                headers=headers, json={"tier": "regular"},
+            )
+            assert generic_attempt.status_code == 410
+            generic_reward = await client.post(
+                f"/api/player/{player_id}/rewards/world_event",
+                headers=headers,
+                json={"activity": "world_event", "claim_key": "invented-first-clear", "repeatable": False},
+            )
+            assert generic_reward.status_code == 410
+            after = await db.players.find_one({"id": player_id}, {"_id": 0, "crowns": 1, "xp": 1})
+            assert after == before
         finally:
             await db.activity_attempts.delete_many({"player_id": player_id})
             await db.activity_completion_receipts.delete_many({"player_id": player_id})

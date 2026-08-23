@@ -47,7 +47,6 @@ type Toast = {
 
 // A single reward the toast can claim without opening the panel.
 type Claimable =
-  | { kind: "objective"; id: string }
   | { kind: "all" }
   | { kind: "weekly" };
 
@@ -57,13 +56,8 @@ function claimableItems(player: any): Claimable[] {
   if (!player) return [];
   const state = ensureFreshDailyRounds(player.daily_rounds, getDailyEligibleActivities(player), player.id, new Date(), (player.player_level ?? 1) >= 5).state;
   const items: Claimable[] = [];
-  if (state.version !== 2) for (const o of state.objectives) {
-    if (o.progress >= o.target && !o.claimed) items.push({ kind: "objective", id: o.id });
-  }
   if (allObjectivesComplete(state) && !state.all_complete_claimed) items.push({ kind: "all" });
-  const weeklyClaimed = state.version === 2
-    ? (state.weekly_momentum_claimed ?? []).includes("5")
-    : state.weekly_claimed;
+  const weeklyClaimed = (state.weekly_momentum_claimed ?? []).includes("5");
   if (state.weekly_days_completed >= WEEKLY_GOAL_TARGET && !weeklyClaimed) items.push({ kind: "weekly" });
   return items;
 }
@@ -109,7 +103,7 @@ function toastFromPulse(pulse: NonNullable<ReturnType<typeof usePlayer>["dailyPu
 }
 
 export function DailyPulseToast() {
-  const { player, dailyPulse, requestOpenDailyRounds, claimDailyObjective, claimDailyAllComplete, claimWeeklyGoal } = usePlayer();
+  const { player, dailyPulse, requestOpenDailyRounds, claimDailyAllComplete, claimWeeklyGoal } = usePlayer();
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const [toast, setToast] = useState<Toast | null>(null);
@@ -182,7 +176,7 @@ export function DailyPulseToast() {
         ? await claimWeeklyGoal()
         : only.kind === "all"
         ? await claimDailyAllComplete()
-        : await claimDailyObjective(only.id);
+        : await claimDailyAllComplete();
       if (res.ok) {
         seq.current += 1;
         showToast({
@@ -199,7 +193,7 @@ export function DailyPulseToast() {
     } finally {
       setClaiming(false);
     }
-  }, [claiming, player, dismiss, openPanel, claimDailyAllComplete, claimDailyObjective, claimWeeklyGoal, showToast]);
+  }, [claiming, player, dismiss, openPanel, claimDailyAllComplete, claimWeeklyGoal, showToast]);
 
   if (!toast) return null;
 

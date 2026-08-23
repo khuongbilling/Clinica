@@ -5,6 +5,8 @@ import {
   recordObjectiveProgress,
   claimAllCompleteBonus,
   claimWeeklyAllComplete,
+  claimObjectiveReward,
+  claimWeeklyTask,
 } from '../src/game/dailyRounds';
 
 const early: DailyOpportunityInput[] = [
@@ -57,4 +59,24 @@ const weeklyState = { ...mature, weekly_days_completed: 5, weekly_momentum_claim
 const weekly = claimWeeklyAllComplete(weeklyState);
 expect('five-day weekly momentum awards +5 stamina', weekly.reward?.stamina === 5);
 expect('weekly momentum is idempotent', claimWeeklyAllComplete(weekly.state).reward === null);
+
+const legacyFixture = {
+  ...defaultDailyRoundsState(),
+  version: undefined,
+  daily_date: '2026-08-23',
+  weekly_key: '2026-W34',
+  objectives: [{
+    id: 'legacy-complete', mode: 'ward_shift', event: 'ward_shift_win', target: 1, progress: 1,
+    claimed: false, label: 'Legacy combat', description: '', icon: 'medkit', reward: { crowns: 999 },
+  }],
+  weekly_tasks: [{
+    id: 'legacy-weekly', label: 'Legacy weekly', description: '', icon: 'medkit',
+    event: 'ward_shift_win', target: 1, progress: 1, claimed: false, reward: { playerXp: 999 },
+  }],
+} as any;
+const migrated = ensureFreshDailyRounds(legacyFixture, universityOnly, 'legacy-account', day, false);
+expect('legacy state migrates one-way to canonical V2', migrated.state.version === 2 && migrated.state.legacy_claims_settled === true);
+expect('migration clears legacy recurring objectives and tasks', migrated.state.objectives.every((o) => !!o.activity_id) && migrated.state.weekly_tasks.length === 0);
+expect('legacy objective and task claims cannot reopen a payout', claimObjectiveReward(migrated.state, 'legacy-complete').reward === null && claimWeeklyTask(migrated.state, 'legacy-weekly').reward === null);
+expect('migration is idempotent after persistence', ensureFreshDailyRounds(migrated.state, universityOnly, 'legacy-account', day, false).changed === false);
 console.log('Daily Rounds V2 tests passed');

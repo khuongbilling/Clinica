@@ -57,9 +57,13 @@ const DMON = dateKey(MONDAY);
 check('FIXTURE: day1/day2 share an ISO week', weekKey(DAY1) === weekKey(DAY2));
 check('FIXTURE: sunday/monday cross an ISO week boundary', weekKey(SUNDAY) !== weekKey(MONDAY));
 
-// Only ward_shift unlocked -> reroll deterministically yields exactly the
-// obj_ward_shift objective (event ward_shift_win, target 2).
-const MODES = ['ward_shift'];
+// Two distinct receipt-backed V2 opportunities create an attainable early
+// board. The exact card order is irrelevant; completeAll uses the card's
+// actual event/activity identity.
+const MODES = [
+  { id: 'university-practice', label: 'University Practice', category: 'learning' as const, dailyMode: 'university' as const, route: '/university/apply-it' },
+  { id: 'clinical-simulation', label: 'Clinical Simulation', category: 'care' as const, dailyMode: 'university' as const, route: '/university/simulation/clinical' },
+];
 const PLAYER_ID = 'p-rollover';
 
 function freshFor(now: Date, prev?: DailyRoundsState): DailyRoundsState {
@@ -71,7 +75,7 @@ function completeAll(state: DailyRoundsState, now: Date): DailyRoundsState {
   let s = state;
   for (const o of s.objectives) {
     const remaining = o.target - o.progress;
-    if (remaining > 0) s = recordObjectiveProgress(s, o.event, remaining, now).state;
+    if (remaining > 0) s = recordObjectiveProgress(s, o.event, remaining, now, o.activity_id).state;
   }
   return s;
 }
@@ -94,9 +98,20 @@ function makeStore(initial: Player) {
   const updateState = async (_next: Player) => { await Promise.resolve(); };
 
   const foldDaily = (p: Player, event: DailyEventType, amount: number = 1): Player => {
-    const before = ensureFreshDailyRounds(p.daily_rounds, MODES, p.id, now).state;
-    const rec = recordObjectiveProgress(before, event, amount, now);
-    return { ...p, daily_rounds: rec.state };
+    let state = ensureFreshDailyRounds(p.daily_rounds, MODES, p.id, now).state;
+    // This test helper models a sequence of verified completions. It uses each
+    // card's exact activity id rather than allowing a retired generic
+    // ward_shift_win event to advance every V2 opportunity.
+    let remaining = amount;
+    while (remaining > 0) {
+      const card = state.objectives.find((objective) => objective.progress < objective.target);
+      if (!card) break;
+      const step = Math.min(remaining, card.target - card.progress);
+      state = recordObjectiveProgress(state, card.event, step, now, card.activity_id).state;
+      remaining -= step;
+    }
+    void event;
+    return { ...p, daily_rounds: state };
   };
 
   const creditProgress = async (event: DailyEventType, amount: number = 1): Promise<void> => {

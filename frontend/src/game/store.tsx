@@ -477,6 +477,19 @@ function normalizeProgression(p: PlayerState): PlayerState {
   if (!Number.isFinite(out.codex_shards) || out.codex_shards == null) {
     out = { ...out, codex_shards: 0 };
   }
+  // Daily Rounds migration lives in its existing canonical state object. Run it
+  // during every load normalization so a legacy snapshot cannot remain active
+  // merely because the player has not opened the panel or completed an action.
+  const daily = ensureFreshDailyRounds(
+    out.daily_rounds,
+    getDailyEligibleActivities(out),
+    out.id,
+    new Date(),
+    playerLevelFromXp(out.xp ?? 0).level >= 5,
+  );
+  if (daily.changed || out.daily_rounds !== daily.state) {
+    out = { ...out, daily_rounds: daily.state };
+  }
   return out;
 }
 
@@ -1052,8 +1065,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     const before = ensureFreshDailyRounds(p.daily_rounds, modes, p.id, new Date(), mature).state;
     const rec = recordObjectiveProgress(before, event, amount, new Date(), activityId);
     // Fix 9 — also update weekly task progress for the same event.
-    const weeklyRec = recordWeeklyProgress(rec.state, event, amount);
-    const finalState = weeklyRec.changed ? weeklyRec.state : rec.state;
+    const finalState = rec.state;
     if (rec.changed) {
       const advanced = rec.state.objectives
         .map((a) => {
@@ -1086,7 +1098,11 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     try {
       const local = await loadLocal();
       if (!local) { setPlayer(null); setLoading(false); return; }
-      const normalized = normalizeProgression(local);
+        const normalized = normalizeProgression(local);
+        // Persist canonical V2 Daily state before any UI can render it. This
+        // covers offline/relaunch migration and prevents presentation-only
+        // boards from rerolling on the next boot.
+        await saveLocal(normalized);
       setPlayer(normalized);
 
       // Reconcile early objectives (steps 1-6) against PlayerState flags so the
@@ -1110,7 +1126,6 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
         // local save, but do not send an unauthenticated ID-only read/mutation
         // that could either 401 or bind someone else's account.
         if (!sessionToken) {
-          await saveLocal(normalized);
           return;
         }
         const remote = normalizeProgression(await api.getPlayer(local.id, sessionToken));
@@ -1120,13 +1135,24 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
         // ended (e.g. user force-closed the app mid-diagnostic).  Taking the
         // logical OR is safe because these flags only ever move false → true,
         // never the other way around.
-        const merged: PlayerState = {
+        let merged: PlayerState = normalizeProgression({
           ...remote,
           economy_token: sessionToken ?? normalized.economy_token,
           identity_restored:     (normalized.identity_restored     || remote.identity_restored)     ?? remote.identity_restored,
           diagnostic_intro_seen: (normalized.diagnostic_intro_seen || remote.diagnostic_intro_seen) ?? remote.diagnostic_intro_seen,
           seen_reminiscence:     (normalized.seen_reminiscence     || remote.seen_reminiscence)     ?? remote.seen_reminiscence,
-        };
+        });
+        // The backend snapshot is the cross-device source of truth. Write the
+        // one-way V2 migration immediately so an older device cannot revive a
+        // legacy reward branch after this session has upgraded the account.
+        const remoteDaily = JSON.stringify(remote.daily_rounds ?? null);
+        if (JSON.stringify(merged.daily_rounds ?? null) !== remoteDaily) {
+          merged = normalizeProgression(await api.updatePlayer(
+            merged.id,
+            { daily_rounds: merged.daily_rounds },
+            sessionToken,
+          ));
+        }
         setPlayer(merged);
         await saveLocal(merged);
         // Also reconcile against the backend-authoritative snapshot in case
@@ -1207,103 +1233,10 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     const base = playerRef.current ?? player;
     if (!base) return { playerLevelUp: null, heroLevelUps: [] };
     let next = { ...base };
-    // First-clear, authored, key, chapter, and boss rewards call this without
-    // `repeatable`, so they always receive their complete intended value.
-    if (rewards.repeatable && (rewards.progressionValue ?? 0) > 0) {
-      const tier = rewards.progressionValue === 5 ? 'major_boss'
-        : rewards.progressionValue === 3 ? 'area_boss'
-          : rewards.progressionValue === 2 ? 'elite' : 'regular';
-      const activity = rewards.rewardActivity === 'auto_sweep' ? 'auto_sweep'
-        : rewards.rewardActivity === 'ward_defense' ? 'ward_defense'
-          : rewards.rewardActivity === 'university_practice' ? 'university_practice'
-            : rewards.rewardActivity === 'world_event' ? 'world_event'
-              : 'clinical_battle';
-      if (activity === 'clinical_battle' && !rewards.prepaidStamina) {
-        const cost = tier === 'major_boss' ? 5 : tier === 'area_boss' ? 3 : tier === 'elite' ? 2 : 1;
-        const economy = await api.mutateEconomy(next.id, { kind: 'spend_stamina', cost }, next.economy_token);
-        next = await mergeEconomyState(next, economy.player);
-      }
-      const attempt = await api.beginActivityAttempt(next.id, activity, tier, next.economy_token);
-      const server = await api.claimActivityAttempt(next.id, attempt.attempt_id, next.economy_token);
-      const authoritative = normalizeProgression(server.player);
-      playerRef.current = authoritative;
-      setPlayer(authoritative);
-      await saveLocal(authoritative);
-      return { playerLevelUp: null, heroLevelUps: [] };
-    }
-    // One-time story and authored numeric grants use the same atomic endpoint,
-    // but deliberately do not spend the repeat budget. Story-state fields such
-    // as codex unlocks and boss flags continue through the ordinary snapshot.
-    if (rewards.xp || rewards.crowns || rewards.codexShards || rewards.epidemicTokens
-      || rewards.inventoryDelta || rewards.heroXp || rewards.mastery) {
-      const activity = rewards.rewardActivity ?? (rewards.enemyId === 'journey_treasure' ? 'journey_treasure' : 'clinical_battle');
-      const hasAuthoritativeActivity = !!rewards.rewardActivity || !!rewards.enemyId;
-      if (!rewards.repeatable && hasAuthoritativeActivity
-        && (activity === 'clinical_battle' || activity === 'auto_sweep' || activity === 'journey_treasure' || activity === 'university_practice' || activity === 'ward_defense')) {
-        const tier = rewards.progressionValue === 5 ? 'major_boss'
-          : rewards.progressionValue === 3 ? 'area_boss'
-            : rewards.progressionValue === 2 ? 'elite' : 'regular';
-        const firstClearAttempt = activity === 'clinical_battle'
-          ? await (async () => {
-            if (rewards.prepaidStamina) return api.beginActivityAttempt(next.id, activity, tier, next.economy_token);
-            const cost = tier === 'major_boss' ? 5 : tier === 'area_boss' ? 3 : tier === 'elite' ? 2 : 1;
-            const economy = await api.mutateEconomy(next.id, { kind: 'spend_stamina', cost }, next.economy_token);
-            next = await mergeEconomyState(next, economy.player);
-            return api.beginActivityAttempt(next.id, activity, tier, next.economy_token);
-          })()
-          : null;
-        const server = await api.grantActivityReward(next.id, activity, {
-          repeatable: false,
-          claim_key: rewards.contentKey ?? rewards.enemyId ?? rewards.enemyName ?? activity,
-          attempt_id: firstClearAttempt?.attempt_id,
-        }, next.economy_token);
-        const authoritative = normalizeProgression(server.player);
-        // The server owns numeric reward fields. Preserve local story and
-        // encounter markers so a first-clear battle still records its codex,
-        // boss, hero, and chapter bookkeeping without trusting client amounts.
-        next = {
-          ...authoritative,
-          codex_unlocked: Array.from(new Set([...(authoritative.codex_unlocked || []), ...(next.codex_unlocked || [])])),
-          bosses_defeated: Array.from(new Set([...(authoritative.bosses_defeated || []), ...(next.bosses_defeated || [])])),
-          failure_counts: next.failure_counts,
-          enemy_mastery: next.enemy_mastery,
-          region_progress: next.region_progress,
-          runs_completed: next.runs_completed,
-        };
-        if (rewards.codex?.length) {
-          next.codex_unlocked = Array.from(new Set([...(next.codex_unlocked || []), ...rewards.codex]));
-        }
-        if (rewards.bossId && !next.bosses_defeated.includes(rewards.bossId)) {
-          next.bosses_defeated = [...next.bosses_defeated, rewards.bossId];
-        }
-        if (rewards.enemyId) {
-          next.failure_counts = { ...(next.failure_counts || {}), [rewards.enemyId]: 0 };
-        }
-        if (rewards.enemyName) {
-          next.enemy_mastery = {
-            ...(next.enemy_mastery || {}),
-            [rewards.enemyName]: (next.enemy_mastery?.[rewards.enemyName] || 0) + 1,
-          };
-        }
-        if (rewards.regionId) {
-          next.region_progress = {
-            ...(next.region_progress || {}),
-            [rewards.regionId]: (next.region_progress?.[rewards.regionId] || 0) + 1,
-          };
-        }
-        next.runs_completed = (next.runs_completed || 0) + 1;
-        playerRef.current = next;
-        setPlayer(next);
-        await saveLocal(next);
-        // Persist non-numeric completion markers (codex, mastery, boss and
-        // regional state) alongside the server-issued numeric reward snapshot.
-        // This writes the exact authoritative totals back, not client-computed
-        // reward amounts, so it cannot double the first-clear grant.
-        await updateState(next);
-        return { playerLevelUp: null, heroLevelUps: [] };
-      }
-      throw new Error(`No server-owned reward route for ${activity}`);
-    }
+    // Repeatable rewards are settled only by their server-owned activity
+    // completions (University practice, simulations, Grand Rounds, Crisis Drill
+    // and Ward Defense). This general state reducer is never allowed to mint a
+    // generic attempt or claim a client-declared activity reward.
     let playerLevelUp: { fromLevel: number; toLevel: number } | null = null;
     if (rewards.xp) {
       const applied = applyXpDetailed(next, rewards.xp);
@@ -1841,7 +1774,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     const base = playerRef.current;
     if (!base) return null;
     const modes = dailyRoundsUnlockedModes(base);
-    const fresh = ensureFreshDailyRounds(base.daily_rounds, modes, base.id, new Date(), (base.player_level ?? 1) >= 5).state;
+    const fresh = ensureFreshDailyRounds(base.daily_rounds, modes, base.id, new Date(), playerLevelFromXp(base.xp ?? 0).level >= 5).state;
     const result = computeCheckIn(fresh);
     let next: PlayerState = { ...base, daily_rounds: result.state };
     if (result.reward) next = addDailyReward(next, result.reward);
@@ -1854,7 +1787,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     const base = playerRef.current;
     if (!base) return { ok: false, message: 'No player loaded.' };
     const modes = dailyRoundsUnlockedModes(base);
-    const fresh = ensureFreshDailyRounds(base.daily_rounds, modes, base.id, new Date(), (base.player_level ?? 1) >= 5).state;
+    const fresh = ensureFreshDailyRounds(base.daily_rounds, modes, base.id, new Date(), playerLevelFromXp(base.xp ?? 0).level >= 5).state;
     const res = claimObjectiveReward(fresh, objectiveId);
     if (!res.reward) return { ok: false, message: res.message };
     const next = addDailyReward({ ...base, daily_rounds: res.state }, res.reward);
@@ -1867,7 +1800,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     const base = playerRef.current;
     if (!base) return { ok: false, message: 'No player loaded.' };
     const modes = dailyRoundsUnlockedModes(base);
-    const fresh = ensureFreshDailyRounds(base.daily_rounds, modes, base.id, new Date(), (base.player_level ?? 1) >= 5).state;
+    const fresh = ensureFreshDailyRounds(base.daily_rounds, modes, base.id, new Date(), playerLevelFromXp(base.xp ?? 0).level >= 5).state;
     const res = claimAllCompleteBonus(fresh);
     if (!res.reward) return { ok: false, message: res.message };
     try {
@@ -1888,7 +1821,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     const base = playerRef.current;
     if (!base) return { ok: false, message: 'No player loaded.' };
     const modes = dailyRoundsUnlockedModes(base);
-    const fresh = ensureFreshDailyRounds(base.daily_rounds, modes, base.id, new Date(), (base.player_level ?? 1) >= 5).state;
+    const fresh = ensureFreshDailyRounds(base.daily_rounds, modes, base.id, new Date(), playerLevelFromXp(base.xp ?? 0).level >= 5).state;
     const res = claimWeeklyReward(fresh);
     if (!res.reward) return { ok: false, message: res.message };
     try {
@@ -2592,9 +2525,9 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     };
   }, [updateState, mergeEconomyState]);
 
-  // The Fading Apprentice labs predate the data-driven practice screen but
-  // remain reachable from the University. Keep their story-first rewards full,
-  // while sending any replayable credit grant through the same daily budget.
+  // The legacy Fading Apprentice screens do not own server-verifiable attempts.
+  // They remain playable as lessons, but cannot issue repeat rewards. The
+  // data-driven University Practice completion route is the authoritative path.
   const grantLegacyUniPracticeReward = useCallback(async (
     activityType: 'cue_lab' | 'triage' | 'stack',
     universityCredits: number,
@@ -2602,32 +2535,13 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     isFirstStoryClear: boolean,
     firstPerfectBonus = 0,
   ) => {
-    const base = playerRef.current;
-    if (!base) return { universityCredits: 0, staminaBonus: 0 };
-
-    const grant = await (async () => {
-      const attempt = await api.beginActivityAttempt(base.id, 'university_practice', 'regular', base.economy_token);
-      return api.claimActivityAttempt(base.id, attempt.attempt_id, base.economy_token);
-    })();
-    const grantedCredits = scaledAge1Reward(universityCredits, grant.multiplier);
-    let next = normalizeProgression(grant.player);
-    const persistedCredits = grantedCredits + (isFirstStoryClear ? firstPerfectBonus : 0);
-    if (objectiveXp > 0) next = applyXp(next, objectiveXp);
-    if (persistedCredits > 0) {
-      next = { ...next, university_credits: (next.university_credits || 0) + persistedCredits };
-    }
-    let staminaBonus = 0;
-    try {
-      const economy = await api.mutateEconomy(base.id, {
-        kind: 'grant_stamina_bonus', source: `practice:${activityType}`, amount: 1,
-      }, base.economy_token);
-      staminaBonus = economy.stamina_bonus ?? 0;
-      next = await mergeEconomyState(next, economy.player);
-    } catch { /* only one educational bonus is available per lab/day */ }
-    playerRef.current = next;
-    await updateState(next);
-    return { universityCredits: grantedCredits, staminaBonus };
-  }, [updateState, mergeEconomyState]);
+    void activityType;
+    void universityCredits;
+    void objectiveXp;
+    void isFirstStoryClear;
+    void firstPerfectBonus;
+    return { universityCredits: 0, staminaBonus: 0 };
+  }, []);
 
   // J4 — Hero Skill Academy: spend learning materials + University Credits to
   // purchase the next rank of a skill upgrade. Uses playerRef critical section
@@ -3556,7 +3470,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     const base = playerRef.current;
     if (!base) return { ok: false, message: 'No player.' };
     const modes = dailyRoundsUnlockedModes(base);
-    const fresh = ensureFreshDailyRounds(base.daily_rounds, modes, base.id, new Date(), (base.player_level ?? 1) >= 5).state;
+    const fresh = ensureFreshDailyRounds(base.daily_rounds, modes, base.id, new Date(), playerLevelFromXp(base.xp ?? 0).level >= 5).state;
     const res = claimWeeklyTaskPure(fresh, taskId);
     if (!res.reward) return { ok: false, message: res.message };
     const next = addDailyReward({ ...base, daily_rounds: res.state }, res.reward);
@@ -3569,7 +3483,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     const base = playerRef.current;
     if (!base) return { ok: false, message: 'No player.' };
     const modes = dailyRoundsUnlockedModes(base);
-    const fresh = ensureFreshDailyRounds(base.daily_rounds, modes, base.id, new Date(), (base.player_level ?? 1) >= 5).state;
+    const fresh = ensureFreshDailyRounds(base.daily_rounds, modes, base.id, new Date(), playerLevelFromXp(base.xp ?? 0).level >= 5).state;
     const res = claimWeeklyAllCompletePure(fresh);
     if (!res.reward) return { ok: false, message: res.message };
     try {

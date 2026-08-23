@@ -107,47 +107,6 @@ export const api = {
       headers: economyToken ? { 'X-Clinica-Session': economyToken, 'X-Clinica-Economy-Token': economyToken } : {},
     },
   ),
-  grantActivityReward: (
-    id: string,
-    activity: 'clinical_battle' | 'journey_treasure' | 'auto_sweep' | 'ward_defense' | 'university_practice' | 'world_event',
-    grant: {
-      tier?: 'regular' | 'elite' | 'area_boss' | 'major_boss';
-      repeatable?: boolean;
-      claim_key?: string;
-      attempt_id?: string;
-      xp?: number; crowns?: number; codex_shards?: number; epidemic_tokens?: number; university_credits?: number;
-      hero_xp?: Record<string, number>; inventory?: Record<string, number>; mastery?: Record<string, number>;
-    },
-    economyToken?: string,
-  ) => http<{ player: PlayerState; multiplier: number; units: number; granted: Record<string, number> }>(
-    `/player/${id}/rewards/${activity}`,
-    {
-      method: 'POST',
-      body: JSON.stringify({ activity, ...grant }),
-      headers: economyToken ? { 'X-Clinica-Session': economyToken, 'X-Clinica-Economy-Token': economyToken } : {},
-    },
-  ),
-  beginActivityAttempt: (
-    id: string,
-    activity: 'clinical_battle' | 'journey_treasure' | 'auto_sweep' | 'ward_defense' | 'university_practice' | 'world_event',
-    tier: 'regular' | 'elite' | 'area_boss' | 'major_boss',
-    sessionToken?: string,
-  ) => http<{ attempt_id: string; activity: string; tier: string }>(
-    `/player/${id}/activity-attempts/${activity}`,
-    {
-      method: 'POST',
-      body: JSON.stringify({ tier }),
-      headers: sessionToken ? { 'X-Clinica-Session': sessionToken } : {},
-    },
-  ),
-  claimActivityAttempt: (id: string, attemptId: string, sessionToken?: string) =>
-    http<{ player: PlayerState; multiplier: number; units: number; granted: Record<string, number> }>(
-      `/player/${id}/activity-attempts/${attemptId}/claim`,
-      {
-        method: 'POST',
-        headers: sessionToken ? { 'X-Clinica-Session': sessionToken } : {},
-      },
-    ),
   completeUniversityPractice: (
     id: string,
     completion: {
