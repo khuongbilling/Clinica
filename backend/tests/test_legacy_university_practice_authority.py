@@ -41,6 +41,10 @@ async def _exercise_legacy_receipt_lifecycle() -> None:
         }
 
         try:
+            await db.activity_completion_receipts.create_index(
+                [("player_id", 1), ("activity_id", 1), ("completion_key", 1)],
+                unique=True,
+            )
             # A completion key cannot be invented without a server-issued,
             # player-bound receipt.
             forged = await client.post(
