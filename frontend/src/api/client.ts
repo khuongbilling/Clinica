@@ -7,6 +7,7 @@ import type {
 import type {
   GrandRoundsAttempt, GrandRoundsCaseCard, GrandRoundsDebrief, GrandRoundsGate,
 } from '@/src/game/grandRounds';
+import type { FacultyGrandRoundsBoard, FacultyGrandRoundsDraft } from '@/src/game/facultyGrandRounds';
 import type {
   CrisisDrillAttempt, CrisisDrillCaseCard, CrisisDrillDebrief, CrisisDrillGate, CrisisDrillDifficulty,
 } from '@/src/game/crisisDrill';
@@ -272,6 +273,34 @@ export const api = {
       `/player/${id}/grand-rounds/attempts/${attemptId}/complete`,
       { method: 'POST', headers: sessionToken ? { 'X-Clinica-Session': sessionToken } : {} },
     ),
+  getFacultyGrandRounds: (facultyKey: string) =>
+    http<FacultyGrandRoundsBoard>('/faculty/grand-rounds/cases', { headers: { 'X-Clinica-Faculty-Key': facultyKey } }),
+  createFacultyGrandRoundsDraft: (facultyKey: string, caseId: string, manifest: Record<string, unknown>) =>
+    http<{ draft: FacultyGrandRoundsDraft }>('/faculty/grand-rounds/cases/drafts', {
+      method: 'POST', body: JSON.stringify({ case_id: caseId, manifest }), headers: { 'X-Clinica-Faculty-Key': facultyKey },
+    }),
+  updateFacultyGrandRoundsDraft: (facultyKey: string, draftId: string, expectedRevision: number, manifest: Record<string, unknown>) =>
+    http<{ draft: FacultyGrandRoundsDraft }>(`/faculty/grand-rounds/cases/drafts/${draftId}`, {
+      method: 'PUT', body: JSON.stringify({ expected_revision: expectedRevision, manifest }), headers: { 'X-Clinica-Faculty-Key': facultyKey },
+    }),
+  submitFacultyGrandRoundsReview: (facultyKey: string, draftId: string, expectedRevision: number) =>
+    http<{ draft: FacultyGrandRoundsDraft }>(`/faculty/grand-rounds/cases/drafts/${draftId}/submit-review`, {
+      method: 'POST', body: JSON.stringify({ expected_revision: expectedRevision }), headers: { 'X-Clinica-Faculty-Key': facultyKey },
+    }),
+  reviewFacultyGrandRoundsDraft: (
+    facultyKey: string, draftId: string, expectedRevision: number,
+    decision: 'approve_for_publish' | 'changes_requested', notes: string,
+  ) => http<{ draft: FacultyGrandRoundsDraft }>(`/faculty/grand-rounds/cases/drafts/${draftId}/review`, {
+    method: 'POST', body: JSON.stringify({ expected_revision: expectedRevision, decision, notes }), headers: { 'X-Clinica-Faculty-Key': facultyKey },
+  }),
+  approveFacultyGrandRoundsDraft: (facultyKey: string, draftId: string, expectedRevision: number) =>
+    http<{ draft: FacultyGrandRoundsDraft; published: { caseId: string; version: number } }>(`/faculty/grand-rounds/cases/drafts/${draftId}/approve`, {
+      method: 'POST', body: JSON.stringify({ expected_revision: expectedRevision }), headers: { 'X-Clinica-Faculty-Key': facultyKey },
+    }),
+  retireFacultyGrandRoundsCase: (facultyKey: string, caseId: string, reason: string) =>
+    http<{ caseId: string; status: 'retired' }>(`/faculty/grand-rounds/cases/${caseId}/retire`, {
+      method: 'POST', body: JSON.stringify({ reason }), headers: { 'X-Clinica-Faculty-Key': facultyKey },
+    }),
   beginUniversityPracticeAttempt: (
     id: string,
     attempt: {

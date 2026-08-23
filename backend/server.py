@@ -103,7 +103,27 @@ def player_access_ok(doc: Dict[str, Any], player_id: str, session: Optional[str]
     # only during the explicit one-time migration endpoint below.
     return valid_guest_session(session, player_id)
 
+def faculty_principal(x_clinica_faculty_key: Optional[str]) -> Dict[str, str]:
+    """Authenticate a faculty operator from a server-only token registry.
 
+    CLINICA_FACULTY_TOKENS is JSON of ``token -> {id, role}``.  It is
+    intentionally separate from guest player sessions: a player identifier or
+    client-supplied role can never gain authoring access.
+    """
+    raw_registry = os.environ.get("CLINICA_FACULTY_TOKENS")
+    if not raw_registry:
+        raise HTTPException(status_code=503, detail="faculty authoring is not configured")
+    try:
+        registry = json.loads(raw_registry)
+    except json.JSONDecodeError as error:
+        raise HTTPException(status_code=503, detail="faculty authoring token registry is invalid") from error
+    principal = registry.get(x_clinica_faculty_key or "") if isinstance(registry, dict) else None
+    if not isinstance(principal, dict):
+        raise HTTPException(status_code=401, detail="invalid faculty credential")
+    faculty_id, role = principal.get("id"), principal.get("role")
+    if not isinstance(faculty_id, str) or not faculty_id or role not in {"author", "reviewer", "approver"}:
+        raise HTTPException(status_code=401, detail="invalid faculty credential")
+    return {"id": faculty_id, "role": role}
 def age1_day_key(now: Optional[datetime] = None) -> str:
     return (now or datetime.now(timezone.utc)).date().isoformat()
 
@@ -1321,7 +1341,9 @@ class GrandRoundsResponseRequest(BaseModel):
 class GrandRoundsNotesRequest(BaseModel):
     notes: str = Field(max_length=2000)
 
-
+class FacultyGrandRoundsDraftCreateRequest(BaseModel):
+    case_id: Optional[str] = Field(default=None, min_length=3, max_length=80, pattern=r"^[a-z0-9][a-z0-9-]*$")
+    manifest: Dict[str, Any]
 class CrisisDrillStartRequest(BaseModel):
     drill_id: str
     drill_version: int = Field(ge=1)
@@ -2620,8 +2642,95 @@ def grand_rounds_eligible(player: Dict[str, Any]) -> bool:
 def grand_round_progress(player: Dict[str, Any]) -> int:
     return sum(int(player.get(key, 0)) for key in ("uni_cue_lab_count", "uni_triage_count", "uni_stack_count"))
 
-
-def grand_round_catalog(player: Dict[str, Any]) -> List[Dict[str, Any]]:
+def _grand_round_manifest_errors(case_id: str, raw: Dict[str, Any]) -> List[str]:
+    """Validate a private authored manifest before it can enter review."""
+    errors: List[str] = []
+    allowed_domains = {"airway", "assessment", "stabilization", "pharmacology", "judgment", "systems"}
+    required_text = ("family", "title", "subtitle", "domain", "patientName", "handoff", "concern", "principle")
+    for key in required_text:
+        if not isinstance(raw.get(key), str) or not raw[key].strip():
+            errors.append(f"{key} is required")
+    if raw.get("difficulty") not in {"introductory", "standard", "advanced", "expert"}:
+        errors.append("difficulty must be introductory, standard, advanced, or expert")
+    if raw.get("domain") not in allowed_domains:
+        errors.append("domain must be one of airway, assessment, stabilization, pharmacology, judgment, or systems")
+    if not isinstance(raw.get("patientAge"), int) or not 0 < raw["patientAge"] < 130:
+        errors.append("patientAge must be between 1 and 129")
+    if not isinstance(raw.get("unlockChapter"), int) or not 1 <= raw["unlockChapter"] <= 10:
+        errors.append("unlockChapter must be between 1 and 10")
+    if not isinstance(raw.get("unlockPractice"), int) or not 0 <= raw["unlockPractice"] <= 100:
+        errors.append("unlockPractice must be between 0 and 100")
+    if not isinstance(raw.get("relatedPractice"), list) or not raw["relatedPractice"] or not all(isinstance(item, str) and item.strip() for item in raw["relatedPractice"]):
+        errors.append("relatedPractice must contain at least one practice name")
+    initial = raw.get("initial")
+    if not isinstance(initial, dict) or any(not isinstance(initial.get(key), int) or not 0 <= initial[key] <= 100 for key in ("stability", "oxygenation", "perfusion")):
+        errors.append("initial must include stability, oxygenation, and perfusion from 0 to 100")
+    hidden = raw.get("hidden")
+    hidden_ids = set()
+    if not isinstance(hidden, list):
+        errors.append("hidden must be a list")
+    else:
+        for item in hidden:
+            if not isinstance(item, dict) or not all(isinstance(item.get(key), str) and item[key].strip() for key in ("id", "label", "value")):
+                errors.append("each hidden finding needs id, label, and value")
+                continue
+            if item["id"] in hidden_ids:
+                errors.append("hidden finding ids must be unique")
+            hidden_ids.add(item["id"])
+    stations = raw.get("stations")
+    if not isinstance(stations, dict) or "observe" not in stations:
+        return [*errors, "stations must include the observe entry station"]
+    response_ids = set()
+    for station_id, station in stations.items():
+        if not isinstance(station_id, str) or not isinstance(station, dict):
+            errors.append("stations must be keyed objects")
+            continue
+        if station.get("inputKind") not in {"single_choice", "priority", "sequence"}:
+            errors.append(f"station {station_id} has an invalid inputKind")
+        if not isinstance(station.get("label"), str) or not station["label"].strip() or not isinstance(station.get("prompt"), str) or not station["prompt"].strip():
+            errors.append(f"station {station_id} needs a label and prompt")
+        responses = station.get("responses")
+        if not isinstance(responses, dict) or not responses:
+            errors.append(f"station {station_id} needs at least one response")
+            continue
+        for response_id, response in responses.items():
+            if not isinstance(response_id, str) or not isinstance(response, dict):
+                errors.append(f"station {station_id} has an invalid response")
+                continue
+            if response_id in response_ids:
+                errors.append("response ids must be unique across the full case")
+            response_ids.add(response_id)
+            if not all(isinstance(response.get(key), str) and response[key].strip() for key in ("label", "rationale", "announcement")):
+                errors.append(f"response {response_id} needs label, rationale, and announcement")
+            if not isinstance(response.get("points", 0), int) or not 0 <= response["points"] <= 100:
+                errors.append(f"response {response_id} needs points from 0 to 100")
+            next_station = response.get("next")
+            if next_station is not None and next_station not in stations:
+                errors.append(f"response {response_id} points to an unknown next station")
+            if not isinstance(response.get("delta", {}), dict) or any(key not in {"stability", "oxygenation", "perfusion"} or not isinstance(value, int) or not -100 <= value <= 100 for key, value in response.get("delta", {}).items()):
+                errors.append(f"response {response_id} has an invalid patient delta")
+            if not isinstance(response.get("reveal", []), list) or any(item not in hidden_ids for item in response.get("reveal", [])):
+                errors.append(f"response {response_id} reveals an unknown finding")
+            if "unsafe" in response and not isinstance(response["unsafe"], bool):
+                errors.append(f"response {response_id} unsafe must be true or false")
+    # The player scoring contract normalizes a 90-100 point best route to 100.
+    # Forbid cycles so an authored station cannot permit infinite score farming.
+    def best_score(station_id: str, visiting: set[str]) -> int:
+        if station_id in visiting:
+            errors.append("station graph cannot contain cycles")
+            return -1000
+        responses = stations.get(station_id, {}).get("responses", {})
+        scores = []
+        for response in responses.values():
+            next_station = response.get("next")
+            follow = 0 if next_station is None else best_score(next_station, {*visiting, station_id})
+            scores.append(int(response.get("points", 0)) + follow)
+        return max(scores, default=-1000)
+    maximum = best_score("observe", set())
+    if not 90 <= maximum <= 100:
+        errors.append("the highest complete safe route must total 90 to 100 points")
+    return list(dict.fromkeys(errors))
+async def grand_round_catalog(player: Dict[str, Any]) -> List[Dict[str, Any]]:
     history = player.get("grand_rounds_history") or []
     completed = {}
     for item in history:
@@ -2629,7 +2738,7 @@ def grand_round_catalog(player: Dict[str, Any]) -> List[Dict[str, Any]]:
     level = int(player.get("player_level") or player_level_from_xp(int(player.get("xp", 0))))
     progress = grand_round_progress(player)
     catalog = []
-    for case_id, manifest in GRAND_ROUNDS_CASES.items():
+    for case_id, manifest in (await active_grand_round_manifests()).items():
         level_ok = manifest["difficulty"] not in {"advanced", "expert"} or level >= GRAND_ROUNDS_ADVANCED_LEVEL_GATE
         practice_ok = progress >= int(manifest["unlockPractice"])
         available = bool(grand_rounds_eligible(player) and level_ok and practice_ok)
@@ -2659,11 +2768,18 @@ async def get_grand_round_player(player_id: str, session: Optional[str]) -> Dict
         raise HTTPException(status_code=401, detail="invalid player session")
     return player
 
-
+def faculty_grand_round_view(draft: Dict[str, Any]) -> Dict[str, Any]:
+    """Return a governed authoring document only after faculty authentication."""
+    return {
+        "draftId": draft["draftId"], "caseId": draft["caseId"], "version": draft["version"],
+        "status": draft["status"], "revision": draft["revision"], "manifest": draft["manifest"],
+        "authorId": draft["authorId"], "createdAt": draft["createdAt"], "updatedAt": draft["updatedAt"],
+        "review": draft.get("review"), "approval": draft.get("approval"), "audit": draft.get("audit", []),
+    }
 @api_router.get("/player/{player_id}/grand-rounds")
 async def list_grand_rounds(player_id: str, x_clinica_session: Optional[str] = Header(default=None)):
     player = await get_grand_round_player(player_id, x_clinica_session)
-    catalog = grand_round_catalog(player)
+    catalog = await grand_round_catalog(player)
     recommendation = next((item["id"] for item in catalog if item["available"] and not item["completedCount"]), None)
     return {
         "cases": catalog, "recommended_id": recommendation,
@@ -2682,12 +2798,12 @@ async def start_grand_rounds(
     player = await get_grand_round_player(player_id, x_clinica_session)
     if not grand_rounds_eligible(player):
         raise HTTPException(status_code=409, detail="Complete the University foundation practices before entering Grand Rounds")
-    manifest = GRAND_ROUNDS_CASES.get(payload.case_id)
+    manifest = await grand_round_manifest(payload.case_id)
     if not manifest:
         raise HTTPException(status_code=422, detail="unknown reviewed Grand Rounds case")
     if int(payload.case_version) != int(manifest["version"]):
         raise HTTPException(status_code=409, detail="this reviewed case version has changed; refresh the case board")
-    selected = next((row for row in grand_round_catalog(player) if row["id"] == payload.case_id), None)
+    selected = next((row for row in await grand_round_catalog(player) if row["id"] == payload.case_id), None)
     if not selected or not selected["available"]:
         raise HTTPException(status_code=409, detail=(selected or {}).get("lockedReason") or "this case is not yet available")
     if payload.retry_mode == "guided" and not any(
@@ -2770,7 +2886,7 @@ async def start_grand_rounds(
     if fenced.modified_count != 1:
         await db.grand_rounds_attempts.delete_one({"attemptId": attempt["attemptId"], "player_id": player_id})
         raise HTTPException(status_code=409, detail="the Grand Rounds reservation expired; retry the case")
-    return {"attempt": grand_round_public_attempt(attempt)}
+    return {"attempt": grand_round_public_attempt(attempt, manifest)}
 
 
 @api_router.get("/player/{player_id}/grand-rounds/attempts/{attempt_id}")
@@ -2779,7 +2895,10 @@ async def get_grand_round_attempt(player_id: str, attempt_id: str, x_clinica_ses
     attempt = await db.grand_rounds_attempts.find_one({"attemptId": attempt_id, "player_id": player_id}, {"_id": 0})
     if not attempt:
         raise HTTPException(status_code=404, detail="Grand Rounds attempt not found")
-    return {"attempt": grand_round_public_attempt(attempt)}
+    manifest = await grand_round_manifest(attempt["caseId"], attempt["version"])
+    if not manifest:
+        raise HTTPException(status_code=409, detail="the immutable case version for this attempt is unavailable")
+    return {"attempt": grand_round_public_attempt(attempt, manifest)}
 
 
 @api_router.post("/player/{player_id}/grand-rounds/attempts/{attempt_id}/responses")
@@ -2792,7 +2911,7 @@ async def submit_grand_round_response(
         raise HTTPException(status_code=404, detail="Grand Rounds attempt not found")
     if attempt.get("status") != "active":
         raise HTTPException(status_code=409, detail="resume this case before making a clinical decision")
-    manifest = GRAND_ROUNDS_CASES.get(attempt["caseId"])
+    manifest = await grand_round_manifest(attempt["caseId"], attempt["version"])
     station = (manifest or {}).get("stations", {}).get(attempt.get("stageId"))
     response = (station or {}).get("responses", {}).get(payload.response_id)
     if not response:
@@ -2830,7 +2949,7 @@ async def submit_grand_round_response(
     )
     if write.modified_count != 1:
         raise HTTPException(status_code=409, detail="the case state changed; reload before responding")
-    return {"attempt": grand_round_public_attempt(next_attempt)}
+    return {"attempt": grand_round_public_attempt(next_attempt, manifest)}
 
 
 @api_router.post("/player/{player_id}/grand-rounds/attempts/{attempt_id}/pause")
@@ -2840,7 +2959,10 @@ async def pause_grand_round(player_id: str, attempt_id: str, x_clinica_session: 
     attempt = await db.grand_rounds_attempts.find_one({"attemptId": attempt_id, "player_id": player_id}, {"_id": 0})
     if not attempt:
         raise HTTPException(status_code=404, detail="Grand Rounds attempt not found")
-    return {"attempt": grand_round_public_attempt(attempt)}
+    manifest = await grand_round_manifest(attempt["caseId"], attempt["version"])
+    if not manifest:
+        raise HTTPException(status_code=409, detail="the immutable case version for this attempt is unavailable")
+    return {"attempt": grand_round_public_attempt(attempt, manifest)}
 
 
 @api_router.post("/player/{player_id}/grand-rounds/attempts/{attempt_id}/resume")
@@ -2850,7 +2972,10 @@ async def resume_grand_round(player_id: str, attempt_id: str, x_clinica_session:
     attempt = await db.grand_rounds_attempts.find_one({"attemptId": attempt_id, "player_id": player_id}, {"_id": 0})
     if not attempt:
         raise HTTPException(status_code=404, detail="Grand Rounds attempt not found")
-    return {"attempt": grand_round_public_attempt(attempt)}
+    manifest = await grand_round_manifest(attempt["caseId"], attempt["version"])
+    if not manifest:
+        raise HTTPException(status_code=409, detail="the immutable case version for this attempt is unavailable")
+    return {"attempt": grand_round_public_attempt(attempt, manifest)}
 
 
 @api_router.put("/player/{player_id}/grand-rounds/attempts/{attempt_id}/notes")
@@ -2865,7 +2990,10 @@ async def save_grand_round_notes(
     attempt = await db.grand_rounds_attempts.find_one({"attemptId": attempt_id, "player_id": player_id}, {"_id": 0})
     if not attempt:
         raise HTTPException(status_code=404, detail="Grand Rounds attempt not found")
-    return {"attempt": grand_round_public_attempt(attempt)}
+    manifest = await grand_round_manifest(attempt["caseId"], attempt["version"])
+    if not manifest:
+        raise HTTPException(status_code=409, detail="the immutable case version for this attempt is unavailable")
+    return {"attempt": grand_round_public_attempt(attempt, manifest)}
 
 
 @api_router.post("/player/{player_id}/grand-rounds/attempts/{attempt_id}/abandon")
@@ -2911,7 +3039,9 @@ async def complete_grand_round(player_id: str, attempt_id: str, x_clinica_sessio
                 return {"player": Player(**current).model_dump(), "debrief": pending["completion"], "already_completed": True}
             await asyncio.sleep(0.05)
         raise HTTPException(status_code=409, detail="Grand Rounds receipt is being finalized; retry to receive the canonical debrief")
-    manifest = GRAND_ROUNDS_CASES[attempt["caseId"]]
+    manifest = await grand_round_manifest(attempt["caseId"], attempt["version"])
+    if not manifest:
+        raise HTTPException(status_code=409, detail="the immutable case version for this attempt is unavailable")
     patient = attempt["patient"]
     raw_score = round(sum(
         (manifest["stations"][entry["stageId"]]["responses"][entry["responseId"]].get("points", 0))
@@ -4669,7 +4799,7 @@ async def mark_run_abandoned(run_id: str, x_clinica_session: Optional[str] = Hea
     return doc
 @app.on_event("startup")
 async def startup_db():
-    """Create idempotency indexes for Journey and the non-rewarding activity layer."""
+    """Create authority indexes for gameplay, activities, and faculty publishing."""
     await db.journey_runs.create_index(
         [("player_id", ASCENDING), ("chapter_id", ASCENDING), ("attempt_number", ASCENDING)],
         unique=True,
@@ -4687,6 +4817,12 @@ async def startup_db():
         [("activity_id", ASCENDING), ("day", ASCENDING)],
         name="activity_analytics_by_activity_day",
     )
+    await db.grand_rounds_case_manifests.create_index(
+        [("caseId", ASCENDING), ("version", ASCENDING)], unique=True, name="immutable_grand_round_version",
+    )
+    await db.grand_rounds_case_catalog.create_index([("caseId", ASCENDING)], unique=True, name="grand_round_catalog_case")
+    await db.grand_rounds_case_drafts.create_index([("draftId", ASCENDING)], unique=True, name="grand_round_draft_id")
+    await db.grand_rounds_case_drafts.create_index([("status", ASCENDING), ("updatedAt", DESCENDING)], name="grand_round_draft_review_queue")
 
 
 app.include_router(api_router)
@@ -4706,3 +4842,233 @@ logger = logging.getLogger(__name__)
 @app.on_event("shutdown")
 async def shutdown_db_client():
     client.close()
+
+class FacultyGrandRoundsDraftUpdateRequest(BaseModel):
+    expected_revision: int = Field(ge=1)
+    manifest: Dict[str, Any]
+
+@api_router.post("/faculty/grand-rounds/cases/drafts")
+async def create_faculty_grand_round_draft(
+    payload: FacultyGrandRoundsDraftCreateRequest, x_clinica_faculty_key: Optional[str] = Header(default=None),
+):
+    principal = faculty_principal(x_clinica_faculty_key)
+    require_faculty_role(principal, "author")
+    case_id = (payload.case_id or "").strip()
+    if not case_id:
+        raise HTTPException(status_code=422, detail="case_id is required for a new faculty case")
+    version = await next_grand_round_version(case_id)
+    manifest = clean_grand_round_manifest(case_id, payload.manifest, version)
+    now = now_iso()
+    draft = {
+        "draftId": str(uuid.uuid4()), "caseId": case_id, "version": version, "status": "draft", "revision": 1,
+        "manifest": manifest, "authorId": principal["id"], "createdAt": now, "updatedAt": now,
+        "audit": [{"at": now, "actorId": principal["id"], "event": "draft_created", "revision": 1}],
+    }
+    await db.grand_rounds_case_drafts.insert_one(draft)
+    return {"draft": faculty_grand_round_view(draft)}
+
+@api_router.post("/faculty/grand-rounds/cases/{case_id}/retire")
+async def retire_faculty_grand_round(
+    case_id: str, payload: FacultyGrandRoundsRetireRequest, x_clinica_faculty_key: Optional[str] = Header(default=None),
+):
+    principal = faculty_principal(x_clinica_faculty_key)
+    require_faculty_role(principal, "approver")
+    now = now_iso()
+    result = await db.grand_rounds_case_catalog.update_one(
+        {"caseId": case_id, "status": "active"},
+        {"$set": {"status": "retired", "retiredAt": now, "retiredBy": principal["id"], "retirementReason": payload.reason.strip(), "updatedAt": now}},
+    )
+    if result.modified_count != 1:
+        raise HTTPException(status_code=404, detail="there is no active faculty-published case with that id")
+    await db.grand_rounds_case_audit.insert_one(
+        {"caseId": case_id, "at": now, "actorId": principal["id"], "event": "case_retired", "reason": payload.reason.strip()}
+    )
+    return {"caseId": case_id, "status": "retired"}
+
+@api_router.post("/faculty/grand-rounds/cases/drafts/{draft_id}/submit-review")
+async def submit_faculty_grand_round_review(
+    draft_id: str, payload: FacultyGrandRoundsApproveRequest, x_clinica_faculty_key: Optional[str] = Header(default=None),
+):
+    principal = faculty_principal(x_clinica_faculty_key)
+    require_faculty_role(principal, "author")
+    now = now_iso()
+    result = await db.grand_rounds_case_drafts.update_one(
+        {"draftId": draft_id, "authorId": principal["id"], "revision": payload.expected_revision, "status": {"$in": ["draft", "changes_requested"]}},
+        {"$set": {"status": "in_review", "revision": payload.expected_revision + 1, "updatedAt": now},
+         "$push": {"audit": {"at": now, "actorId": principal["id"], "event": "review_requested", "revision": payload.expected_revision + 1}}},
+    )
+    if result.modified_count != 1:
+        raise HTTPException(status_code=409, detail="this draft cannot be submitted; reload before trying again")
+    updated = await db.grand_rounds_case_drafts.find_one({"draftId": draft_id}, {"_id": 0})
+    return {"draft": faculty_grand_round_view(updated)}
+
+async def next_grand_round_version(case_id: str) -> int:
+    latest = await db.grand_rounds_case_manifests.find_one(
+        {"caseId": case_id}, {"_id": 0, "version": 1}, sort=[("version", DESCENDING)]
+    )
+    static = GRAND_ROUNDS_CASES.get(case_id)
+    return max(int((latest or {}).get("version", 0)), int((static or {}).get("version", 0))) + 1
+
+def clean_grand_round_manifest(case_id: str, raw: Dict[str, Any], version: int) -> Dict[str, Any]:
+    errors = _grand_round_manifest_errors(case_id, raw)
+    if errors:
+        raise HTTPException(status_code=422, detail={"message": "case manifest needs correction", "errors": errors})
+    minutes = {"introductory": 15, "standard": 20, "advanced": 25, "expert": 30}[raw["difficulty"]]
+    stability = int(raw["initial"]["stability"])
+    acuity = "critical" if stability < 45 else "high" if stability < 65 else "moderate"
+    return {
+        **raw, "version": version, "estimatedMinutes": minutes,
+        "family": raw["family"].strip(), "title": raw["title"].strip(), "subtitle": raw["subtitle"].strip(),
+        "domain": raw["domain"].strip(), "patientName": raw["patientName"].strip(), "handoff": raw["handoff"].strip(),
+        "concern": raw["concern"].strip(), "principle": raw["principle"].strip(),
+        "relatedPractice": [item.strip() for item in raw["relatedPractice"]],
+        # Acuity is server-derived, never a faculty-entered or player-controlled
+        # field. Public attempts require this state from their first response.
+        "initial": {**raw["initial"], "acuity": acuity},
+    }
+
+class FacultyGrandRoundsReviewRequest(BaseModel):
+    expected_revision: int = Field(ge=1)
+    decision: Literal["approve_for_publish", "changes_requested"]
+    notes: str = Field(min_length=3, max_length=4000)
+
+@api_router.get("/faculty/grand-rounds/cases")
+async def list_faculty_grand_rounds(x_clinica_faculty_key: Optional[str] = Header(default=None)):
+    principal = faculty_principal(x_clinica_faculty_key)
+    drafts = []
+    cursor = db.grand_rounds_case_drafts.find({}, {"_id": 0}).sort("updatedAt", DESCENDING)
+    async for draft in cursor:
+        drafts.append(faculty_grand_round_view(draft))
+    catalog = []
+    async for item in db.grand_rounds_case_catalog.find({}, {"_id": 0}).sort("caseId", ASCENDING):
+        catalog.append(item)
+    return {"faculty": {"id": principal["id"], "role": principal["role"]}, "drafts": drafts, "catalog": catalog}
+
+class FacultyGrandRoundsApproveRequest(BaseModel):
+    expected_revision: int = Field(ge=1)
+
+async def active_grand_round_manifests() -> Dict[str, Dict[str, Any]]:
+    """Overlay governed approved versions over the legacy Age 1 catalog."""
+    manifests = dict(GRAND_ROUNDS_CASES)
+    rows = db.grand_rounds_case_catalog.find({"status": "active"}, {"_id": 0, "caseId": 1, "currentVersion": 1})
+    async for row in rows:
+        manifest = await grand_round_manifest(row["caseId"], int(row["currentVersion"]))
+        if manifest:
+            manifests[row["caseId"]] = manifest
+    retired = db.grand_rounds_case_catalog.find({"status": "retired"}, {"_id": 0, "caseId": 1})
+    async for row in retired:
+        manifests.pop(row["caseId"], None)
+    return manifests
+
+def require_faculty_role(principal: Dict[str, str], *roles: str) -> None:
+    if principal["role"] not in roles:
+        raise HTTPException(status_code=403, detail="your faculty role cannot perform this action")
+
+async def grand_round_manifest(case_id: str, version: Optional[int] = None) -> Optional[Dict[str, Any]]:
+    """Resolve a manifest by its immutable version, including retired content."""
+    if version is not None:
+        published = await db.grand_rounds_case_manifests.find_one(
+            {"caseId": case_id, "version": int(version)}, {"_id": 0, "manifest": 1}
+        )
+        if published:
+            return published["manifest"]
+        static = GRAND_ROUNDS_CASES.get(case_id)
+        return static if static and int(static["version"]) == int(version) else None
+    catalog = await db.grand_rounds_case_catalog.find_one({"caseId": case_id, "status": "active"}, {"_id": 0})
+    if catalog:
+        return await grand_round_manifest(case_id, int(catalog["currentVersion"]))
+    retired = await db.grand_rounds_case_catalog.find_one({"caseId": case_id, "status": "retired"}, {"_id": 0})
+    if retired:
+        return None
+    return GRAND_ROUNDS_CASES.get(case_id)
+
+@api_router.post("/faculty/grand-rounds/cases/drafts/{draft_id}/review")
+async def review_faculty_grand_round(
+    draft_id: str, payload: FacultyGrandRoundsReviewRequest, x_clinica_faculty_key: Optional[str] = Header(default=None),
+):
+    principal = faculty_principal(x_clinica_faculty_key)
+    require_faculty_role(principal, "reviewer")
+    draft = await db.grand_rounds_case_drafts.find_one({"draftId": draft_id}, {"_id": 0})
+    if not draft:
+        raise HTTPException(status_code=404, detail="faculty case draft not found")
+    if draft["authorId"] == principal["id"]:
+        raise HTTPException(status_code=403, detail="a faculty author cannot review their own case")
+    now = now_iso()
+    next_status = "approved_for_publish" if payload.decision == "approve_for_publish" else "changes_requested"
+    review = {"reviewerId": principal["id"], "decision": payload.decision, "notes": payload.notes.strip(), "reviewedAt": now}
+    result = await db.grand_rounds_case_drafts.update_one(
+        {"draftId": draft_id, "revision": payload.expected_revision, "status": "in_review"},
+        {"$set": {"status": next_status, "review": review, "revision": payload.expected_revision + 1, "updatedAt": now},
+         "$push": {"audit": {"at": now, "actorId": principal["id"], "event": payload.decision, "revision": payload.expected_revision + 1}}},
+    )
+    if result.modified_count != 1:
+        raise HTTPException(status_code=409, detail="this review changed; reload before recording a decision")
+    updated = await db.grand_rounds_case_drafts.find_one({"draftId": draft_id}, {"_id": 0})
+    return {"draft": faculty_grand_round_view(updated)}
+
+@api_router.post("/faculty/grand-rounds/cases/drafts/{draft_id}/approve")
+async def approve_faculty_grand_round(
+    draft_id: str, payload: FacultyGrandRoundsApproveRequest, x_clinica_faculty_key: Optional[str] = Header(default=None),
+):
+    principal = faculty_principal(x_clinica_faculty_key)
+    require_faculty_role(principal, "approver")
+    draft = await db.grand_rounds_case_drafts.find_one({"draftId": draft_id}, {"_id": 0})
+    if not draft:
+        raise HTTPException(status_code=404, detail="faculty case draft not found")
+    if draft["authorId"] == principal["id"] or (draft.get("review") or {}).get("reviewerId") == principal["id"]:
+        raise HTTPException(status_code=403, detail="approval requires an independent faculty approver")
+    if draft["status"] != "approved_for_publish" or int(draft["revision"]) != payload.expected_revision:
+        raise HTTPException(status_code=409, detail="this case is not ready for approval; reload its review state")
+    # Revalidate immediately before publishing; only this clean snapshot is
+    # written to the append-only manifest collection.
+    manifest = clean_grand_round_manifest(draft["caseId"], draft["manifest"], int(draft["version"]))
+    now = now_iso()
+    immutable = {
+        "caseId": draft["caseId"], "version": draft["version"], "manifest": manifest,
+        "approvedAt": now, "approvedBy": principal["id"], "sourceDraftId": draft_id,
+        "review": draft["review"],
+    }
+    try:
+        await db.grand_rounds_case_manifests.insert_one(immutable)
+    except DuplicateKeyError:
+        raise HTTPException(status_code=409, detail="this immutable case version was already published")
+    await db.grand_rounds_case_catalog.update_one(
+        {"caseId": draft["caseId"]},
+        {"$set": {"caseId": draft["caseId"], "currentVersion": draft["version"], "status": "active", "updatedAt": now, "updatedBy": principal["id"]}},
+        upsert=True,
+    )
+    await db.grand_rounds_case_drafts.update_one(
+        {"draftId": draft_id, "revision": payload.expected_revision, "status": "approved_for_publish"},
+        {"$set": {"status": "published", "approval": {"approverId": principal["id"], "approvedAt": now}, "revision": payload.expected_revision + 1, "updatedAt": now},
+         "$push": {"audit": {"at": now, "actorId": principal["id"], "event": "immutable_version_published", "revision": payload.expected_revision + 1}}},
+    )
+    updated = await db.grand_rounds_case_drafts.find_one({"draftId": draft_id}, {"_id": 0})
+    return {"draft": faculty_grand_round_view(updated), "published": {"caseId": draft["caseId"], "version": draft["version"]}}
+
+class FacultyGrandRoundsRetireRequest(BaseModel):
+    reason: str = Field(min_length=3, max_length=1000)
+
+@api_router.put("/faculty/grand-rounds/cases/drafts/{draft_id}")
+async def update_faculty_grand_round_draft(
+    draft_id: str, payload: FacultyGrandRoundsDraftUpdateRequest, x_clinica_faculty_key: Optional[str] = Header(default=None),
+):
+    principal = faculty_principal(x_clinica_faculty_key)
+    require_faculty_role(principal, "author")
+    draft = await db.grand_rounds_case_drafts.find_one({"draftId": draft_id}, {"_id": 0})
+    if not draft:
+        raise HTTPException(status_code=404, detail="faculty case draft not found")
+    if draft["authorId"] != principal["id"]:
+        raise HTTPException(status_code=403, detail="only the drafting faculty member can edit this case")
+    if draft["status"] not in {"draft", "changes_requested"}:
+        raise HTTPException(status_code=409, detail="only a draft or requested-changes case can be edited")
+    manifest = clean_grand_round_manifest(draft["caseId"], payload.manifest, int(draft["version"]))
+    now = now_iso()
+    result = await db.grand_rounds_case_drafts.update_one(
+        {"draftId": draft_id, "revision": payload.expected_revision, "status": {"$in": ["draft", "changes_requested"]}},
+        {"$set": {"manifest": manifest, "status": "draft", "revision": payload.expected_revision + 1, "updatedAt": now},
+         "$push": {"audit": {"at": now, "actorId": principal["id"], "event": "draft_updated", "revision": payload.expected_revision + 1}}},
+    )
+    if result.modified_count != 1:
+        raise HTTPException(status_code=409, detail="this draft changed; reload before saving")
+    updated = await db.grand_rounds_case_drafts.find_one({"draftId": draft_id}, {"_id": 0})
+    return {"draft": faculty_grand_round_view(updated)}

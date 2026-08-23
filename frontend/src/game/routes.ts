@@ -82,6 +82,7 @@ const UNI_SCHOOLS:              AppRoute = "/university/schools";
 // Keep this explicit cast until that generator has seen the new screen.
 const UNI_GRAND_ROUNDS:         AppRoute = "/university/grand-rounds" as AppRoute;
 const UNI_CRISIS_DRILL:         AppRoute = "/university/crisis-drill" as AppRoute;
+const FACULTY_GRAND_ROUNDS:     AppRoute = "/faculty/grand-rounds" as AppRoute;
 
 // ── Other screens ─────────────────────────────────────────────────────────────
 const TITLE:               AppRoute = "/title";
@@ -183,6 +184,7 @@ export const ROUTES = {
   UNI_SCHOOLS,
   UNI_GRAND_ROUNDS,
   UNI_CRISIS_DRILL,
+  FACULTY_GRAND_ROUNDS,
 
   // ── Other screens ─────────────────────────────────────────────────────────
   TITLE,

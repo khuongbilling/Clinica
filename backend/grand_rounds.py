@@ -92,8 +92,13 @@ def public_station(manifest: Dict[str, Any], stage_id: Optional[str]) -> Optiona
             "options": [{"id": rid, "label": item["label"], "rationale": item["rationale"]} for rid, item in station["responses"].items()]}
 
 
-def public_attempt(attempt: Dict[str, Any]) -> Dict[str, Any]:
-    manifest = GRAND_ROUNDS_CASES[attempt["caseId"]]
+def public_attempt(attempt: Dict[str, Any], manifest: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    """Project an attempt without leaking its private answer contract.
+
+    ``manifest`` is supplied by the server for faculty-published versions.  The
+    static catalog remains a backwards-compatible fallback for legacy attempts.
+    """
+    manifest = manifest or GRAND_ROUNDS_CASES[attempt["caseId"]]
     return {
         "attemptId": attempt["attemptId"], "caseId": attempt["caseId"], "version": attempt["version"],
         "branchId": attempt["branchId"], "difficulty": attempt["difficulty"], "status": attempt["status"],
