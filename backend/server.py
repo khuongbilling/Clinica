@@ -6,6 +6,8 @@ from pymongo import ASCENDING, DESCENDING
 from pymongo.errors import DuplicateKeyError
 import os
 import asyncio
+import hashlib
+import hmac
 import random
 import secrets
 import logging
@@ -14,7 +16,7 @@ import hashlib
 import hmac
 import json
 from pathlib import Path
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 from typing import Any, Dict, List, Optional, Literal
 import uuid
 from datetime import datetime, timezone, timedelta
@@ -36,6 +38,29 @@ db = client[os.environ.get('DB_NAME', 'clinica')]
 
 app = FastAPI(title="Clinica: Kingdom of Healing API")
 api_router = APIRouter(prefix="/api")
+
+ACTIVITY_REGISTRY_PATH = ROOT_DIR.parent / "frontend" / "src" / "game" / "activityRegistry.manifest.json"
+with ACTIVITY_REGISTRY_PATH.open(encoding="utf-8") as activity_registry_file:
+    _activity_registry_document = json.load(activity_registry_file)
+ACTIVITY_REGISTRY_VERSION = int(_activity_registry_document["version"])
+ACTIVITY_REGISTRY = {row["id"]: row for row in _activity_registry_document["activities"]}
+# 5A records lifecycle evidence only for sources whose meaningful completion is
+# already verified by an existing authoritative attempt. It deliberately does
+# not make rewards, Daily claims, wellness, Realm production, or client input
+# part of this endpoint.
+ACTIVITY_COMPLETION_SOURCES = {
+    "university-practice": "activity_attempts",
+    "clinical-simulation": "clinical_simulation_attempts",
+    "grand-rounds": "grand_rounds_attempts",
+    "crisis-drill": "crisis_drill_attempts",
+}
+
+
+def activity_analytics_key(player_id: str, activity_id: str, completion_key: str) -> str:
+    """Create an analytics-only, non-joinable receipt identifier."""
+    secret = os.environ.get("SESSION_SECRET", "clinica-development-analytics-key").encode()
+    message = f"{player_id}:{activity_id}:{completion_key}".encode()
+    return hmac.new(secret, message, hashlib.sha256).hexdigest()
 
 
 def now_iso() -> str:
@@ -595,6 +620,12 @@ class PlayerUpdate(BaseModel):
     chapter_boss_keys: Optional[Dict[str, Any]] = None
     # Canonical shift per choice chapter (str chapter_id → "day"|"evening"|"night").
     canonical_shifts: Optional[Dict[str, str]] = None
+
+
+class ActivityCompletionRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    activity_id: str
+    completion_key: str = Field(min_length=1, max_length=160)
 
 
 # ---------- Player Hero foundation ----------
@@ -2122,6 +2153,113 @@ async def complete_university_practice(
         "first_completion": is_first_completion,
         "milestone_ids": milestone_ids,
         "already_claimed": False,
+    }
+
+
+# ---------- Living Clinica Activity Registry (Package 5A) ----------
+
+def activity_is_daily_eligible(activity_id: str, player: Dict[str, Any]) -> bool:
+    """Mirror the registry's introduction rule without inspecting sensitive data."""
+    if activity_id == "university-practice":
+        return bool(player.get("seen_university_intro")) and len(player.get("lessons_completed") or []) > 0
+    if activity_id in {"clinical-simulation", "grand-rounds", "crisis-drill"}:
+        return (
+            len(player.get("lessons_completed") or []) > 0
+            and int(player.get("uni_cue_lab_count") or 0) > 0
+            and int(player.get("uni_triage_count") or 0) > 0
+            and int(player.get("uni_stack_count") or 0) > 0
+        )
+    return False
+
+
+async def verified_activity_completion_source(
+    player_id: str, activity_id: str, completion_key: str,
+) -> Dict[str, Any]:
+    """Return an existing authoritative completion or reject forged lifecycle events."""
+    collection = ACTIVITY_COMPLETION_SOURCES.get(activity_id)
+    if not collection:
+        raise HTTPException(status_code=422, detail="activity does not have a registered authoritative completion source")
+    if activity_id == "university-practice":
+        attempt = await db.activity_attempts.find_one(
+            {"id": completion_key, "player_id": player_id, "status": "claimed"}, {"_id": 0},
+        )
+    else:
+        attempt = await getattr(db, collection).find_one(
+            {"attemptId": completion_key, "player_id": player_id, "completion": {"$exists": True}}, {"_id": 0},
+        )
+    if not attempt:
+        raise HTTPException(status_code=409, detail="meaningful activity completion has not been verified")
+    return attempt
+
+
+@api_router.post("/player/{player_id}/activity-completions")
+async def record_activity_completion(
+    player_id: str,
+    payload: ActivityCompletionRequest,
+    x_clinica_session: Optional[str] = Header(default=None),
+):
+    """
+    Record a single, non-rewarding lifecycle receipt for an already settled
+    activity. The client cannot choose a reward, event type, wellness value,
+    answer, note, or patient content; it may only name an existing completion.
+    """
+    player = await db.players.find_one({"id": player_id}, {"_id": 0})
+    if not player:
+        raise HTTPException(status_code=404, detail="player not found")
+    if not player_access_ok(player, player_id, x_clinica_session, None):
+        raise HTTPException(status_code=401, detail="invalid player session")
+    activity = ACTIVITY_REGISTRY.get(payload.activity_id)
+    if not activity or payload.activity_id not in ACTIVITY_COMPLETION_SOURCES:
+        raise HTTPException(status_code=422, detail="activity is not registered for completion tracking")
+    source = await verified_activity_completion_source(player_id, payload.activity_id, payload.completion_key)
+    completed_at = source.get("completed_at") or source.get("claimed_at") or now_iso()
+    receipt = {
+        "player_id": player_id,
+        "activity_id": payload.activity_id,
+        "completion_key": payload.completion_key,
+        "registry_version": ACTIVITY_REGISTRY_VERSION,
+        "category": activity["category"],
+        "home_area": activity["homeArea"],
+        "daily_eligible": activity_is_daily_eligible(payload.activity_id, player),
+        "completed_at": completed_at,
+        "recorded_at": now_iso(),
+    }
+    try:
+        await db.activity_completion_receipts.insert_one(receipt)
+        accepted, duplicate = True, False
+    except DuplicateKeyError:
+        accepted, duplicate = False, True
+        existing = await db.activity_completion_receipts.find_one(
+            {"player_id": player_id, "activity_id": payload.activity_id, "completion_key": payload.completion_key},
+            {"_id": 0},
+        )
+        if existing:
+            receipt = existing
+
+    # Aggregate-only analytics. No account ID, notes, patient state, clinical
+    # responses, wellness/log content, or rewards leave the receipt boundary.
+    if accepted:
+        analytics = {
+            "receipt_key": activity_analytics_key(player_id, payload.activity_id, payload.completion_key),
+            "activity_id": payload.activity_id,
+            "category": activity["category"],
+            "home_area": activity["homeArea"],
+            "registry_version": ACTIVITY_REGISTRY_VERSION,
+            "day": str(completed_at)[:10],
+            "recorded_at": now_iso(),
+        }
+        try:
+            await db.activity_analytics.insert_one(analytics)
+        except DuplicateKeyError:
+            pass
+    return {
+        "accepted": accepted,
+        "duplicate": duplicate,
+        "receipt": {
+            "activityId": receipt["activity_id"],
+            "completionKey": receipt["completion_key"],
+            "dailyEligible": bool(receipt["daily_eligible"]),
+        },
     }
 
 
@@ -4502,11 +4640,23 @@ async def mark_run_abandoned(run_id: str, x_clinica_session: Optional[str] = Hea
     return doc
 @app.on_event("startup")
 async def startup_db():
-    """Create the unique compound index that prevents duplicate journey runs."""
+    """Create idempotency indexes for Journey and the non-rewarding activity layer."""
     await db.journey_runs.create_index(
         [("player_id", ASCENDING), ("chapter_id", ASCENDING), ("attempt_number", ASCENDING)],
         unique=True,
         name="unique_player_chapter_attempt",
+    )
+    await db.activity_completion_receipts.create_index(
+        [("player_id", ASCENDING), ("activity_id", ASCENDING), ("completion_key", ASCENDING)],
+        unique=True,
+    )
+    await db.activity_analytics.create_index(
+        [("receipt_key", ASCENDING)],
+        unique=True,
+    )
+    await db.activity_analytics.create_index(
+        [("activity_id", ASCENDING), ("day", ASCENDING)],
+        name="activity_analytics_by_activity_day",
     )
 
 

@@ -9,6 +9,7 @@ import { ScrollView, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { BannerCard } from "@/src/components/ModeBanners";
+import { ActivityEntryGate } from "@/src/components/FeatureGate";
 import { JOURNEY_SAGAS } from "@/src/game/journeyHierarchy";
 import type { ModeCardDef } from "@/src/game/modeHub";
 import { UNIVERSITY_HUB_MODE } from "@/src/game/modeHub";
@@ -33,6 +34,10 @@ const MEMORIES_MODE: ModeCardDef = {
 };
 
 export default function JourneyTab() {
+  return <ActivityEntryGate activityId="journey" title="Journey" fallback={ROUTES.tabs}><JourneyContent /></ActivityEntryGate>;
+}
+
+function JourneyContent() {
   const router = useRouter();
   const { player } = usePlayer();
   const newMemories = unseenMemoriesCount(player);

@@ -163,6 +163,7 @@ for (const legacySimulation of SIMULATIONS) {
 for (const clinicalSimulation of CLINICAL_SIMULATIONS) {
   assert(resolveSimulationRoute(clinicalSimulation.id) === 'clinical', `${clinicalSimulation.id} opens the Clinical Simulation Lab`);
 }
+assert(resolveSimulationRoute('clinical') === 'clinical', 'the stable Lab selector route opens the Clinical Simulation Lab');
 assert(resolveSimulationRoute('missing-simulation') === 'unknown', 'unknown IDs never fall back to a different simulation');
 
 console.log('clinical_simulation: deterministic state, 24 reviewed cases, safe/unsafe paths, route ownership, hidden data, safety, branch identity, and completion passed');

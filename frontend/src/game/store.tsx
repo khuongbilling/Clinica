@@ -22,6 +22,7 @@ import {
   recordWeeklyProgress, QUEST_MILESTONES, CheckInResult, allObjectivesComplete, allWeeklyTasksComplete,
 } from './dailyRounds';
 import { buildGateContext, checkFeatureGate } from './progression';
+import { getDailyEligibleFeatureIds } from './activityRegistry';
 import {
   defaultOwnedUnits, sanitizeLoadout, rollGachaUnit, STARTER_UNIT_IDS,
   GACHA_COST, MASTERY_LEVEL_CAP, WARD_UNIT_META, getMasteryRequirement,
@@ -798,11 +799,8 @@ function makeLocalId(): string {
 // Modes a Daily Rounds objective can be drawn from. Filtered per-player through
 // the same compound feature gate the rest of the app uses, so a brand-new
 // player only ever gets objectives for the systems they have actually unlocked.
-const DAILY_ROUNDS_MODES = ['ward_shift', 'ward_defense', 'university', 'lotus_journal', 'hall_of_heroes'];
-
 function dailyRoundsUnlockedModes(p: PlayerState): string[] {
-  const ctx = buildGateContext(p);
-  return DAILY_ROUNDS_MODES.filter((m) => checkFeatureGate(m, ctx).unlocked);
+  return getDailyEligibleFeatureIds(p);
 }
 
 // Credit currency reward from a claimed daily/weekly/streak/milestone reward.
@@ -2399,8 +2397,11 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     playerRef.current = next;
     setPlayer(next);
     await saveLocal(next);
+    // This non-rewarding receipt is intentionally best-effort: the simulation
+    // endpoint above remains the only source of rewards and Daily progress.
+    void api.recordActivityCompletion(base.id, 'clinical-simulation', attemptId, base.economy_token).catch(() => undefined);
     return { debrief: response.debrief, alreadyCompleted: response.already_completed };
-  }, [foldDaily]);
+  }, []);
 
   // Grand Rounds is its own server-authoritative lifecycle. These wrappers
   // never calculate state, scores, or rewards locally; they only persist the
@@ -2457,6 +2458,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     const response = await api.completeGrandRounds(base.id, attemptId, base.economy_token);
     const next = normalizeProgression(response.player);
     playerRef.current = next; setPlayer(next); await saveLocal(next);
+    void api.recordActivityCompletion(base.id, 'grand-rounds', attemptId, base.economy_token).catch(() => undefined);
     return { debrief: response.debrief, alreadyCompleted: response.already_completed };
   }, []);
 
@@ -2511,6 +2513,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     const response = await api.completeCrisisDrill(base.id, attemptId, base.economy_token);
     const next = normalizeProgression(response.player);
     playerRef.current = next; setPlayer(next); await saveLocal(next);
+    void api.recordActivityCompletion(base.id, 'crisis-drill', attemptId, base.economy_token).catch(() => undefined);
     return { debrief: response.debrief, alreadyCompleted: response.already_completed };
   }, []);
 
@@ -2548,6 +2551,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       },
       base.economy_token,
     );
+    void api.recordActivityCompletion(base.id, 'university-practice', attempt.attempt_id, base.economy_token).catch(() => undefined);
     const isFirstComplete = grant.first_completion;
     const rawRewardDef = (isFirstComplete ? PRACTICE_REWARDS : PRACTICE_REPEAT_REWARDS)[activityType][difficulty];
     const rewardDef = {

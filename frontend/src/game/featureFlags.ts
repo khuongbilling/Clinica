@@ -53,3 +53,13 @@ export const MULTI_THREAT_COMBAT_V1 = true;
 // Default: false — wardEvent tiles are not generated until this is enabled.
 // Rollback: set to false.  Existing runs have no wardEvent tiles to render.
 export const WARD_EVENTS_V1 = false;
+
+// ── Living Clinica — Activity Registry 5A ───────────────────────────────────
+// A metadata and access layer only. It never changes rewards, currency,
+// inventory, combat, or existing attempt settlement. Roll back by setting false:
+// legacy feature gates continue to operate through the compatibility path.
+export const ACTIVITY_REGISTRY_5A = true;
+
+// The Lab registry entry is deliberately metadata-only in 5A. It stays hidden
+// until a later package ships a reviewed, authoritative activity.
+export const APOTHECARY_LAB_5A_PREVIEW = false;

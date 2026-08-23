@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "activities": [
+    { "id": "university-practice", "label": "University Practice", "category": "learning", "homeArea": "university", "featureId": "university", "route": "/university/apply-it", "visibility": "available", "dailyEligible": true, "dailyMode": "university", "completionKind": "attempt" },
+    { "id": "clinical-simulation", "label": "Clinical Simulation Lab", "category": "learning", "homeArea": "university", "featureId": "university", "route": "/university/simulation/clinical", "visibility": "available", "dailyEligible": true, "dailyMode": "university", "completionKind": "attempt" },
+    { "id": "grand-rounds", "label": "Grand Rounds", "category": "learning", "homeArea": "university", "featureId": "university", "route": "/university/grand-rounds", "visibility": "available", "dailyEligible": true, "dailyMode": "university", "completionKind": "attempt" },
+    { "id": "crisis-drill", "label": "Crisis Drill", "category": "learning", "homeArea": "university", "featureId": "university", "route": "/university/crisis-drill", "visibility": "available", "dailyEligible": true, "dailyMode": "university", "completionKind": "attempt" },
+    { "id": "ward-shift", "label": "Ward Shift", "category": "care", "homeArea": "shift", "featureId": "ward_shift", "route": "/shift", "visibility": "available", "dailyEligible": true, "dailyMode": "ward_shift", "completionKind": "run" },
+    { "id": "ward-defense", "label": "Ward Defense", "category": "care", "homeArea": "shift", "featureId": "ward_defense", "route": "/ward-defense", "visibility": "available", "dailyEligible": true, "dailyMode": "ward_defense", "completionKind": "run" },
+    { "id": "journey", "label": "Journey", "category": "adventure", "homeArea": "journey", "featureId": "ward_shift", "route": "/journey", "visibility": "available", "dailyEligible": true, "dailyMode": "ward_shift", "completionKind": "node" },
+    { "id": "realm", "label": "Realm Sanctuary", "category": "sanctuary", "homeArea": "realm", "featureId": "realm", "route": "/kingdom", "visibility": "available", "dailyEligible": false, "dailyMode": null, "completionKind": "none" },
+    { "id": "lotus-journal", "label": "Lotus Plate Journal", "category": "wellness", "homeArea": "lotus", "featureId": "lotus_journal", "route": "/lotus-journal", "visibility": "available", "dailyEligible": true, "dailyMode": "lotus_journal", "completionKind": "reflection" },
+    { "id": "hero-growth", "label": "Hero Growth", "category": "roster", "homeArea": "heroes", "featureId": "hall_of_heroes", "route": "/(tabs)/heroes", "visibility": "available", "dailyEligible": true, "dailyMode": "hall_of_heroes", "completionKind": "progression" },
+    { "id": "shop", "label": "Apothecary Market", "category": "market", "homeArea": "shop", "featureId": "shop", "route": "/shop", "visibility": "available", "dailyEligible": false, "dailyMode": null, "completionKind": "none" },
+    { "id": "apothecary-lab", "label": "Apothecary Lab", "category": "crafting", "homeArea": "realm", "featureId": "realm", "visibility": "teased", "dailyEligible": false, "dailyMode": null, "completionKind": "none" }
+  ]
+}

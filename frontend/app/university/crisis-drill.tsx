@@ -14,6 +14,7 @@ import type {
 } from '@/src/game/crisisDrill';
 import { ROUTES } from '@/src/game/routes';
 import { usePlayer } from '@/src/game/store';
+import { ActivityEntryGate } from '@/src/components/FeatureGate';
 import { COLORS, RADIUS, SPACING } from '@/src/theme/colors';
 
 const cleanError = (error: unknown) =>
@@ -53,6 +54,10 @@ function Vital({ label, value }: { label: string; value: number }) {
 }
 
 export default function CrisisDrillScreen() {
+  return <ActivityEntryGate activityId="crisis-drill" title="Crisis Drill" fallback={ROUTES.UNIVERSITY}><CrisisDrillContent /></ActivityEntryGate>;
+}
+
+function CrisisDrillContent() {
   const router = useRouter();
   const {
     player,
@@ -63,7 +68,6 @@ export default function CrisisDrillScreen() {
     abandonCrisisDrill,
     completeCrisisDrill,
   } = usePlayer();
-
   const [cases, setCases] = useState<CrisisDrillCaseCard[]>([]);
   const [gate, setGate] = useState<CrisisDrillGate | null>(null);
   const [attempt, setAttempt] = useState<CrisisDrillAttempt | null>(null);

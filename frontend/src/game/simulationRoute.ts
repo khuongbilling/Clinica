@@ -11,6 +11,9 @@ export type SimulationRouteKind = 'legacy' | 'clinical' | 'unknown';
  */
 export function resolveSimulationRoute(id: string): SimulationRouteKind {
   if (getSimulation(id)) return 'legacy';
+  // The Lab is a selector, not a single case. This explicit sentinel is used by
+  // the registry's stable route and never falls through to an unavailable case.
+  if (id === 'clinical') return 'clinical';
   if (getClinicalSimulation(id)) return 'clinical';
   return 'unknown';
 }

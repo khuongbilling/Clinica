@@ -8,6 +8,7 @@ import { api } from '@/src/api/client';
 import type { GrandRoundsAttempt, GrandRoundsCaseCard, GrandRoundsDebrief, GrandRoundsGate } from '@/src/game/grandRounds';
 import { ROUTES } from '@/src/game/routes';
 import { usePlayer } from '@/src/game/store';
+import { ActivityEntryGate } from '@/src/components/FeatureGate';
 import { COLORS, RADIUS, SPACING } from '@/src/theme/colors';
 
 const cleanError = (error: unknown) => error instanceof Error ? error.message.replace(/^API \d+: /, '') : 'Grand Rounds is unavailable right now.';
@@ -23,6 +24,10 @@ function Vital({ label, value }: { label: string; value: number }) {
 }
 
 export default function GrandRoundsScreen() {
+  return <ActivityEntryGate activityId="grand-rounds" title="Grand Rounds" fallback={ROUTES.UNIVERSITY}><GrandRoundsContent /></ActivityEntryGate>;
+}
+
+function GrandRoundsContent() {
   const router = useRouter();
   const {
     player, startGrandRounds, resumeGrandRounds, submitGrandRoundsResponse, pauseGrandRounds,

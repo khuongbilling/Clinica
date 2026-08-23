@@ -5,13 +5,14 @@ import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import {
-  CLINICAL_SIMULATIONS, getClinicalSimulation,
+  CLINICAL_SIMULATIONS, getClinicalSimulation, recommendedSimulation,
   CLINICAL_SIMULATION_ADVANCED_LEVEL_GATE, SimulationActionGroup, SimulationAttemptState, SimulationConfig, SimulationDebrief,
   SimulationManifest,
 } from '@/src/game/clinicalSimulation';
 import { LegacySimulationDetail } from '@/src/components/university/LegacySimulationDetail';
 import { resolveSimulationRoute } from '@/src/game/simulationRoute';
 import { usePlayer } from '@/src/game/store';
+import { ActivityEntryGate } from '@/src/components/FeatureGate';
 import { ROUTES } from '@/src/game/routes';
 import { COLORS, RADIUS, SPACING } from '@/src/theme/colors';
 
@@ -58,13 +59,17 @@ function MissingSimulationScreen() {
 }
 
 function ClinicalSimulationLabScreen() {
+  return <ActivityEntryGate activityId="clinical-simulation" title="Clinical Simulation Lab" fallback={ROUTES.UNIVERSITY}><ClinicalSimulationLabContent /></ActivityEntryGate>;
+}
+
+function ClinicalSimulationLabContent() {
   const router = useRouter();
   const params = useLocalSearchParams<{ id: string }>();
   const {
     player, startClinicalSimulation, resumeClinicalSimulation,
     submitClinicalSimulationAction, completeClinicalSimulation,
   } = usePlayer();
-  const initialManifest = getClinicalSimulation(String(params.id))!;
+  const initialManifest = getClinicalSimulation(String(params.id)) ?? recommendedSimulation();
   const [manifest, setManifest] = useState<SimulationManifest>(initialManifest);
   const [screen, setScreen] = useState<ScreenState>('intro');
   const [attempt, setAttempt] = useState<SimulationAttemptState | null>(null);

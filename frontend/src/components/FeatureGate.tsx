@@ -1,10 +1,12 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import type { ReactNode } from "react";
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { usePlayer } from "@/src/game/store";
 import { buildGateContext, checkFeatureGate, type GateResult } from "@/src/game/progression";
+import { resolveActivityAccess, type ActivityAccess } from "@/src/game/activityRegistry";
 import { goBack } from "@/src/utils/navigation";
 import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 
@@ -14,6 +16,41 @@ import { COLORS, RADIUS, SPACING } from "@/src/theme/colors";
 export function useFeatureGate(featureId: string): GateResult {
   const { player } = usePlayer();
   return checkFeatureGate(featureId, buildGateContext(player));
+}
+
+/**
+ * Registry-backed screen-entry guard for activity routes. Unlike a typed route,
+ * this resolves visibility, feature flags, compound progression gates, and the
+ * reviewed-mode introduction requirement in one place.
+ */
+export function useActivityGate(activityId: string): ActivityAccess {
+  const { player } = usePlayer();
+  return resolveActivityAccess(activityId, player);
+}
+
+/** Use at a route boundary so AsyncStorage hydration never flashes a lock. */
+export function ActivityEntryGate({
+  activityId,
+  title,
+  fallback,
+  children,
+}: {
+  activityId: string;
+  title: string;
+  fallback: string;
+  children: ReactNode;
+}) {
+  const { loading } = usePlayer();
+  const access = useActivityGate(activityId);
+  if (loading) {
+    return <SafeAreaView style={styles.container} edges={["top"]}>
+      <View style={styles.center}><ActivityIndicator color={COLORS.brand} /></View>
+    </SafeAreaView>;
+  }
+  if (!access.allowed) {
+    return <FeatureLockedView title={title} reason={access.reason} fallback={fallback} />;
+  }
+  return <>{children}</>;
 }
 
 // Friendly full-screen locked state shown when a player reaches a gated screen

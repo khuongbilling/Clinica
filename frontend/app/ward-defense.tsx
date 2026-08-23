@@ -51,6 +51,7 @@ const ENEMY_PORTRAITS: Record<string, any> = {
 };
 
 import { usePlayer } from "@/src/game/store";
+import { ActivityEntryGate } from "@/src/components/FeatureGate";
 import { api } from "@/src/api/client";
 import { useTutorial } from "@/src/game/tutorialStore";
 import { useBlockBack } from "@/src/hooks/useBlockBack";
@@ -2537,6 +2538,10 @@ function WavePauseOverlay({ wave }: { wave: number }) {
    MAIN WARD DEFENSE COMPONENT
    ═══════════════════════════════════════════════════════════════════ */
 export default function WardDefense() {
+  return <ActivityEntryGate activityId="ward-defense" title="Ward Defense" fallback={ROUTES.SHIFT}><WardDefenseContent /></ActivityEntryGate>;
+}
+
+function WardDefenseContent() {
   const router = useRouter();
   const { player, completeWardDefense, recordWardWaves, syncInventory, setWardLoadout, updateState } = usePlayer();
   const { isCompleted, startTutorial, onRequiredAction } = useTutorial();

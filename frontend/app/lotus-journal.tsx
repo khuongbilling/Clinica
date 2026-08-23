@@ -10,6 +10,7 @@ import { useTutorial } from "@/src/game/tutorialStore";
 import { useClearTutorialOnExit } from "@/src/hooks/useClearTutorialOnExit";
 import { useWebBackToHub } from "@/src/hooks/useWebBackToHub";
 import { PlayerHeader } from "@/src/components/PlayerHeader";
+import { ActivityEntryGate } from "@/src/components/FeatureGate";
 import { TutorialOverlay } from "@/src/components/TutorialOverlay";
 import { RewardPreview } from "@/src/components/RewardPreview";
 import { DAILY_INSIGHT_CAP, WELLNESS_LESSONS } from "@/src/game/wellness";
@@ -28,6 +29,10 @@ const BOUTIQUE_ITEMS = [
 ];
 
 export default function LotusJournalPage() {
+  return <ActivityEntryGate activityId="lotus-journal" title="Lotus Plate Journal" fallback={ROUTES.tabs}><LotusJournalContent /></ActivityEntryGate>;
+}
+
+function LotusJournalContent() {
   const router = useRouter();
   const { player, logWellnessActivity } = usePlayer();
   const { isCompleted, startTutorial } = useTutorial();

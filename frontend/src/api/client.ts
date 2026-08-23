@@ -341,6 +341,19 @@ export const api = {
       body: JSON.stringify({ class_id: classId }),
       headers: sessionToken ? { 'X-Clinica-Session': sessionToken } : {},
     }),
+  recordActivityCompletion: (
+    id: string,
+    activityId: 'university-practice' | 'clinical-simulation' | 'grand-rounds' | 'crisis-drill',
+    attemptId: string,
+    sessionToken?: string,
+  ) => http<{ accepted: boolean; duplicate: boolean; receipt: { activityId: string; completionKey: string; dailyEligible: boolean } }>(
+    `/player/${id}/activity-completions`,
+    {
+      method: 'POST',
+      body: JSON.stringify({ activity_id: activityId, completion_key: attemptId }),
+      headers: sessionToken ? { 'X-Clinica-Session': sessionToken } : {},
+    },
+  ),
   claimClassTier: (id: string, level: 1 | 10 | 20 | 30, sessionToken?: string) =>
     http<PlayerState>(`/player/${id}/class-tiers`, {
       method: 'POST',
