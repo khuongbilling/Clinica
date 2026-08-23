@@ -81,6 +81,7 @@ const UNI_SCHOOLS:              AppRoute = "/university/schools";
 // Expo Router's generated route union is refreshed by the application workflow.
 // Keep this explicit cast until that generator has seen the new screen.
 const UNI_GRAND_ROUNDS:         AppRoute = "/university/grand-rounds" as AppRoute;
+const UNI_CRISIS_DRILL:         AppRoute = "/university/crisis-drill" as AppRoute;
 
 // ── Other screens ─────────────────────────────────────────────────────────────
 const TITLE:               AppRoute = "/title";
@@ -181,6 +182,7 @@ export const ROUTES = {
   UNI_CAREER_EXPLORER,
   UNI_SCHOOLS,
   UNI_GRAND_ROUNDS,
+  UNI_CRISIS_DRILL,
 
   // ── Other screens ─────────────────────────────────────────────────────────
   TITLE,
@@ -292,6 +294,7 @@ export const ROUTES = {
   universityUniMilestones:        UNI_MILESTONES,
   universityUniShop:              UNI_SHOP,
   universityGrandRounds:         UNI_GRAND_ROUNDS,
+  universityCrisisDrill:         UNI_CRISIS_DRILL,
   universityLotusLessonHydration: "/university/lotus-lesson/recognizing-cues-hydration" as AppRoute,
 
   // ── Prologue ───────────────────────────────────────────────────────────────

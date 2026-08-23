@@ -175,9 +175,10 @@ export const CLINICAL_CHALLENGE_MODES: ModeCardDef[] = [
     subtitle: "Practice fast emergency decisions under rising pressure.",
     icon: "alert-circle",
     accentColor: "#EF4444",
-    status: "coming_soon",
+    status: "active",
     size: "small",
-    unlockChapter: 3,
+    route: "/university/crisis-drill",
+    entryLabel: "Enter Crisis Drill",
     artBrief:
       "A fast emergency scene with bright alert sigils, a healer rushing forward, and urgent clinical energy.",
   },

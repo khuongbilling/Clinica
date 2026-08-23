@@ -263,6 +263,14 @@ function normalizeProgression(p: PlayerState): PlayerState {
   if (out.grand_rounds_first_clear_claims === undefined) out = { ...out, grand_rounds_first_clear_claims: {} };
   if (out.grand_rounds_case_bests === undefined) out = { ...out, grand_rounds_case_bests: {} };
   if (out.grand_rounds_daily_event_ids === undefined) out = { ...out, grand_rounds_daily_event_ids: [] };
+  // Task 817 — Crisis Drill backfills for pre-817 saves.
+  if (out.crisis_drill_history === undefined) out = { ...out, crisis_drill_history: [] };
+  if (out.crisis_drill_active_attempt_id === undefined) out = { ...out, crisis_drill_active_attempt_id: null };
+  if (out.crisis_drill_case_bests === undefined) out = { ...out, crisis_drill_case_bests: {} };
+  if (out.crisis_drill_first_clear_claims === undefined) out = { ...out, crisis_drill_first_clear_claims: {} };
+  if (out.crisis_drill_drill_bests === undefined) out = { ...out, crisis_drill_drill_bests: {} };
+  if (out.crisis_drill_mastery_by_family === undefined) out = { ...out, crisis_drill_mastery_by_family: {} };
+  if (out.crisis_drill_daily_event_ids === undefined) out = { ...out, crisis_drill_daily_event_ids: [] };
   if (!out.clinical_simulation_first_clear_claims) {
     out = { ...out, clinical_simulation_first_clear_claims: {} };
   }
@@ -615,6 +623,20 @@ type Ctx = {
   saveGrandRoundsNotes: (attemptId: string, notes: string) => Promise<import('./grandRounds').GrandRoundsAttempt>;
   completeGrandRounds: (attemptId: string) => Promise<{
     debrief: import('./grandRounds').GrandRoundsDebrief; alreadyCompleted: boolean;
+  }>;
+  // Crisis Drill — server-authoritative emergency simulation lifecycle.
+  startCrisisDrill: (
+    caseId: string, caseVersion: number,
+    mode?: import('./crisisDrill').CrisisDrillDifficulty,
+    retryMode?: 'fresh_case' | 'same_case' | 'guided',
+    priorAttemptId?: string,
+  ) => Promise<import('./crisisDrill').CrisisDrillAttempt>;
+  resumeCrisisDrill: (attemptId: string) => Promise<import('./crisisDrill').CrisisDrillAttempt>;
+  submitCrisisDrillResponse: (attemptId: string, responseId: string) => Promise<import('./crisisDrill').CrisisDrillAttempt>;
+  pauseCrisisDrill: (attemptId: string) => Promise<import('./crisisDrill').CrisisDrillAttempt>;
+  abandonCrisisDrill: (attemptId: string) => Promise<void>;
+  completeCrisisDrill: (attemptId: string) => Promise<{
+    debrief: import('./crisisDrill').CrisisDrillDebrief; alreadyCompleted: boolean;
   }>;
   // J3 — University practice activity completion (Clinical Cue Lab, Rapid Triage, Stabilize Stack).
   // Increments the counter, grants XP/UC/scrolls/heroXP, auto-claims newly earned practice milestones,
@@ -2438,6 +2460,60 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     return { debrief: response.debrief, alreadyCompleted: response.already_completed };
   }, []);
 
+  // Crisis Drill is server-authoritative. These wrappers never compute state,
+  // scores, or rewards locally; they only persist the compact player receipt.
+  const startCrisisDrill = useCallback(async (
+    caseId: string, caseVersion: number,
+    mode: import('./crisisDrill').CrisisDrillDifficulty = 'training',
+    retryMode: 'fresh_case' | 'same_case' | 'guided' = 'fresh_case',
+    priorAttemptId?: string,
+  ) => {
+    const base = playerRef.current;
+    if (!base) throw new Error('No player loaded.');
+    const { attempt } = await api.beginCrisisDrill(base.id, caseId, caseVersion, mode, retryMode, priorAttemptId, base.economy_token);
+    const next = { ...base, crisis_drill_active_attempt_id: attempt.attemptId };
+    playerRef.current = next; setPlayer(next); await saveLocal(next);
+    return attempt;
+  }, []);
+
+  const resumeCrisisDrill = useCallback(async (attemptId: string) => {
+    const base = playerRef.current;
+    if (!base) throw new Error('No player loaded.');
+    const { attempt } = await api.resumeCrisisDrill(base.id, attemptId, base.economy_token);
+    const next = { ...base, crisis_drill_active_attempt_id: ['active', 'paused'].includes(attempt.status) ? attempt.attemptId : null };
+    playerRef.current = next; setPlayer(next); await saveLocal(next);
+    return attempt;
+  }, []);
+
+  const submitCrisisDrillResponse = useCallback(async (attemptId: string, responseId: string) => {
+    const base = playerRef.current;
+    if (!base) throw new Error('No player loaded.');
+    return (await api.submitCrisisDrillResponse(base.id, attemptId, responseId, base.economy_token)).attempt;
+  }, []);
+
+  const pauseCrisisDrill = useCallback(async (attemptId: string) => {
+    const base = playerRef.current;
+    if (!base) throw new Error('No player loaded.');
+    return (await api.pauseCrisisDrill(base.id, attemptId, base.economy_token)).attempt;
+  }, []);
+
+  const abandonCrisisDrill = useCallback(async (attemptId: string) => {
+    const base = playerRef.current;
+    if (!base) throw new Error('No player loaded.');
+    const response = await api.abandonCrisisDrill(base.id, attemptId, base.economy_token);
+    const next = normalizeProgression(response.player);
+    playerRef.current = next; setPlayer(next); await saveLocal(next);
+  }, []);
+
+  const completeCrisisDrill = useCallback(async (attemptId: string) => {
+    const base = playerRef.current;
+    if (!base) throw new Error('No player loaded.');
+    const response = await api.completeCrisisDrill(base.id, attemptId, base.economy_token);
+    const next = normalizeProgression(response.player);
+    playerRef.current = next; setPlayer(next); await saveLocal(next);
+    return { debrief: response.debrief, alreadyCompleted: response.already_completed };
+  }, []);
+
   // Shared challenge practice completion. The backend owns attempt receipts,
   // rewards, counters, milestones, and compact mastery history.
   const completeUniPractice = useCallback(async (
@@ -3623,7 +3699,8 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     applyFogMapChapterBossRewards,
     reconcileChapterBossKeys,
     setCanonicalShift,
-  }), [player, loading, dailyPulse, openRoundsSignal, requestOpenDailyRounds, createPlayer, applyRewards, claimJourneyChapterBoss, claimJourneyAreaBoss, completeVerdantha, recordWardWaves, purchaseItem, purchaseJourneyMerchant, assembleCovenantScroll, redeemExchangeItem, claimMilestone, setActiveTitle, purchaseSkin, equipSkin, purchaseUpgrade, refillStamina, pullGacha, upgradeUnitMastery, setWardLoadout, setRealmLayout, setRealmAssignment, collectRealmProduction, recordFailure, syncInventory, saveActiveTeam, summonOnce, evolveHero, recruitOnce, freeRecruitOnce, tutorialRecruitOnce, recruitTen, promoteHeroCert, trainHero, toggleHeroLock, toggleHeroFavorite, completeLesson, completeSimulation, startClinicalSimulation, resumeClinicalSimulation, submitClinicalSimulationAction, completeClinicalSimulation, startGrandRounds, resumeGrandRounds, submitGrandRoundsResponse, pauseGrandRounds, abandonGrandRounds, saveGrandRoundsNotes, completeGrandRounds, completeUniPractice, grantLegacyUniPracticeReward, upgradeHeroSkill, spendStamina, logWellnessActivity, checkInDailyRounds, claimDailyObjective, claimDailyAllComplete, claimWeeklyGoal, claimWeeklyTask, claimWeeklyAllComplete, claimQuestMilestone, claimPracticeModule, markPracticeCurriculumSeen, exchangeInsightCrystals, recordCueTopics, resetPlayer, refresh, setPlayerClass, claimClassTier, completePrologue, completeIdentityRestore, setAvatar, completeDiagnosticIntro, markReminiscenceSeen, markStorySceneSeen, completeLotusLessonNode, applyClassDiagnostic, confirmClassDiagnostic, setLearningProfile, updateBattleStars, performSweep, claimLevelReward, claimChapterChest, claimChapter3Star, claimJourneyNode, markLv2UnlockSeen, markUniversityIntroSeen, completeWardDefense, purchaseWardExchange, assembleWardAegis, updateState, setEquippedCards, markCardTutorialSeen, markCallTutorialSeen, advanceProloguePhase, completePrologueCinematic, claimPrologueRewards, confirmIdentityReconstruction, equipItem, unequipItem, claimSpecialization, getPlayerHeroEligibility, createPlayerHero, applyFogMapChapterBossRewards, reconcileChapterBossKeys]);
+    startCrisisDrill, resumeCrisisDrill, submitCrisisDrillResponse, pauseCrisisDrill, abandonCrisisDrill, completeCrisisDrill,
+  }), [player, loading, dailyPulse, openRoundsSignal, requestOpenDailyRounds, createPlayer, applyRewards, claimJourneyChapterBoss, claimJourneyAreaBoss, completeVerdantha, recordWardWaves, purchaseItem, purchaseJourneyMerchant, assembleCovenantScroll, redeemExchangeItem, claimMilestone, setActiveTitle, purchaseSkin, equipSkin, purchaseUpgrade, refillStamina, pullGacha, upgradeUnitMastery, setWardLoadout, setRealmLayout, setRealmAssignment, collectRealmProduction, recordFailure, syncInventory, saveActiveTeam, summonOnce, evolveHero, recruitOnce, freeRecruitOnce, tutorialRecruitOnce, recruitTen, promoteHeroCert, trainHero, toggleHeroLock, toggleHeroFavorite, completeLesson, completeSimulation, startClinicalSimulation, resumeClinicalSimulation, submitClinicalSimulationAction, completeClinicalSimulation, startGrandRounds, resumeGrandRounds, submitGrandRoundsResponse, pauseGrandRounds, abandonGrandRounds, saveGrandRoundsNotes, completeGrandRounds, completeUniPractice, grantLegacyUniPracticeReward, upgradeHeroSkill, spendStamina, logWellnessActivity, checkInDailyRounds, claimDailyObjective, claimDailyAllComplete, claimWeeklyGoal, claimWeeklyTask, claimWeeklyAllComplete, claimQuestMilestone, claimPracticeModule, markPracticeCurriculumSeen, exchangeInsightCrystals, recordCueTopics, resetPlayer, refresh, setPlayerClass, claimClassTier, completePrologue, completeIdentityRestore, setAvatar, completeDiagnosticIntro, markReminiscenceSeen, markStorySceneSeen, completeLotusLessonNode, applyClassDiagnostic, confirmClassDiagnostic, setLearningProfile, updateBattleStars, performSweep, claimLevelReward, claimChapterChest, claimChapter3Star, claimJourneyNode, markLv2UnlockSeen, markUniversityIntroSeen, completeWardDefense, purchaseWardExchange, assembleWardAegis, updateState, setEquippedCards, markCardTutorialSeen, markCallTutorialSeen, advanceProloguePhase, completePrologueCinematic, claimPrologueRewards, confirmIdentityReconstruction, equipItem, unequipItem, claimSpecialization, getPlayerHeroEligibility, createPlayerHero, applyFogMapChapterBossRewards, reconcileChapterBossKeys, startCrisisDrill, resumeCrisisDrill, submitCrisisDrillResponse, pauseCrisisDrill, abandonCrisisDrill, completeCrisisDrill]);
 
   return <PlayerContext.Provider value={value}>{children}</PlayerContext.Provider>;
 }

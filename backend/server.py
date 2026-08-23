@@ -19,6 +19,10 @@ from typing import Any, Dict, List, Optional, Literal
 import uuid
 from datetime import datetime, timezone, timedelta
 from grand_rounds import GRAND_ROUNDS_CASES, public_attempt as grand_round_public_attempt
+from crisis_drill import CRISIS_DRILL_CASES, CRISIS_DRILL_FAMILIES, public_cd_attempt
+
+CRISIS_DRILL_ADVANCED_LEVEL_GATE = 12
+CRISIS_DRILL_GRANT_LOCKS: Dict[str, asyncio.Lock] = {}
 
 GRAND_ROUNDS_ADVANCED_LEVEL_GATE = 12
 
@@ -348,6 +352,19 @@ class Player(BaseModel):
     grand_rounds_first_clear_claims: Dict[str, str] = Field(default_factory=dict)
     grand_rounds_case_bests: Dict[str, int] = Field(default_factory=dict)
     grand_rounds_daily_event_ids: List[str] = Field(default_factory=list)
+    # Crisis Drill stores its full attempt state in a separate collection.
+    # Compact receipts here serve board discovery, resumable entry, and bounded
+    # breadth-mastery progression; no answer key or hidden finding is copied.
+    crisis_drill_history: List[Dict[str, Any]] = Field(default_factory=list)
+    crisis_drill_active_attempt_id: Optional[str] = None
+    crisis_drill_reservation_at: Optional[str] = None
+    crisis_drill_first_clear_claims: Dict[str, str] = Field(default_factory=dict)
+    crisis_drill_drill_bests: Dict[str, int] = Field(default_factory=dict)
+    crisis_drill_mastery_by_family: Dict[str, int] = Field(default_factory=dict)
+    crisis_drill_daily_event_ids: List[str] = Field(default_factory=list)
+    # Durable outbox/idempotency marker for a completed Crisis Drill receipt.
+    # This is bounded and prevents a recovered completion from paying twice.
+    crisis_drill_applied_grant_ids: List[str] = Field(default_factory=list)
     realm_layout: Dict[str, str] = Field(default_factory=dict)
     realm_decor: Dict[str, str] = Field(default_factory=dict)
     realm_assignments: Dict[str, List[str]] = Field(default_factory=dict)
@@ -1243,6 +1260,19 @@ class GrandRoundsResponseRequest(BaseModel):
 
 class GrandRoundsNotesRequest(BaseModel):
     notes: str = Field(max_length=2000)
+
+
+class CrisisDrillStartRequest(BaseModel):
+    drill_id: str
+    drill_version: int = Field(ge=1)
+    # training mode: full coaching, no timing rank impact.
+    # crisis mode: timed, ranked completion for daily University event credit.
+    mode: Literal["training", "crisis"] = "training"
+    retry_mode: Literal["fresh_drill", "fresh_case", "same_case", "guided"] = "fresh_drill"
+
+
+class CrisisDrillDecisionRequest(BaseModel):
+    response_id: str
 
 
 # This is deliberately small, explicit, and server-owned. The frontend may
@@ -2785,6 +2815,687 @@ async def complete_grand_round(player_id: str, attempt_id: str, x_clinica_sessio
     current = await db.players.find_one({"id": player_id}, {"_id": 0})
     receipt = await db.grand_rounds_attempts.find_one({"attemptId": attempt_id}, {"_id": 0, "completion": 1})
     return {"player": Player(**current).model_dump(), "debrief": (receipt or {}).get("completion") or debrief, "already_completed": False}
+
+
+# ---------------------------------------------------------------------------
+# Crisis Drill endpoints  (/api/player/{id}/crisis-drills/…)
+# ---------------------------------------------------------------------------
+# Design mirrors Grand Rounds exactly.  Crisis Drill is isolated from Ward
+# Defense — no shared state, collection, or reward source.
+
+def crisis_drill_eligible(player: Dict[str, Any]) -> bool:
+    """Same foundation gate as Grand Rounds — one lesson + one of each practice."""
+    return simulation_eligible(player)
+
+
+def crisis_drill_catalog(player: Dict[str, Any]) -> List[Dict[str, Any]]:
+    history = player.get("crisis_drill_history") or []
+    completed: Dict[str, int] = {}
+    for item in history:
+        completed[item.get("drillId")] = completed.get(item.get("drillId"), 0) + 1
+    safe_families = {
+        item.get("family") for item in history
+        if item.get("outcome") in {"excellent", "competent"} and item.get("family")
+    }
+    safe_breadth = len(safe_families)
+    eligible = crisis_drill_eligible(player)
+    catalog = []
+    for drill_id, manifest in CRISIS_DRILL_CASES.items():
+        # Emergency pacing depends on University exposure and demonstrated safe
+        # breadth, never account days or hero power. Introductory cases are
+        # available once the foundation is complete; standard and advanced cases
+        # expand after safe completion across distinct emergency families.
+        breadth_needed = {"introductory": 0, "standard": 1, "advanced": 3}[manifest["difficulty"]]
+        breadth_ok = safe_breadth >= breadth_needed
+        available = eligible and breadth_ok
+        reason = None
+        if not eligible:
+            reason = "Complete one Lotus Lesson and one Cue, Triage, and Stack practice session to enter Crisis Drills."
+        elif not breadth_ok:
+            noun = "family" if breadth_needed == 1 else "families"
+            reason = f"Complete safe drills in {breadth_needed} emergency {noun} to unlock this case."
+        catalog.append({
+            "id": drill_id,
+            "version": manifest["version"],
+            "family": manifest["family"],
+            "variantFamilyId": manifest["family"],
+            "variant": manifest["variant"],
+            "title": manifest["title"],
+            "subtitle": manifest["subtitle"],
+            "domain": manifest["domain"],
+            "difficulty": manifest["difficulty"],
+            "estimatedMinutes": manifest["estimatedMinutes"],
+            "reviewed": True,
+            "approved": True,
+            "scenario": manifest["alert"],
+            "availableModes": ["training", "crisis"],
+            "available": available,
+            "lockedReason": reason,
+            "personalBest": (player.get("crisis_drill_drill_bests") or {}).get(drill_id),
+            "completedCount": completed.get(drill_id, 0),
+        })
+    return catalog
+
+
+async def _get_crisis_drill_player(player_id: str, session: Optional[str]) -> Dict[str, Any]:
+    player = await db.players.find_one({"id": player_id}, {"_id": 0})
+    if not player:
+        raise HTTPException(status_code=404, detail="player not found")
+    if not player_access_ok(player, player_id, session, None):
+        raise HTTPException(status_code=401, detail="invalid player session")
+    return player
+
+
+@api_router.get("/player/{player_id}/crisis-drills")
+async def list_crisis_drills(player_id: str, x_clinica_session: Optional[str] = Header(default=None)):
+    player = await _get_crisis_drill_player(player_id, x_clinica_session)
+    catalog = crisis_drill_catalog(player)
+    # Build family-grouped view for the board
+    families: Dict[str, List[Dict[str, Any]]] = {}
+    for item in catalog:
+        families.setdefault(item["family"], []).append(item)
+    recommendation = next(
+        (item["id"] for item in catalog if item["available"] and not item["completedCount"]), None
+    )
+    return {
+        "drills": catalog,
+        "cases": catalog,
+        "families": families,
+        "recommended_id": recommendation,
+        "gate": {
+            "eligible": crisis_drill_eligible(player),
+            "reason": None if crisis_drill_eligible(player) else "Complete one Lotus Lesson and one Cue, Triage, and Stack practice session to enter Crisis Drills.",
+            "requiredPractice": {"lessons": 1, "cueLab": 1, "triage": 1, "stack": 1},
+            "requiredLevel": 1,
+        },
+    }
+
+
+@api_router.post("/player/{player_id}/crisis-drills/attempts")
+async def start_crisis_drill(
+    player_id: str,
+    payload: CrisisDrillStartRequest,
+    x_clinica_session: Optional[str] = Header(default=None),
+):
+    player = await _get_crisis_drill_player(player_id, x_clinica_session)
+    # Reconcile the durable completion outbox before opening another attempt.
+    # This serializes per-player Crisis Drill grants, so a later completion
+    # cannot be applied against an older receipt's stale daily/mastery snapshot.
+    pending_grants = await db.crisis_drill_attempts.find(
+        {
+            "player_id": player_id,
+            "completion": {"$exists": True},
+            "grant_state": {"$ne": "applied"},
+            "grant_plan": {"$exists": True},
+        },
+        {"_id": 0},
+    ).sort("completed_at", ASCENDING).to_list(length=None)
+    for pending_grant in pending_grants:
+        await _apply_crisis_drill_grant(player_id, pending_grant, pending_grant["grant_plan"])
+    if pending_grants:
+        player = await _get_crisis_drill_player(player_id, x_clinica_session)
+    if not crisis_drill_eligible(player):
+        raise HTTPException(status_code=409, detail="Complete the University foundation practices before entering Crisis Drills")
+    manifest = CRISIS_DRILL_CASES.get(payload.drill_id)
+    if not manifest:
+        raise HTTPException(status_code=422, detail="unknown reviewed Crisis Drill")
+    if int(payload.drill_version) != int(manifest["version"]):
+        raise HTTPException(status_code=409, detail="this crisis drill version has changed; refresh the drill board")
+    selected = next((item for item in crisis_drill_catalog(player) if item["id"] == payload.drill_id), None)
+    if not selected or not selected["available"]:
+        raise HTTPException(status_code=409, detail=(selected or {}).get("lockedReason") or "this drill is not yet available")
+    if payload.retry_mode == "guided" and not any(
+        row.get("drillId") == payload.drill_id for row in (player.get("crisis_drill_history") or [])
+    ):
+        raise HTTPException(status_code=422, detail="guided review is available after you complete this drill once")
+
+    # ── Stale-reservation cleanup (mirrors Grand Rounds exactly) ──
+    active_id = player.get("crisis_drill_active_attempt_id")
+    if active_id:
+        active = await db.crisis_drill_attempts.find_one(
+            {"attemptId": active_id, "player_id": player_id}, {"_id": 0}
+        )
+        if not active:
+            stale_before = (datetime.now(timezone.utc) - timedelta(seconds=30)).isoformat()
+            released = await db.players.update_one(
+                {"id": player_id, "crisis_drill_active_attempt_id": active_id, "$or": [
+                    {"crisis_drill_reservation_at": {"$lt": stale_before}},
+                    {"crisis_drill_reservation_at": {"$exists": False}},
+                ]},
+                {"$set": {"crisis_drill_active_attempt_id": None, "crisis_drill_reservation_at": None, "updated_at": now_iso()}},
+            )
+            if released.modified_count != 1:
+                raise HTTPException(status_code=409, detail="a Crisis Drill reservation is being created; retry shortly")
+        else:
+            if active.get("status") in {"active", "paused"}:
+                raise HTTPException(status_code=409, detail=f"an active Crisis Drill is in progress; resume {active_id} before starting another")
+            await db.players.update_one(
+                {"id": player_id, "crisis_drill_active_attempt_id": active_id},
+                {"$set": {"crisis_drill_active_attempt_id": None, "crisis_drill_reservation_at": None}},
+            )
+
+    # training mode is never ranked; crisis mode starts ranked but loses ranking
+    # if paused or interrupted (pause sets ranked=False on the attempt).
+    ranked = payload.mode == "crisis"
+    attempt: Dict[str, Any] = {
+        "attemptId": str(uuid.uuid4()),
+        "player_id": player_id,
+        "drillId": payload.drill_id,
+        "version": manifest["version"],
+        "family": manifest["family"],
+        "variant": manifest["variant"],
+        "difficulty": manifest["difficulty"],
+        "mode": payload.mode,
+        "beatId": "alert",          # first station in every drill
+        "patient": {**manifest["initial"], "concern": manifest["concern"]},
+        "known": [],
+        "timeline": [],
+        "responseIds": [],
+        "timing_records": [],
+        "safety": "safe",
+        "status": "active",
+        "ranked": ranked,
+        "reviewMode": payload.retry_mode == "guided",
+        "decision_started_at": now_iso(),
+        "paused_at": None,
+        "created_at": now_iso(),
+        "updated_at": now_iso(),
+    }
+
+    # ── Atomic pointer reservation (mirrors Grand Rounds) ──
+    reserved = await db.players.update_one(
+        {"id": player_id, "$or": [
+            {"crisis_drill_active_attempt_id": None},
+            {"crisis_drill_active_attempt_id": {"$exists": False}},
+        ]},
+        {"$set": {
+            "crisis_drill_active_attempt_id": attempt["attemptId"],
+            "crisis_drill_reservation_at": now_iso(),
+            "updated_at": now_iso(),
+        }},
+    )
+    if reserved.modified_count != 1:
+        current = await db.players.find_one({"id": player_id}, {"_id": 0, "crisis_drill_active_attempt_id": 1})
+        raise HTTPException(status_code=409, detail=f"an active Crisis Drill is in progress; resume {(current or {}).get('crisis_drill_active_attempt_id')} before starting another")
+    try:
+        await db.crisis_drill_attempts.insert_one(attempt)
+    except Exception:
+        await db.players.update_one(
+            {"id": player_id, "crisis_drill_active_attempt_id": attempt["attemptId"]},
+            {"$set": {"crisis_drill_active_attempt_id": None, "crisis_drill_reservation_at": None, "updated_at": now_iso()}},
+        )
+        raise
+    # Fence the insert
+    fenced = await db.players.update_one(
+        {"id": player_id, "crisis_drill_active_attempt_id": attempt["attemptId"]},
+        {"$set": {"crisis_drill_reservation_at": None, "updated_at": now_iso()}},
+    )
+    if fenced.modified_count != 1:
+        await db.crisis_drill_attempts.delete_one({"attemptId": attempt["attemptId"], "player_id": player_id})
+        raise HTTPException(status_code=409, detail="the Crisis Drill reservation expired; retry the drill")
+    return {"attempt": public_cd_attempt(attempt)}
+
+
+@api_router.get("/player/{player_id}/crisis-drills/attempts/{attempt_id}")
+async def get_crisis_drill_attempt(
+    player_id: str, attempt_id: str, x_clinica_session: Optional[str] = Header(default=None),
+):
+    await _get_crisis_drill_player(player_id, x_clinica_session)
+    attempt = await db.crisis_drill_attempts.find_one({"attemptId": attempt_id, "player_id": player_id}, {"_id": 0})
+    if not attempt:
+        raise HTTPException(status_code=404, detail="Crisis Drill attempt not found")
+    return {"attempt": public_cd_attempt(attempt)}
+
+
+@api_router.post("/player/{player_id}/crisis-drills/attempts/{attempt_id}/action")
+async def submit_crisis_drill_decision(
+    player_id: str,
+    attempt_id: str,
+    payload: CrisisDrillDecisionRequest,
+    x_clinica_session: Optional[str] = Header(default=None),
+):
+    await _get_crisis_drill_player(player_id, x_clinica_session)
+    attempt = await db.crisis_drill_attempts.find_one({"attemptId": attempt_id, "player_id": player_id}, {"_id": 0})
+    if not attempt:
+        raise HTTPException(status_code=404, detail="Crisis Drill attempt not found")
+    if attempt.get("status") != "active":
+        raise HTTPException(status_code=409, detail="resume this drill before making a clinical decision")
+    manifest = CRISIS_DRILL_CASES.get(attempt["drillId"])
+    station = (manifest or {}).get("stations", {}).get(attempt.get("beatId"))
+    response = (station or {}).get("responses", {}).get(payload.response_id)
+    if not response:
+        raise HTTPException(status_code=422, detail="that response is not legal at this decision beat")
+    if payload.response_id in attempt.get("responseIds", []):
+        raise HTTPException(status_code=409, detail="this beat response was already submitted")
+
+    before, patient = dict(attempt["patient"]), dict(attempt["patient"])
+    # The client never supplies a clock value.  Crisis efficiency is calculated
+    # from the server's decision start timestamp; a slow safe response remains
+    # clinically safe but records lower efficiency than a timely safe response.
+    elapsed_seconds = 0
+    if attempt.get("mode") == "crisis" and attempt.get("decision_started_at"):
+        try:
+            elapsed_seconds = max(
+                0,
+                int((datetime.now(timezone.utc) - datetime.fromisoformat(attempt["decision_started_at"])).total_seconds()),
+            )
+        except (TypeError, ValueError):
+            elapsed_seconds = 45
+    timed_out = elapsed_seconds > 45
+    # A late response is recorded for the separate Crisis Efficiency metric
+    # only. It must never change patient state, safety caps, mastery, or the
+    # equal baseline reward for safe care.
+    for key, value in response.get("delta", {}).items():
+        patient[key] = max(0, min(100, int(patient.get(key, 0)) + int(value)))
+    if patient["stability"] < 30:
+        patient["acuity"] = "critical"
+    elif patient["stability"] < 55:
+        patient["acuity"] = "high"
+    else:
+        patient["acuity"] = "moderate"
+
+    revealed_ids = response.get("reveal", [])
+    existing = {item["id"] for item in attempt.get("known", [])}
+    known = [*attempt.get("known", []), *[
+        item for item in manifest["hidden"]
+        if item["id"] in revealed_ids and item["id"] not in existing
+    ]]
+
+    delta = " · ".join(
+        f"{key} {'+' if patient[key] > before[key] else ''}{patient[key] - before[key]}"
+        for key in ("stability", "oxygenation", "perfusion") if patient[key] != before[key]
+    ) or "no measurable patient-state change"
+    timeline = [*attempt.get("timeline", []), {
+        "responseId": payload.response_id,
+        "beatId": attempt["beatId"],
+        "announcement": response["announcement"],
+        "stateDelta": delta,
+        "knownIds": revealed_ids,
+    }]
+    next_beat = response.get("next")
+    # An unsafe choice loses the crisis timing ranking
+    ranked = bool(attempt.get("ranked")) and not response.get("unsafe")
+    next_attempt = {
+        **attempt,
+        "patient": patient,
+        "known": known,
+        "timeline": timeline,
+        "responseIds": [*attempt.get("responseIds", []), payload.response_id],
+        # Timing records remain server-only. They are used for the separate
+        # Crisis Efficiency debrief metric, never clinical mastery or rewards.
+        "timing_records": [*attempt.get("timing_records", []), {
+            "beatId": attempt["beatId"], "elapsedSeconds": elapsed_seconds, "timedOut": timed_out,
+        }],
+        "safety": "unsafe" if response.get("unsafe") else attempt.get("safety", "safe"),
+        "ranked": ranked,
+        "beatId": next_beat,
+        "status": "completed" if next_beat is None else "active",
+        "decision_started_at": now_iso() if next_beat is not None else attempt.get("decision_started_at"),
+        "updated_at": now_iso(),
+    }
+    write = await db.crisis_drill_attempts.update_one(
+        {"attemptId": attempt_id, "player_id": player_id, "status": "active",
+         "beatId": attempt["beatId"], "responseIds": attempt.get("responseIds", [])},
+        {"$set": next_attempt},
+    )
+    if write.modified_count != 1:
+        raise HTTPException(status_code=409, detail="the drill state changed; reload before responding")
+    return {"attempt": public_cd_attempt(next_attempt)}
+
+
+@api_router.post("/player/{player_id}/crisis-drills/attempts/{attempt_id}/pause")
+async def pause_crisis_drill(
+    player_id: str, attempt_id: str, x_clinica_session: Optional[str] = Header(default=None),
+):
+    await _get_crisis_drill_player(player_id, x_clinica_session)
+    # Pausing a crisis attempt permanently loses its timing ranking for this run.
+    await db.crisis_drill_attempts.update_one(
+        {"attemptId": attempt_id, "player_id": player_id, "status": "active"},
+        {"$set": {"status": "paused", "ranked": False, "paused_at": now_iso(), "updated_at": now_iso()}},
+    )
+    attempt = await db.crisis_drill_attempts.find_one({"attemptId": attempt_id, "player_id": player_id}, {"_id": 0})
+    if not attempt:
+        raise HTTPException(status_code=404, detail="Crisis Drill attempt not found")
+    return {"attempt": public_cd_attempt(attempt)}
+
+
+@api_router.post("/player/{player_id}/crisis-drills/attempts/{attempt_id}/resume")
+async def resume_crisis_drill(
+    player_id: str, attempt_id: str, x_clinica_session: Optional[str] = Header(default=None),
+):
+    await _get_crisis_drill_player(player_id, x_clinica_session)
+    await db.crisis_drill_attempts.update_one(
+        {"attemptId": attempt_id, "player_id": player_id, "status": "paused"},
+        # A pause is an accessibility/interruption boundary. Restart the
+        # decision window after resuming so time spent paused cannot cause a
+        # clinical deterioration; the run is already permanently unranked.
+        {"$set": {"status": "active", "paused_at": None, "decision_started_at": now_iso(), "updated_at": now_iso()}},
+    )
+    attempt = await db.crisis_drill_attempts.find_one({"attemptId": attempt_id, "player_id": player_id}, {"_id": 0})
+    if not attempt:
+        raise HTTPException(status_code=404, detail="Crisis Drill attempt not found")
+    return {"attempt": public_cd_attempt(attempt)}
+
+
+@api_router.post("/player/{player_id}/crisis-drills/attempts/{attempt_id}/abandon")
+async def abandon_crisis_drill(
+    player_id: str, attempt_id: str, x_clinica_session: Optional[str] = Header(default=None),
+):
+    await _get_crisis_drill_player(player_id, x_clinica_session)
+    await db.crisis_drill_attempts.update_one(
+        {"attemptId": attempt_id, "player_id": player_id, "status": {"$in": ["active", "paused"]}},
+        {"$set": {"status": "abandoned", "beatId": None, "updated_at": now_iso()}},
+    )
+    await db.players.update_one(
+        {"id": player_id, "crisis_drill_active_attempt_id": attempt_id},
+        {"$set": {"crisis_drill_active_attempt_id": None, "updated_at": now_iso()}},
+    )
+    current = await db.players.find_one({"id": player_id}, {"_id": 0})
+    return {"player": Player(**current).model_dump()}
+
+
+async def _apply_crisis_drill_grant(
+    player_id: str, attempt: Dict[str, Any], plan: Dict[str, Any],
+) -> None:
+    """Serialize receipt recovery per player before applying the durable grant."""
+    lock = CRISIS_DRILL_GRANT_LOCKS.setdefault(player_id, asyncio.Lock())
+    async with lock:
+        await _apply_crisis_drill_grant_unlocked(player_id, attempt, plan)
+
+
+async def _apply_crisis_drill_grant_unlocked(
+    player_id: str, attempt: Dict[str, Any], plan: Dict[str, Any],
+) -> None:
+    """Apply a persisted Crisis Drill receipt exactly once.
+
+    Mongo runs locally as a standalone service, so this durable outbox pattern
+    replaces a cross-document transaction: the immutable attempt receipt is
+    written first, and this guarded player update can safely be retried after
+    an interruption without duplicating XP, history, mastery, or daily credit.
+    """
+    grant_id = plan["grantId"]
+    if plan.get("reviewMode"):
+        await db.players.update_one(
+            {"id": player_id, "crisis_drill_active_attempt_id": attempt["attemptId"]},
+            {"$set": {"crisis_drill_active_attempt_id": None, "updated_at": now_iso()}},
+        )
+    else:
+        # Merge receipt deltas into the current player record rather than
+        # restoring a completion-time snapshot. This preserves progression when
+        # several crash-recovered receipts are drained in sequence.
+        current = await db.players.find_one({"id": player_id}, {"_id": 0}) or {}
+        daily = dict(current.get("daily_rounds") or {})
+        daily_ids = list(current.get("crisis_drill_daily_event_ids") or [])
+        # Compatibility for receipts persisted before plans switched from
+        # snapshots to deltas. Such a receipt already contains its intended
+        # daily marker and its learner-facing mastery receipt.
+        marker = plan.get("dailyMarker")
+        legacy_markers = [
+            value for value in plan.get("dailyIds", [])
+            if isinstance(value, str) and value.endswith(":crisis-drill")
+        ]
+        if not marker and legacy_markers:
+            marker = legacy_markers[-1]
+        should_count_daily = bool(plan.get("countDaily")) or (
+            "countDaily" not in plan and bool(marker)
+        )
+        if should_count_daily and marker and marker not in daily_ids:
+            for objective in daily.get("objectives", []):
+                if objective.get("event") == "university_lesson":
+                    objective["progress"] = min(int(objective.get("target", 0)), int(objective.get("progress", 0)) + 1)
+            for task in daily.get("weekly_tasks", []):
+                if task.get("id") == "w_university":
+                    task["progress"] = min(int(task.get("target", 0)), int(task.get("progress", 0)) + 1)
+            daily_ids = [*daily_ids, marker][-365:]
+        mastery_by_family = dict(current.get("crisis_drill_mastery_by_family") or {})
+        mastery_delta = int(
+            plan.get("masteryDelta", (attempt.get("completion") or {}).get("reward", {}).get("mastery", 0))
+        )
+        family = plan.get("family") or (plan.get("record") or {}).get("family")
+        if mastery_delta and family:
+            mastery_by_family[family] = min(100, int(mastery_by_family.get(family, 0)) + mastery_delta)
+        await db.players.update_one(
+            {"id": player_id, "crisis_drill_applied_grant_ids": {"$ne": grant_id}},
+            {
+                "$set": {
+                    "daily_rounds": daily,
+                    "crisis_drill_daily_event_ids": daily_ids,
+                    "crisis_drill_mastery_by_family": mastery_by_family,
+                    "crisis_drill_active_attempt_id": None,
+                    "updated_at": now_iso(),
+                },
+                "$push": {
+                    "crisis_drill_history": {"$each": [plan["record"]], "$slice": -60},
+                    # This is a durable idempotency ledger, intentionally not
+                    # truncated. A pending receipt may be replayed long after
+                    # normal history retention, so expiring this marker could
+                    # recreate an old reward after a crash boundary.
+                    "crisis_drill_applied_grant_ids": grant_id,
+                },
+                "$max": {f"crisis_drill_drill_bests.{attempt['drillId']}": plan["score"]},
+                "$inc": {"xp": plan["xp"], "university_credits": plan["credits"]},
+            },
+        )
+    await db.crisis_drill_attempts.update_one(
+        {"attemptId": attempt["attemptId"], "grant_id": grant_id},
+        {"$set": {"grant_state": "applied", "grant_applied_at": now_iso()}},
+    )
+
+
+@api_router.post("/player/{player_id}/crisis-drills/attempts/{attempt_id}/complete")
+async def complete_crisis_drill(
+    player_id: str, attempt_id: str, x_clinica_session: Optional[str] = Header(default=None),
+):
+    player = await _get_crisis_drill_player(player_id, x_clinica_session)
+    attempt = await db.crisis_drill_attempts.find_one({"attemptId": attempt_id, "player_id": player_id}, {"_id": 0})
+    if not attempt:
+        raise HTTPException(status_code=404, detail="Crisis Drill attempt not found")
+    if attempt.get("completion"):
+        # The receipt is durable before its player grant. If an interruption
+        # leaves it pending, retry reconciles the exact persisted plan rather
+        # than recomputing a potentially different first-clear reward.
+        plan = attempt.get("grant_plan")
+        if plan and attempt.get("grant_state") != "applied":
+            await _apply_crisis_drill_grant(player_id, attempt, plan)
+        current = await db.players.find_one({"id": player_id}, {"_id": 0})
+        if current:
+            await db.players.update_one(
+                {"id": player_id, "xp": current.get("xp", 0)},
+                {"$set": {"player_level": player_level_from_xp(int(current.get("xp", 0)))}},
+            )
+            current = await db.players.find_one({"id": player_id}, {"_id": 0})
+        return {"player": Player(**(current or player)).model_dump(), "debrief": attempt["completion"], "already_completed": True}
+    if attempt.get("status") != "completed" or attempt.get("beatId") is not None:
+        raise HTTPException(status_code=409, detail="complete every decision beat before opening the debrief")
+
+    # ── Atomic single-claim guard (mirrors Grand Rounds) ──
+    claim_token = str(uuid.uuid4())
+    stale_claim_before = (datetime.now(timezone.utc) - timedelta(seconds=30)).isoformat()
+    claimed = await db.crisis_drill_attempts.update_one(
+        {"attemptId": attempt_id, "completion": {"$exists": False}, "$or": [
+            {"completion_claim": {"$exists": False}},
+            {"completion_claimed_at": {"$lt": stale_claim_before}},
+        ]},
+        {"$set": {"completion_claim": claim_token, "completion_claimed_at": now_iso()}},
+    )
+    if claimed.modified_count != 1:
+        for _ in range(40):
+            pending = await db.crisis_drill_attempts.find_one({"attemptId": attempt_id, "player_id": player_id}, {"_id": 0})
+            if pending and pending.get("completion"):
+                plan = pending.get("grant_plan")
+                if plan and pending.get("grant_state") != "applied":
+                    await _apply_crisis_drill_grant(player_id, pending, plan)
+                current = await db.players.find_one({"id": player_id}, {"_id": 0})
+                if current:
+                    await db.players.update_one(
+                        {"id": player_id, "xp": current.get("xp", 0)},
+                        {"$set": {"player_level": player_level_from_xp(int(current.get("xp", 0)))}},
+                    )
+                    current = await db.players.find_one({"id": player_id}, {"_id": 0})
+                return {"player": Player(**current).model_dump(), "debrief": pending["completion"], "already_completed": True}
+            await asyncio.sleep(0.05)
+        raise HTTPException(status_code=409, detail="Crisis Drill receipt is being finalized; retry to receive the canonical debrief")
+
+    manifest = CRISIS_DRILL_CASES[attempt["drillId"]]
+    patient = attempt["patient"]
+    timeline = attempt.get("timeline", [])
+
+    # ── Scoring ──
+    # Max points per beat: 20 × 6 beats = 120 raw; normalize to 100.
+    raw_score = round(sum(
+        manifest["stations"][entry["beatId"]]["responses"][entry["responseId"]].get("points", 0)
+        for entry in timeline
+    ) / 1.2)
+    raw_score = max(0, min(100, raw_score))
+    unsafe = attempt.get("safety") == "unsafe" or int(patient["stability"]) < 30
+    score = min(raw_score, 55) if unsafe else raw_score
+    outcome = "unsafe" if unsafe else "excellent" if score >= 90 else "competent" if score >= 60 else "needs_review"
+    patient_outcome = "deteriorated" if int(patient["stability"]) < 40 else "stabilized" if int(patient["stability"]) >= 65 else "guarded"
+    timing_records = attempt.get("timing_records", [])
+    crisis_efficiency = 0
+    if attempt.get("mode") == "crisis" and timing_records and attempt.get("ranked"):
+        on_time = sum(1 for item in timing_records if not item.get("timedOut"))
+        crisis_efficiency = round((on_time / len(timing_records)) * 100)
+
+    review_mode = bool(attempt.get("reviewMode"))
+    history = list(player.get("crisis_drill_history") or [])
+    first_clear = False
+    if not review_mode and outcome in {"excellent", "competent"}:
+        fc_path = f"crisis_drill_first_clear_claims.{attempt['drillId']}"
+        fc_claim = await db.players.update_one(
+            {"id": player_id, fc_path: {"$exists": False}},
+            {"$set": {fc_path: attempt_id}},
+        )
+        first_clear = fc_claim.modified_count == 1
+        if not first_clear:
+            fc_current = await db.players.find_one({"id": player_id}, {"_id": 0, "crisis_drill_first_clear_claims": 1})
+            first_clear = (fc_current or {}).get("crisis_drill_first_clear_claims", {}).get(attempt["drillId"]) == attempt_id
+
+    completed_count = sum(1 for row in history if row.get("drillId") == attempt["drillId"])
+    rewardable = outcome in {"excellent", "competent"} and not review_mode
+
+    # Rewards mirror Grand Rounds baseline: first/repeat taper, same baseline mode.
+    # training mode pays same rewards as crisis mode (mode affects ranking/daily event, not reward).
+    xp, credits, mastery = (
+        (25, 30, 4) if rewardable and first_clear
+        else (3, 3, 1) if rewardable and completed_count < 2
+        else (0, 0, 0)
+    )
+    reward_msg = (
+        "Review mode pays no reward or progression." if review_mode
+        else "A safety result needs review before rewards." if not rewardable
+        else "First drill clear." if first_clear
+        else "Repeat evidence is sharply tapered."
+    )
+
+    debrief = {
+        "outcome": outcome,
+        "patientOutcome": patient_outcome,
+        "score": score,
+        "safety": "unsafe" if unsafe else "safe",
+        "ranked": bool(attempt.get("ranked")) and not review_mode,
+        "crisisEfficiency": {
+            "eligible": attempt.get("mode") == "crisis" and bool(attempt.get("ranked")) and not review_mode,
+            "score": crisis_efficiency if attempt.get("mode") == "crisis" and bool(attempt.get("ranked")) and not review_mode else None,
+            "note": "Prestige only — never changes clinical safety, mastery, or baseline rewards.",
+        },
+        "strongestDecision": (timeline[0]["announcement"] if timeline else "No completed clinical decision."),
+        "missedOpportunity": (
+            "Review the safety change and return through the related practice." if unsafe
+            else "None — your reassessment closed the loop."
+        ),
+        "patientEvolution": f"Final stability {patient['stability']}, oxygenation {patient['oxygenation']}, perfusion {patient['perfusion']}.",
+        # Public aliases consumed by the emergency board; no scoring keys or
+        # unrevealed alternatives are included.
+        "urgencyHandling": "missed" if unsafe else (
+            "appropriate" if attempt.get("mode") == "training" or crisis_efficiency >= 70 else "delayed"
+        ),
+        "patientSummary": f"Patient outcome: {patient_outcome}. Final stability {patient['stability']}.",
+        "clinicalPrinciple": manifest["principle"],
+        "relatedPractice": manifest["relatedPractice"],
+        "timeline": timeline,
+        "firstClear": first_clear,
+        "personalBest": not review_mode and score > int((player.get("crisis_drill_drill_bests") or {}).get(attempt["drillId"], -1)),
+        "reward": {"xp": xp, "universityCredits": credits, "mastery": mastery, "message": reward_msg},
+    }
+
+    # ── Daily University event (exactly one per calendar day) ──
+    daily = dict(player.get("daily_rounds") or {})
+    daily_ids = list(player.get("crisis_drill_daily_event_ids") or [])
+    daily_marker = f"{datetime.now(timezone.utc).date().isoformat()}:crisis-drill"
+    # Training and Crisis have equal baseline progression.  A normal or
+    # accessibility-paused Crisis attempt remains mastery/reward eligible;
+    # pause only makes its timing prestige record unranked.
+    count_daily = not review_mode and daily_marker not in daily_ids
+    if count_daily:
+        for objective in daily.get("objectives", []):
+            if objective.get("event") == "university_lesson":
+                objective["progress"] = min(int(objective.get("target", 0)), int(objective.get("progress", 0)) + 1)
+        for task in daily.get("weekly_tasks", []):
+            if task.get("id") == "w_university":
+                task["progress"] = min(int(task.get("target", 0)), int(task.get("progress", 0)) + 1)
+        daily_ids = [*daily_ids, daily_marker][-365:]
+
+    record = {
+        "attemptId": attempt_id,
+        "drillId": attempt["drillId"],
+        "family": manifest["family"],
+        "variant": manifest["variant"],
+        "score": score,
+        "outcome": outcome,
+        "safety": debrief["safety"],
+        "ranked": debrief["ranked"],
+        "completedAt": now_iso(),
+    }
+    mastery_by_family = dict(player.get("crisis_drill_mastery_by_family") or {})
+    if mastery:
+        mastery_by_family[manifest["family"]] = min(
+            100, int(mastery_by_family.get(manifest["family"], 0)) + mastery
+        )
+
+    grant_plan = {
+        "grantId": attempt_id,
+        "reviewMode": review_mode,
+        "xp": xp,
+        "credits": credits,
+        "score": score,
+        "record": record,
+        "dailyMarker": daily_marker,
+        "countDaily": count_daily,
+        "masteryDelta": mastery,
+        "family": manifest["family"],
+    }
+    receipt_write = await db.crisis_drill_attempts.update_one(
+        {"attemptId": attempt_id, "completion_claim": claim_token, "completion": {"$exists": False}},
+        {"$set": {
+            "completion": debrief,
+            "grant_plan": grant_plan,
+            "grant_id": attempt_id,
+            "grant_state": "pending",
+            "completed_at": now_iso(),
+        }},
+    )
+    if receipt_write.modified_count != 1:
+        persisted = await db.crisis_drill_attempts.find_one({"attemptId": attempt_id, "player_id": player_id}, {"_id": 0})
+        if persisted and persisted.get("completion") and persisted.get("grant_plan"):
+            await _apply_crisis_drill_grant(player_id, persisted, persisted["grant_plan"])
+            current = await db.players.find_one({"id": player_id}, {"_id": 0})
+            return {"player": Player(**current).model_dump(), "debrief": persisted["completion"], "already_completed": True}
+        raise HTTPException(status_code=409, detail="Crisis Drill receipt is being finalized; retry to receive the canonical debrief")
+
+    await _apply_crisis_drill_grant(player_id, attempt, grant_plan)
+    current = await db.players.find_one({"id": player_id}, {"_id": 0})
+    await db.players.update_one(
+        {"id": player_id, "xp": current.get("xp", 0)},
+        {"$set": {"player_level": player_level_from_xp(int(current.get("xp", 0)))}},
+    )
+    current = await db.players.find_one({"id": player_id}, {"_id": 0})
+    receipt = await db.crisis_drill_attempts.find_one({"attemptId": attempt_id}, {"_id": 0, "completion": 1})
+    return {
+        "player": Player(**current).model_dump(),
+        "debrief": (receipt or {}).get("completion") or debrief,
+        "already_completed": False,
+    }
 
 
 @api_router.post("/player/{player_id}/activity-attempts/{activity}", response_model=Dict[str, Any])

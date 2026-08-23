@@ -565,6 +565,21 @@ export default function UniversityHubScreen() {
                 </View>
                 <Ionicons name="arrow-forward" size={16} color="#FBBF24" />
               </Pressable>
+              <Pressable style={[pracStyles.curriculumCard, { borderColor: "#EF444455", backgroundColor: "#1A0E10" }]}
+                onPress={() => router.push(ROUTES.UNI_CRISIS_DRILL)}
+                testID="university-crisis-drill">
+                <View style={pracStyles.curriculumLeft}>
+                  <View style={[pracStyles.curriculumBadge, { backgroundColor: "#EF44441D" }]}>
+                    <Ionicons name="alert-circle-outline" size={14} color="#F87171" />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[pracStyles.curriculumKicker, { color: "#F87171" }]}>EMERGENCY TRAINING</Text>
+                    <Text style={pracStyles.curriculumTitle}>Code Blue / Crisis Drill</Text>
+                    <Text style={pracStyles.curriculumSub}>Training {"&"} Crisis modes · fast decisions · safe debrief</Text>
+                  </View>
+                </View>
+                <Ionicons name="arrow-forward" size={16} color="#F87171" />
+              </Pressable>
               <Pressable style={[pracStyles.curriculumCard, { borderColor: "#A78BFA55", backgroundColor: "#19132A" }]}
                 onPress={() => router.push(dynRoute.simulation(recommendedSimulation(player.clinical_simulation_history).id))}
                 testID="university-clinical-simulation-lab">

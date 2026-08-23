@@ -488,6 +488,25 @@ export interface PlayerState {
   grand_rounds_first_clear_claims?: Record<string, string>;
   grand_rounds_case_bests?: Record<string, number>;
   grand_rounds_daily_event_ids?: string[];
+  /**
+   * Crisis Drill compact receipt history. Full attempt state lives on the
+   * server; only the summary receipt is stored here for board display.
+   */
+  crisis_drill_history?: Array<{
+    attemptId: string;
+    caseId: string;
+    variantFamilyId: string;
+    score: number;
+    outcome: import('./crisisDrill').CrisisDrillOutcome;
+    safety: import('./crisisDrill').CrisisDrillSafety;
+    completedAt: string;
+  }>;
+  crisis_drill_active_attempt_id?: string | null;
+  crisis_drill_case_bests?: Record<string, number>;
+  crisis_drill_first_clear_claims?: Record<string, string>;
+  crisis_drill_drill_bests?: Record<string, number>;
+  crisis_drill_mastery_by_family?: Record<string, number>;
+  crisis_drill_daily_event_ids?: string[];
   // J4 — Hero Skill Academy upgrade ranks. Keyed by upgradeId (see heroSkillAcademy.ts).
   // Value = current rank (0 = not purchased; 1 = Rank I active; 2 = Rank II active).
   // Backfilled as {} for existing players in normalizeProgression.

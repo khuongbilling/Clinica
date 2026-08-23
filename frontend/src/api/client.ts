@@ -7,6 +7,9 @@ import type {
 import type {
   GrandRoundsAttempt, GrandRoundsCaseCard, GrandRoundsDebrief, GrandRoundsGate,
 } from '@/src/game/grandRounds';
+import type {
+  CrisisDrillAttempt, CrisisDrillCaseCard, CrisisDrillDebrief, CrisisDrillGate, CrisisDrillDifficulty,
+} from '@/src/game/crisisDrill';
 
 const BASE_URL = (process.env.EXPO_PUBLIC_BACKEND_URL || (Constants?.expoConfig?.extra as any)?.backendUrl || '').replace(/\/$/, '');
 const API = `${BASE_URL}/api`;
@@ -356,6 +359,61 @@ export const api = {
   completeVerdantha: (id: string, sessionToken?: string) =>
     http<{ already_completed: boolean; player: PlayerState; granted: Record<string, number> }>(
       `/player/${id}/world-event/verdantha/completion`,
+      { method: 'POST', headers: sessionToken ? { 'X-Clinica-Session': sessionToken } : {} },
+    ),
+  getCrisisDrills: (id: string, sessionToken?: string) =>
+    http<{ cases: CrisisDrillCaseCard[]; gate: CrisisDrillGate }>(
+      `/player/${id}/crisis-drills`,
+      { headers: sessionToken ? { 'X-Clinica-Session': sessionToken } : {} },
+    ),
+  beginCrisisDrill: (
+    id: string,
+    caseId: string,
+    caseVersion: number,
+    mode: CrisisDrillDifficulty = 'training',
+    retryMode: 'fresh_case' | 'same_case' | 'guided' = 'fresh_case',
+    priorAttemptId?: string,
+    sessionToken?: string,
+  ) => http<{ attempt: CrisisDrillAttempt }>(
+    `/player/${id}/crisis-drills/attempts`,
+    {
+      method: 'POST',
+      body: JSON.stringify({ drill_id: caseId, drill_version: caseVersion, mode, retry_mode: retryMode, prior_attempt_id: priorAttemptId }),
+      headers: sessionToken ? { 'X-Clinica-Session': sessionToken } : {},
+    },
+  ),
+  getCrisisDrillAttempt: (id: string, attemptId: string, sessionToken?: string) =>
+    http<{ attempt: CrisisDrillAttempt }>(
+      `/player/${id}/crisis-drills/attempts/${attemptId}`,
+      { headers: sessionToken ? { 'X-Clinica-Session': sessionToken } : {} },
+    ),
+  submitCrisisDrillResponse: (id: string, attemptId: string, responseId: string, sessionToken?: string) =>
+    http<{ attempt: CrisisDrillAttempt }>(
+      `/player/${id}/crisis-drills/attempts/${attemptId}/action`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ response_id: responseId }),
+        headers: sessionToken ? { 'X-Clinica-Session': sessionToken } : {},
+      },
+    ),
+  pauseCrisisDrill: (id: string, attemptId: string, sessionToken?: string) =>
+    http<{ attempt: CrisisDrillAttempt }>(
+      `/player/${id}/crisis-drills/attempts/${attemptId}/pause`,
+      { method: 'POST', headers: sessionToken ? { 'X-Clinica-Session': sessionToken } : {} },
+    ),
+  resumeCrisisDrill: (id: string, attemptId: string, sessionToken?: string) =>
+    http<{ attempt: CrisisDrillAttempt }>(
+      `/player/${id}/crisis-drills/attempts/${attemptId}/resume`,
+      { method: 'POST', headers: sessionToken ? { 'X-Clinica-Session': sessionToken } : {} },
+    ),
+  abandonCrisisDrill: (id: string, attemptId: string, sessionToken?: string) =>
+    http<{ player: PlayerState }>(
+      `/player/${id}/crisis-drills/attempts/${attemptId}/abandon`,
+      { method: 'POST', headers: sessionToken ? { 'X-Clinica-Session': sessionToken } : {} },
+    ),
+  completeCrisisDrill: (id: string, attemptId: string, sessionToken?: string) =>
+    http<{ player: PlayerState; debrief: CrisisDrillDebrief; already_completed: boolean }>(
+      `/player/${id}/crisis-drills/attempts/${attemptId}/complete`,
       { method: 'POST', headers: sessionToken ? { 'X-Clinica-Session': sessionToken } : {} },
     ),
 };
