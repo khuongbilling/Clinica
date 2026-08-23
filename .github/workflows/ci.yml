@@ -35,13 +35,53 @@ jobs:
             exit 1
           fi
 
-          npm ci "${install_flags[@]}"
-          install_status=$?
+          npm config set fetch-retries 5
+          npm config set fetch-retry-factor 2
+          npm config set fetch-retry-mintimeout 10000
+          npm config set fetch-retry-maxtimeout 120000
+          npm config set fetch-timeout 300000
+
+          print_npm_diagnostics() {
+            local log_dir="${npm_config_cache:-$HOME/.npm}/_logs"
+            local latest_log
+
+            latest_log="$(
+              find "$log_dir" -type f -name '*-debug-0.log' -printf '%T@ %p\n' 2>/dev/null \
+                | sort -nr \
+                | head -n 1 \
+                | cut -d' ' -f2-
+            )"
+
+            if [ -n "$latest_log" ] && [ -f "$latest_log" ]; then
+              echo "Focused npm diagnostics from ${latest_log##*/}:" >&2
+              grep -Ei 'npm ERR!|network|fetch|timeout|ETIMEDOUT|ECONNRESET|ENOTFOUND|EAI_AGAIN|stack' "$latest_log" \
+                | tail -n 120 \
+                | sed -E 's#(https?://)[^/@[:space:]]+@#\1***@#g' \
+                || true
+            else
+              echo "No npm debug log was found for focused diagnostics." >&2
+            fi
+          }
+
+          install_status=0
+          npm ci "${install_flags[@]}" || install_status=$?
 
           if [ "$install_status" -ne 0 ] || [ ! -x node_modules/.bin/sucrase-node ]; then
-            echo "npm 10.8.2 install did not produce sucrase-node; retrying once with npm 10.8.0." >&2
+            echo "npm ci did not complete with sucrase-node; retrying once with npm install." >&2
+            print_npm_diagnostics
             rm -rf node_modules
-            npx --yes npm@10.8.0 ci "${install_flags[@]}"
+            fallback_status=0
+            npm install "${install_flags[@]}" || fallback_status=$?
+
+            if [ "$fallback_status" -ne 0 ]; then
+              echo "Fallback npm install failed." >&2
+              exit "$fallback_status"
+            fi
+
+            if ! git diff --exit-code -- package.json package-lock.json; then
+              echo "Fallback npm install changed package metadata or the lockfile." >&2
+              exit 1
+            fi
           fi
 
           if [ ! -x node_modules/.bin/sucrase-node ]; then
