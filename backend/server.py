@@ -1501,6 +1501,49 @@ def simulation_branch(seed: int, family: str) -> str:
     return f"branch-{value:08x}"
 
 
+def simulation_is_unlocked(manifest: Dict[str, Any], player_level: int) -> bool:
+    """Keep reviewed-case rotation inside the same difficulty gate as start."""
+    return manifest["difficulty"] not in {"advanced", "expert"} or player_level >= CLINICAL_SIMULATION_ADVANCED_LEVEL_GATE
+
+
+def select_new_simulation_variation(
+    requested_simulation_id: str,
+    history: List[Dict[str, Any]],
+    player_level: int,
+) -> str:
+    """Choose a deterministic eligible sibling without trusting a client case ID.
+
+    The completed-history receipt is the source of truth for an uncompleted
+    sibling. Once the whole family is complete, move forward from the just
+    completed case in a stable ID ordering so a variation never immediately
+    repeats.
+    """
+    requested = CLINICAL_SIMULATION_MANIFESTS[requested_simulation_id]
+    siblings = sorted(
+        simulation_id
+        for simulation_id, manifest in CLINICAL_SIMULATION_MANIFESTS.items()
+        if manifest["family"] == requested["family"] and simulation_is_unlocked(manifest, player_level)
+    )
+    if len(siblings) < 2:
+        return requested_simulation_id
+
+    completed_ids = {
+        str(row.get("simulationId"))
+        for row in history
+        if row.get("variantFamilyId") == requested["family"]
+    }
+    uncompleted_siblings = [
+        simulation_id
+        for simulation_id in siblings
+        if simulation_id != requested_simulation_id and simulation_id not in completed_ids
+    ]
+    if uncompleted_siblings:
+        return uncompleted_siblings[0]
+
+    current_index = siblings.index(requested_simulation_id)
+    return siblings[(current_index + 1) % len(siblings)]
+
+
 def simulation_next_beat(attempt: Dict[str, Any], manifest: Dict[str, Any]) -> str:
     ids = attempt.get("actionIds", [])
     groups = [manifest["actions"][action_id]["group"] for action_id in ids if action_id in manifest["actions"]]
@@ -2094,22 +2137,51 @@ async def start_clinical_simulation(
         raise HTTPException(status_code=401, detail="invalid player session")
     if not simulation_eligible(player):
         raise HTTPException(status_code=409, detail="Complete the introductory labs before entering Simulation Lab")
-    manifest = CLINICAL_SIMULATION_MANIFESTS.get(payload.simulation_id)
-    if not manifest:
+    requested_manifest = CLINICAL_SIMULATION_MANIFESTS.get(payload.simulation_id)
+    if not requested_manifest:
         raise HTTPException(status_code=422, detail="unknown reviewed simulation")
-    if payload.config.difficulty != manifest["difficulty"] or payload.config.style != manifest["style"]:
-        raise HTTPException(status_code=422, detail="difficulty and style must match the reviewed simulation")
     level = int(player.get("player_level") or player_level_from_xp(int(player.get("xp", 0))))
-    if payload.config.difficulty in {"advanced", "expert"} and level < CLINICAL_SIMULATION_ADVANCED_LEVEL_GATE:
+    selected_simulation_id = payload.simulation_id
+    manifest = requested_manifest
+    if payload.retry_mode == "new_variation" and payload.prior_attempt_id:
+        prior = await db.clinical_simulation_attempts.find_one(
+            {"attemptId": payload.prior_attempt_id, "player_id": player_id},
+            {"_id": 0, "simulationId": 1, "completion": 1},
+        )
+        if not prior or prior.get("simulationId") != payload.simulation_id:
+            raise HTTPException(status_code=422, detail="new variation must reference your matching prior attempt")
+        if not prior.get("completion"):
+            raise HTTPException(status_code=409, detail="complete the current simulation before starting a new variation")
+        selected_simulation_id = select_new_simulation_variation(
+            payload.simulation_id,
+            list(player.get("clinical_simulation_history") or []),
+            level,
+        )
+        manifest = CLINICAL_SIMULATION_MANIFESTS[selected_simulation_id]
+
+    # A new variation may have a different reviewed difficulty/style. Preserve
+    # only the learner's assistance choice; the server derives all case-owned
+    # configuration from the selected manifest.
+    config = payload.config.model_dump()
+    if selected_simulation_id != payload.simulation_id:
+        config["difficulty"] = manifest["difficulty"]
+        config["style"] = manifest["style"]
+        complication = manifest.get("complication")
+        if not complication or config.get("complicationId") != complication["id"]:
+            config["complicationId"] = None
+
+    if config["difficulty"] != manifest["difficulty"] or config["style"] != manifest["style"]:
+        raise HTTPException(status_code=422, detail="difficulty and style must match the reviewed simulation")
+    if not simulation_is_unlocked(manifest, level):
         raise HTTPException(status_code=409, detail=f"Player Level {CLINICAL_SIMULATION_ADVANCED_LEVEL_GATE} is required for Advanced and Expert simulations")
     complication = manifest.get("complication")
-    if payload.config.complicationId:
-        if not complication or payload.config.complicationId != complication["id"]:
+    if config.get("complicationId"):
+        if not complication or config["complicationId"] != complication["id"]:
             raise HTTPException(status_code=422, detail="unknown or unavailable complication")
-        if payload.config.difficulty not in {"advanced", "expert"}:
+        if config["difficulty"] not in {"advanced", "expert"}:
             raise HTTPException(status_code=422, detail="complications require Advanced or Expert")
     if payload.retry_mode == "guided":
-        payload.config.assistance = "guided"
+        config["assistance"] = "guided"
     seed = secrets.randbelow(2_000_000_000) + 1
     if payload.retry_mode == "same_branch":
         if not payload.prior_attempt_id:
@@ -2130,9 +2202,9 @@ async def start_clinical_simulation(
             {"$set": {"clinical_simulation_active_attempt_id": None, "updated_at": now_iso()}},
         )
     attempt = {
-        "attemptId": str(uuid.uuid4()), "player_id": player_id, "simulationId": payload.simulation_id,
+        "attemptId": str(uuid.uuid4()), "player_id": player_id, "simulationId": selected_simulation_id,
         "version": manifest["version"], "seed": seed, "branchId": simulation_branch(seed, manifest["family"]),
-        "config": payload.config.model_dump(), "beat": "assess", "patient": dict(manifest["initial"]),
+        "config": config, "beat": "assess", "patient": dict(manifest["initial"]),
         "known": [], "completedObjectiveIds": [], "actionIds": [], "timeline": [], "safety": "safe",
         "status": "active", "complicationTriggered": False, "created_at": now_iso(), "updated_at": now_iso(),
     }

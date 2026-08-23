@@ -14,6 +14,7 @@ export type SimulationBeat =
   | 'handoff' | 'assess' | 'reveal' | 'prioritize' | 'intervene'
   | 'reassess' | 'complication' | 'adaptation' | 'outcome';
 export type SimulationActionGroup = 'assess' | 'support' | 'treat' | 'escalate' | 'reassess';
+/** New variations are selected from the current family by the server after debrief. */
 export type SimulationRetryMode = 'same_branch' | 'new_variation' | 'similar_case' | 'guided';
 export type SimulationOutcome = 'stabilized' | 'partially_stabilized' | 'unsafe' | 'missed';
 export type SimulationSafety = 'safe' | 'needs_review' | 'unsafe';

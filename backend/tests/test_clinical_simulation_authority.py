@@ -23,6 +23,18 @@ EXPECTED_REVIEWED_CASES = {
     "sim-systems-handoff-detail": ("systems-handoff", "systems", "introductory", "guided"),
     "sim-systems-delayed-escalation": ("systems-handoff", "systems", "standard", "focused"),
     "sim-systems-across-teams": ("systems-handoff", "systems", "advanced", "transfer"),
+    "sim-assessment-new-confusion": ("deterioration-recognition", "assessment", "introductory", "guided"),
+    "sim-assessment-fever-trend": ("deterioration-recognition", "assessment", "standard", "transfer"),
+    "sim-assessment-post-op-pain": ("deterioration-recognition", "judgment", "advanced", "focused"),
+    "sim-medication-identity": ("medication-safety", "pharmacology", "introductory", "guided"),
+    "sim-medication-renal-dose": ("medication-safety", "pharmacology", "standard", "focused"),
+    "sim-medication-sedation-check": ("medication-safety", "pharmacology", "advanced", "transfer"),
+    "sim-judgment-prioritize-fall": ("escalation-handoff", "judgment", "introductory", "guided"),
+    "sim-judgment-call-rapid-response": ("escalation-handoff", "judgment", "standard", "focused"),
+    "sim-judgment-change-plan": ("escalation-handoff", "judgment", "advanced", "transfer"),
+    "sim-sepsis-subtle-trend": ("sepsis-pattern", "assessment", "introductory", "guided"),
+    "sim-sepsis-source-control": ("sepsis-pattern", "assessment", "standard", "transfer"),
+    "sim-sepsis-escalation": ("sepsis-pattern", "judgment", "advanced", "focused"),
 }
 
 
@@ -43,6 +55,10 @@ def test_reviewed_simulation_catalog_has_three_authoritative_variations_per_fami
         "perfusion-hidden": 3,
         "stabilization-sequence": 3,
         "systems-handoff": 3,
+        "deterioration-recognition": 3,
+        "medication-safety": 3,
+        "escalation-handoff": 3,
+        "sepsis-pattern": 3,
     }
 
 
@@ -169,6 +185,25 @@ async def _complete_parallel_attempt() -> None:
             assert len([row for row in stored["clinical_simulation_history"] if row["attemptId"] == attempt_id]) == 1
             assert stored["xp"] == 15
             assert stored["university_credits"] == 20
+
+            variation = await client.post(
+                f"/api/player/{player_id}/clinical-simulations/attempts",
+                json={
+                    "simulation_id": "sim-airway-quiet-change",
+                    # These belong to the just-completed case. The server must
+                    # replace them with the newly selected sibling's contract.
+                    "config": {"difficulty": "introductory", "style": "guided", "assistance": "coach"},
+                    "retry_mode": "new_variation",
+                    "prior_attempt_id": attempt_id,
+                },
+                headers=headers,
+            )
+            assert variation.status_code == 200, variation.text
+            varied_attempt = variation.json()["attempt"]
+            assert varied_attempt["simulationId"] == "sim-airway-breathless-walk"
+            selected_manifest = CLINICAL_SIMULATION_MANIFESTS[varied_attempt["simulationId"]]
+            assert varied_attempt["config"]["difficulty"] == selected_manifest["difficulty"]
+            assert varied_attempt["config"]["style"] == selected_manifest["style"]
         finally:
             await db.clinical_simulation_attempts.delete_many({"player_id": player_id})
             await db.players.delete_one({"id": player_id})

@@ -2,7 +2,7 @@ import Constants from 'expo-constants';
 import { PlayerState } from '@/src/game/types';
 import type { PlayerHeroEligibility, PlayerHeroRecord, PlayerHeroAppearance } from '@/src/game/playerHero';
 import type {
-  SimulationConfig, SimulationDebrief, SimulationManifest, SimulationAttemptState,
+  SimulationConfig, SimulationDebrief, SimulationManifest, SimulationAttemptState, SimulationRetryMode,
 } from '@/src/game/clinicalSimulation';
 import type {
   GrandRoundsAttempt, GrandRoundsCaseCard, GrandRoundsDebrief, GrandRoundsGate,
@@ -173,7 +173,7 @@ export const api = {
     id: string,
     simulationId: string,
     config: SimulationConfig,
-    retryMode: 'same_branch' | 'new_variation' | 'similar_case' | 'guided' = 'new_variation',
+    retryMode: SimulationRetryMode = 'new_variation',
     priorAttemptId?: string,
     sessionToken?: string,
   ) => http<{ attempt: SimulationAttemptState }>(

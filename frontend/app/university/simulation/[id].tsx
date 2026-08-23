@@ -139,7 +139,11 @@ function ClinicalSimulationLabScreen() {
     try {
       const next = await startClinicalSimulation(manifest.id, {
         ...config, assistance: retryMode === 'guided' ? 'guided' : config.assistance,
-      }, retryMode, retryMode === 'same_branch' ? attempt?.attemptId : undefined);
+      }, retryMode, ['same_branch', 'new_variation'].includes(retryMode) ? attempt?.attemptId : undefined);
+      const selectedManifest = getClinicalSimulation(next.simulationId);
+      if (!selectedManifest) throw new Error('The selected reviewed case is unavailable. Please choose another case.');
+      setManifest(selectedManifest);
+      setConfig(next.config);
       setAttempt(next); setDebrief(null); setShowTimeline(false); setScreen('handoff');
     } catch (cause) {
       setError(cause instanceof Error ? cause.message.replace(/^API \d+: /, '') : 'Simulation Lab is unavailable right now.');
@@ -313,7 +317,7 @@ function ClinicalSimulationLabScreen() {
             <Pressable style={styles.timelineToggle} onPress={() => setShowDetails((value) => !value)}><Text style={styles.secondaryTxt}>{showDetails ? 'Hide clinical principle' : 'Show clinical principle & related practice'}</Text><Ionicons name={showDetails ? 'chevron-up' : 'chevron-down'} size={15} color="#A78BFA" /></Pressable>
             {showDetails && <View style={styles.detail}><Text style={styles.body}>{debrief.clinicalPrinciple}</Text><Text style={styles.timelineDelta}>Related practice: {debrief.relatedPractice.join(' · ')}</Text></View>}
             <Pressable style={styles.primary} onPress={() => start('same_branch')} disabled={working}><Text style={styles.primaryTxt}>RETRY SAME SCENARIO</Text></Pressable>
-            <Pressable style={styles.secondary} onPress={() => { const next = CLINICAL_SIMULATIONS.find((item) => item.variantFamilyId === manifest.variantFamilyId && item.id !== manifest.id) ?? CLINICAL_SIMULATIONS.find((item) => item.id !== manifest.id) ?? manifest; selectManifest(next); setScreen('configuration'); }}><Text style={styles.secondaryTxt}>NEW VARIATION / SIMILAR CASE</Text></Pressable>
+            <Pressable style={styles.secondary} onPress={() => start('new_variation')} disabled={working}><Text style={styles.secondaryTxt}>NEW VARIATION</Text></Pressable>
             {debrief.safety === 'unsafe' && <Pressable style={styles.secondary} onPress={() => start('guided')}><Text style={styles.secondaryTxt}>REVIEW IN GUIDED MODE</Text></Pressable>}
             <Pressable style={styles.secondary} onPress={() => router.replace(ROUTES.UNI_PRACTICE)}><Text style={styles.secondaryTxt}>NEW SIMULATION</Text></Pressable>
           </View>
