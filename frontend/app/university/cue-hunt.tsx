@@ -382,7 +382,7 @@ function InfirmaryScene({ scW, found, onCorrect, onWrong }: SceneProps) {
 
 export default function CueHuntScreen() {
   const router = useRouter();
-  const { grantLegacyUniPracticeReward } = usePlayer();
+  const { player, startLegacyUniPracticeAttempt, completeLegacyUniPracticeReward } = usePlayer();
   const { startTutorial, isCompleted, activeTutorialId } = useTutorial();
 
   const [scW, setScW] = useState(0);
@@ -393,6 +393,7 @@ export default function CueHuntScreen() {
   const [creditsEarned, setCreditsEarned] = useState(0);
   const [milestoneItems, setMilestoneItems] = useState<MilestoneRewardItem[] | undefined>();
   const creditedRef = useRef(false);
+  const practiceAttemptRef = useRef<Promise<string> | null>(null);
   const toastOpacity = useRef(new Animated.Value(0)).current;
 
   // Back navigation is blocked while playing — the back links are the
@@ -409,6 +410,21 @@ export default function CueHuntScreen() {
       }
     });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const ensurePracticeAttempt = useCallback(() => {
+    if (!practiceAttemptRef.current) {
+      const attempt = startLegacyUniPracticeAttempt("cue_lab");
+      practiceAttemptRef.current = attempt;
+      void attempt.catch(() => { practiceAttemptRef.current = null; });
+    }
+    return practiceAttemptRef.current;
+  }, [startLegacyUniPracticeAttempt]);
+
+  // Start the server-owned receipt before the learner can finish the exercise.
+  useEffect(() => {
+    if (!player) return;
+    void ensurePracticeAttempt().catch(() => {});
+  }, [player?.id, ensurePracticeAttempt]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const requiredFound = [...found].filter(
     (id) => ZONES.find((z) => z.id === id)?.isRequired,
@@ -427,7 +443,6 @@ export default function CueHuntScreen() {
   // Transition to complete when all required clues found; persist chain step
   useEffect(() => {
     if (requiredFound >= REQUIRED_COUNT && phase === "playing") {
-      markChainStep("cueHuntDone");
       setTimeout(() => setPhase("complete"), 450);
     }
   }, [requiredFound, phase]);
@@ -466,35 +481,33 @@ export default function CueHuntScreen() {
     setWrongTaps((n) => n + 1);
   }, []);
 
-  // Award University Credits + C1 objective XP once on completion
+  // Complete exactly the receipt begun for this lesson. Reward values are
+  // derived by the authoritative University Practice route, not this screen.
   useEffect(() => {
     if (phase !== "complete" || creditedRef.current) return;
     creditedRef.current = true;
-    const credits = wrongTaps === 0 ? 30 : wrongTaps === 1 ? 20 : 15;
     const isPerfect = wrongTaps === 0;
     (async () => {
-      // C1: grant 10 Player XP for completing Cue Hunt (once only)
-      const isObjNew = await completeObjective("obj_cue_hunt_done");
-      const objXp = isObjNew ? 10 : 0;
-
+      const score = ((REQUIRED_COUNT - Math.min(wrongTaps, REQUIRED_COUNT)) / REQUIRED_COUNT) * 100;
+      const result = await completeLegacyUniPracticeReward(
+        "cue_lab",
+        await ensurePracticeAttempt(),
+        score,
+        isPerfect ? "safe" : "needs_review",
+      );
+      setCreditsEarned(result.universityCredits);
+      await completeObjective("obj_cue_hunt_done");
       if (isPerfect) {
         const isFirst = await checkAndMarkFirstPerfect("cueHunt");
         if (isFirst) {
-          const bonus = 15;
           setMilestoneItems([
-            { icon: "school", label: "Uni Credits", amount: String(bonus) },
-            { icon: "trophy", label: "First Perfect Bonus" },
-            ...(isObjNew ? [{ icon: "star-outline" as const, label: "+10 XP — Cue Hunt", amount: "10" }] : []),
+            { icon: "trophy", label: "First perfect lesson" },
           ]);
-          const result = await grantLegacyUniPracticeReward("cue_lab", credits, objXp, isObjNew, bonus);
-          setCreditsEarned(result.universityCredits);
-          return;
         }
       }
-      const result = await grantLegacyUniPracticeReward("cue_lab", credits, objXp, isObjNew);
-      setCreditsEarned(result.universityCredits);
+      await markChainStep("cueHuntDone");
     })();
-  }, [phase]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [phase, wrongTaps, completeLegacyUniPracticeReward, ensurePracticeAttempt]);
 
   const dots = Array.from({ length: REQUIRED_COUNT }, (_, i) => i < requiredFound);
 

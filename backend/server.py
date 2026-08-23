@@ -1732,12 +1732,10 @@ class FacultyCredentialIssueRequest(BaseModel):
     faculty_id: str = Field(min_length=3, max_length=80, pattern=r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
     role: Literal["author", "reviewer", "approver"]
 
-
 class FacultyCredentialRotateRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
     role: Literal["author", "reviewer", "approver"]
     reason: str = Field(min_length=3, max_length=500)
-
 
 class FacultyCredentialRevokeRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
@@ -1779,6 +1777,28 @@ for _activity, _ids, _domains, _topic in (
             "activity": _activity, "difficulty": _difficulty, "version": 1,
             "family": _id.rsplit("_", 1)[0], "domains": list(_domains), "topics": [_topic],
         }
+
+# The legacy Fading Apprentice lessons are fixed story exercises, rather than
+# entries in the rotating client catalog. They still receive an explicit
+# server-owned practice identity so only these reviewed lesson completions can
+# obtain an issued receipt and the normal first/repeat University rewards.
+PRACTICE_CHALLENGE_MANIFEST.update({
+    "legacy-fading-apprentice-cue-hunt": {
+        "activity": "cue_lab", "difficulty": "introductory", "version": 1,
+        "family": "fading-apprentice", "domains": ["assessment", "systems"],
+        "topics": ["clinical-assessment"],
+    },
+    "legacy-fading-apprentice-rapid-triage": {
+        "activity": "triage", "difficulty": "introductory", "version": 1,
+        "family": "fading-apprentice", "domains": ["judgment", "command"],
+        "topics": ["priority-care"],
+    },
+    "legacy-fading-apprentice-stabilize-stack": {
+        "activity": "stack", "difficulty": "introductory", "version": 1,
+        "family": "fading-apprentice", "domains": ["stabilization", "systems"],
+        "topics": ["care-sequencing"],
+    },
+})
 
 # Clinical Simulation Lab content is declarative and server-owned. The client
 # may render it, but it never supplies a legal action, effect, score, branch,

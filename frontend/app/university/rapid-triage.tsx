@@ -257,7 +257,7 @@ function DonghuaTriageScene({ sceneImg, overlayColor, setting }: {
 
 export default function RapidTriageScreen() {
   const router  = useRouter();
-  const { grantLegacyUniPracticeReward } = usePlayer();
+  const { player, startLegacyUniPracticeAttempt, completeLegacyUniPracticeReward } = usePlayer();
   const { startTutorial, isCompleted, activeTutorialId } = useTutorial();
 
   const [cardIdx,   setCardIdx]   = useState(0);
@@ -267,6 +267,7 @@ export default function RapidTriageScreen() {
   const [creditsEarned, setCreditsEarned] = useState(0);
   const [milestoneItems, setMilestoneItems] = useState<MilestoneRewardItem[] | undefined>();
   const creditedRef = useRef(false);
+  const practiceAttemptRef = useRef<Promise<string> | null>(null);
 
   useBlockBack();
   useClearTutorialOnExit();
@@ -280,35 +281,47 @@ export default function RapidTriageScreen() {
     });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Award University Credits + C1 objective XP once on completion
+  const ensurePracticeAttempt = useCallback(() => {
+    if (!practiceAttemptRef.current) {
+      const attempt = startLegacyUniPracticeAttempt("triage");
+      practiceAttemptRef.current = attempt;
+      void attempt.catch(() => { practiceAttemptRef.current = null; });
+    }
+    return practiceAttemptRef.current;
+  }, [startLegacyUniPracticeAttempt]);
+
+  // The authoritative receipt is issued when the playable lesson begins, not
+  // retroactively after the learner has already completed every card.
+  useEffect(() => {
+    if (!player) return;
+    void ensurePracticeAttempt().catch(() => {});
+  }, [player?.id, ensurePracticeAttempt]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Complete the exact University Practice receipt issued on entry.
   useEffect(() => {
     if (gamePhase !== "complete" || creditedRef.current) return;
     creditedRef.current = true;
-    const credits = correctCount === CARDS.length ? 30 : correctCount === 2 ? 20 : 10;
     const isPerfect = correctCount === CARDS.length;
     (async () => {
-      // C1: grant 10 Player XP for completing Rapid Triage (once only)
-      const isObjNew = await completeObjective("obj_triage_done");
-      const objXp = isObjNew ? 10 : 0;
-
+      const result = await completeLegacyUniPracticeReward(
+        "triage",
+        await ensurePracticeAttempt(),
+        (correctCount / CARDS.length) * 100,
+        isPerfect ? "safe" : "needs_review",
+      );
+      setCreditsEarned(result.universityCredits);
+      await completeObjective("obj_triage_done");
       if (isPerfect) {
         const isFirst = await checkAndMarkFirstPerfect("triage");
         if (isFirst) {
-          const bonus = 15;
           setMilestoneItems([
-            { icon: "school", label: "Uni Credits", amount: String(bonus) },
-            { icon: "trophy", label: "First Perfect Bonus" },
-            ...(isObjNew ? [{ icon: "star-outline" as const, label: "+10 XP — Rapid Triage", amount: "10" }] : []),
+            { icon: "trophy", label: "First perfect lesson" },
           ]);
-          const result = await grantLegacyUniPracticeReward("triage", credits, objXp, isObjNew, bonus);
-          setCreditsEarned(result.universityCredits);
-          return;
         }
       }
-      const result = await grantLegacyUniPracticeReward("triage", credits, objXp, isObjNew);
-      setCreditsEarned(result.universityCredits);
+      await markChainStep("rapidTriageDone");
     })();
-  }, [gamePhase]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [gamePhase, correctCount, completeLegacyUniPracticeReward, ensurePracticeAttempt]);
 
   const cardFade    = useRef(new Animated.Value(1)).current;
   const feedbackFade = useRef(new Animated.Value(0)).current;
@@ -363,7 +376,6 @@ export default function RapidTriageScreen() {
         setFeedback({ correct: true, text: card.correctFeedback });
         setTimeout(() => {
           if (cardIdx >= CARDS.length - 1) {
-            markChainStep("rapidTriageDone");
             // Fade out, then switch to complete phase
             Animated.timing(cardFade, { toValue: 0, duration: 200, useNativeDriver: true }).start(() => {
               setGamePhase("complete");
@@ -377,7 +389,6 @@ export default function RapidTriageScreen() {
         // Auto-advance after showing wrong feedback — never trap the player on one card
         setTimeout(() => {
           if (cardIdx >= CARDS.length - 1) {
-            markChainStep("rapidTriageDone");
             Animated.timing(cardFade, { toValue: 0, duration: 200, useNativeDriver: true }).start(() => {
               setGamePhase("complete");
             });

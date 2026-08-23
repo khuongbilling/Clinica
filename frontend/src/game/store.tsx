@@ -42,8 +42,11 @@ import type { ClinicalChallenge, ClinicalEvaluation } from './clinicalChallenge'
 
 const STORAGE_KEY = 'clinica.player.v2';
 
-// Backfill hero_progression so every owned hero has a star/copies entry,
-// and clamp any malformed values. Keeps older/remote saves compatible.
+const LEGACY_UNI_PRACTICE_CHALLENGES = {
+  cue_lab: { challengeId: 'legacy-fading-apprentice-cue-hunt', challengeVersion: 1 },
+  triage: { challengeId: 'legacy-fading-apprentice-rapid-triage', challengeVersion: 1 },
+  stack: { challengeId: 'legacy-fading-apprentice-stabilize-stack', challengeVersion: 1 },
+} as const;
 function normalizeProgression(p: PlayerState): PlayerState {
   const src = p.hero_progression || {};
   const prog: Record<string, { star: number; copies: number; level: number; xp: number; locked: boolean; favorite: boolean }> = {};
@@ -667,14 +670,14 @@ type Ctx = {
     reward: import('./uniPractice').GrantedPracticeReward;
     newMilestones: import('./uniPractice').UniPracticeMilestone[];
   }>;
-  /** Economy-aware completion for the legacy Fading Apprentice practice routes. */
-  grantLegacyUniPracticeReward: (
-    activityType: 'cue_lab' | 'triage' | 'stack',
-    universityCredits: number,
-    objectiveXp: number,
-    isFirstStoryClear: boolean,
-    firstPerfectBonus?: number,
-  ) => Promise<{ universityCredits: number; staminaBonus: number }>;
+  /** Server-owned University Practice lifecycle for Fading Apprentice lessons. */
+  startLegacyUniPracticeAttempt: (activityType: LegacyUniPracticeActivity) => Promise<string>;
+  completeLegacyUniPracticeReward: (
+    activityType: LegacyUniPracticeActivity,
+    attemptId: string,
+    score: number,
+    safety: 'safe' | 'needs_review' | 'unsafe',
+  ) => Promise<{ universityCredits: number; staminaBonus: number; alreadyClaimed: boolean }>;
   spendStamina: (cost?: number) => Promise<boolean>;
   logWellnessActivity: (input: WellnessLogInput) => Promise<WellnessResult | null>;
   // Daily Ward Rounds — free-to-earn daily engagement loop.
@@ -2566,23 +2569,65 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     };
   }, [updateState, mergeEconomyState]);
 
-  // The legacy Fading Apprentice screens do not own server-verifiable attempts.
-  // They remain playable as lessons, but cannot issue repeat rewards. The
-  // data-driven University Practice completion route is the authoritative path.
-  const grantLegacyUniPracticeReward = useCallback(async (
-    activityType: 'cue_lab' | 'triage' | 'stack',
-    universityCredits: number,
-    objectiveXp: number,
-    isFirstStoryClear: boolean,
-    firstPerfectBonus = 0,
-  ) => {
-    void activityType;
-    void universityCredits;
-    void objectiveXp;
-    void isFirstStoryClear;
-    void firstPerfectBonus;
-    return { universityCredits: 0, staminaBonus: 0 };
+  const startLegacyUniPracticeAttempt = useCallback(async (activityType: LegacyUniPracticeActivity) => {
+    const base = playerRef.current;
+    if (!base) throw new Error('No player loaded.');
+    const challenge = LEGACY_UNI_PRACTICE_CHALLENGES[activityType];
+    const attempt = await api.beginUniversityPracticeAttempt(base.id, {
+      activity: activityType,
+      difficulty: 'introductory',
+      challenge_id: challenge.challengeId,
+      challenge_version: challenge.challengeVersion,
+    }, base.economy_token);
+    return attempt.attempt_id;
   }, []);
+
+  // Legacy screens retain their story-specific UI, but rewards travel through
+  // the exact bound-attempt lifecycle used by University Practice. The client
+  // cannot supply a reward, generic claim key, or invented completion ID.
+  const completeLegacyUniPracticeReward = useCallback(async (
+    activityType: LegacyUniPracticeActivity,
+    attemptId: string,
+    score: number,
+    safety: 'safe' | 'needs_review' | 'unsafe',
+  ) => {
+    const base = playerRef.current;
+    if (!base) throw new Error('No player loaded.');
+    const challenge = LEGACY_UNI_PRACTICE_CHALLENGES[activityType];
+    const grant = await api.completeUniversityPractice(base.id, {
+      activity: activityType,
+      difficulty: 'introductory',
+      challenge_id: challenge.challengeId,
+      challenge_version: challenge.challengeVersion,
+      attempt_id: attemptId,
+      score: Math.max(0, Math.min(100, Math.round(score))),
+      safety_result: safety,
+    }, base.economy_token);
+
+    // Package 5A only records a receipt after the server has claimed the
+    // bound attempt. The receipt remains idempotent and is never a reward path.
+    await api.recordActivityCompletion(base.id, 'university-practice', attemptId, base.economy_token);
+
+    let next = normalizeProgression(grant.player);
+    let staminaBonus = 0;
+    try {
+      const economy = await api.mutateEconomy(base.id, {
+        kind: 'grant_stamina_bonus', source: `practice:${activityType}`, amount: 1,
+      }, base.economy_token);
+      staminaBonus = economy.stamina_bonus ?? 0;
+      next = await mergeEconomyState(next, economy.player);
+    } catch { /* repeated practice remains playable without an extra daily bonus */ }
+
+    next = foldDaily(next, 'university_lesson', 1, 'university-practice');
+    next = foldDaily(next, 'material_earned');
+    playerRef.current = next;
+    await updateState(next);
+    return {
+      universityCredits: grant.granted.university_credits ?? 0,
+      staminaBonus,
+      alreadyClaimed: grant.already_claimed,
+    };
+  }, [mergeEconomyState, updateState]);
 
   // J4 — Hero Skill Academy: spend learning materials + University Credits to
   // purchase the next rank of a skill upgrade. Uses playerRef critical section
@@ -3648,7 +3693,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
 
   const value = useMemo<Ctx>(() => ({
     player, loading, dailyPulse, openRoundsSignal, requestOpenDailyRounds, createPlayer, applyRewards, claimJourneyChapterBoss, claimJourneyAreaBoss, completeVerdantha, recordWardWaves, purchaseItem, purchaseJourneyMerchant, assembleCovenantScroll, redeemExchangeItem, claimMilestone, setActiveTitle, purchaseSkin, equipSkin, purchaseUpgrade, refillStamina, pullGacha, upgradeUnitMastery, setWardLoadout, setRealmLayout, setRealmAssignment, collectRealmProduction, recordFailure,
-    syncInventory, saveActiveTeam, summonOnce, evolveHero, recruitOnce, freeRecruitOnce, tutorialRecruitOnce, recruitTen, promoteHeroCert, trainHero, toggleHeroLock, toggleHeroFavorite, completeLesson, completeSimulation, startClinicalSimulation, resumeClinicalSimulation, submitClinicalSimulationAction, completeClinicalSimulation, startGrandRounds, resumeGrandRounds, submitGrandRoundsResponse, pauseGrandRounds, abandonGrandRounds, saveGrandRoundsNotes, completeGrandRounds, completeUniPractice, grantLegacyUniPracticeReward, upgradeHeroSkill, spendStamina, logWellnessActivity, checkInDailyRounds, claimDailyObjective, claimDailyAllComplete, claimWeeklyGoal, claimWeeklyTask, claimWeeklyAllComplete, claimQuestMilestone, claimPracticeModule, markPracticeCurriculumSeen, exchangeInsightCrystals, recordCueTopics, resetPlayer, refresh, setPlayerClass, claimClassTier, completePrologue, completeIdentityRestore, setAvatar, completeDiagnosticIntro, markReminiscenceSeen, markStorySceneSeen, completeLotusLessonNode, applyClassDiagnostic, confirmClassDiagnostic, setLearningProfile, updateBattleStars, performSweep, claimLevelReward, claimChapterChest, claimChapter3Star, claimJourneyNode, markLv2UnlockSeen, markUniversityIntroSeen, completeWardDefense, purchaseWardExchange, assembleWardAegis, updateState,
+    syncInventory, saveActiveTeam, summonOnce, evolveHero, recruitOnce, freeRecruitOnce, tutorialRecruitOnce, recruitTen, promoteHeroCert, trainHero, toggleHeroLock, toggleHeroFavorite, completeLesson, completeSimulation, startClinicalSimulation, resumeClinicalSimulation, submitClinicalSimulationAction, completeClinicalSimulation, startGrandRounds, resumeGrandRounds, submitGrandRoundsResponse, pauseGrandRounds, abandonGrandRounds, saveGrandRoundsNotes, completeGrandRounds, completeUniPractice, startLegacyUniPracticeAttempt, completeLegacyUniPracticeReward, upgradeHeroSkill, spendStamina, logWellnessActivity, checkInDailyRounds, claimDailyObjective, claimDailyAllComplete, claimWeeklyGoal, claimWeeklyTask, claimWeeklyAllComplete, claimQuestMilestone, claimPracticeModule, markPracticeCurriculumSeen, exchangeInsightCrystals, recordCueTopics, resetPlayer, refresh, setPlayerClass, claimClassTier, completePrologue, completeIdentityRestore, setAvatar, completeDiagnosticIntro, markReminiscenceSeen, markStorySceneSeen, completeLotusLessonNode, applyClassDiagnostic, confirmClassDiagnostic, setLearningProfile, updateBattleStars, performSweep, claimLevelReward, claimChapterChest, claimChapter3Star, claimJourneyNode, markLv2UnlockSeen, markUniversityIntroSeen, completeWardDefense, purchaseWardExchange, assembleWardAegis, updateState,
     setEquippedCards, markCardTutorialSeen, markCallTutorialSeen,
     advanceProloguePhase, completePrologueCinematic, claimPrologueRewards,
     confirmIdentityReconstruction,
@@ -3659,7 +3704,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     reconcileChapterBossKeys,
     setCanonicalShift,
     startCrisisDrill, resumeCrisisDrill, submitCrisisDrillResponse, pauseCrisisDrill, abandonCrisisDrill, completeCrisisDrill,
-  }), [player, loading, dailyPulse, openRoundsSignal, requestOpenDailyRounds, createPlayer, applyRewards, claimJourneyChapterBoss, claimJourneyAreaBoss, completeVerdantha, recordWardWaves, purchaseItem, purchaseJourneyMerchant, assembleCovenantScroll, redeemExchangeItem, claimMilestone, setActiveTitle, purchaseSkin, equipSkin, purchaseUpgrade, refillStamina, pullGacha, upgradeUnitMastery, setWardLoadout, setRealmLayout, setRealmAssignment, collectRealmProduction, recordFailure, syncInventory, saveActiveTeam, summonOnce, evolveHero, recruitOnce, freeRecruitOnce, tutorialRecruitOnce, recruitTen, promoteHeroCert, trainHero, toggleHeroLock, toggleHeroFavorite, completeLesson, completeSimulation, startClinicalSimulation, resumeClinicalSimulation, submitClinicalSimulationAction, completeClinicalSimulation, startGrandRounds, resumeGrandRounds, submitGrandRoundsResponse, pauseGrandRounds, abandonGrandRounds, saveGrandRoundsNotes, completeGrandRounds, completeUniPractice, grantLegacyUniPracticeReward, upgradeHeroSkill, spendStamina, logWellnessActivity, checkInDailyRounds, claimDailyObjective, claimDailyAllComplete, claimWeeklyGoal, claimWeeklyTask, claimWeeklyAllComplete, claimQuestMilestone, claimPracticeModule, markPracticeCurriculumSeen, exchangeInsightCrystals, recordCueTopics, resetPlayer, refresh, setPlayerClass, claimClassTier, completePrologue, completeIdentityRestore, setAvatar, completeDiagnosticIntro, markReminiscenceSeen, markStorySceneSeen, completeLotusLessonNode, applyClassDiagnostic, confirmClassDiagnostic, setLearningProfile, updateBattleStars, performSweep, claimLevelReward, claimChapterChest, claimChapter3Star, claimJourneyNode, markLv2UnlockSeen, markUniversityIntroSeen, completeWardDefense, purchaseWardExchange, assembleWardAegis, updateState, setEquippedCards, markCardTutorialSeen, markCallTutorialSeen, advanceProloguePhase, completePrologueCinematic, claimPrologueRewards, confirmIdentityReconstruction, equipItem, unequipItem, claimSpecialization, getPlayerHeroEligibility, createPlayerHero, applyFogMapChapterBossRewards, reconcileChapterBossKeys, startCrisisDrill, resumeCrisisDrill, submitCrisisDrillResponse, pauseCrisisDrill, abandonCrisisDrill, completeCrisisDrill]);
+  }), [player, loading, dailyPulse, openRoundsSignal, requestOpenDailyRounds, createPlayer, applyRewards, claimJourneyChapterBoss, claimJourneyAreaBoss, completeVerdantha, recordWardWaves, purchaseItem, purchaseJourneyMerchant, assembleCovenantScroll, redeemExchangeItem, claimMilestone, setActiveTitle, purchaseSkin, equipSkin, purchaseUpgrade, refillStamina, pullGacha, upgradeUnitMastery, setWardLoadout, setRealmLayout, setRealmAssignment, collectRealmProduction, recordFailure, syncInventory, saveActiveTeam, summonOnce, evolveHero, recruitOnce, freeRecruitOnce, tutorialRecruitOnce, recruitTen, promoteHeroCert, trainHero, toggleHeroLock, toggleHeroFavorite, completeLesson, completeSimulation, startClinicalSimulation, resumeClinicalSimulation, submitClinicalSimulationAction, completeClinicalSimulation, startGrandRounds, resumeGrandRounds, submitGrandRoundsResponse, pauseGrandRounds, abandonGrandRounds, saveGrandRoundsNotes, completeGrandRounds, completeUniPractice, startLegacyUniPracticeAttempt, completeLegacyUniPracticeReward, upgradeHeroSkill, spendStamina, logWellnessActivity, checkInDailyRounds, claimDailyObjective, claimDailyAllComplete, claimWeeklyGoal, claimWeeklyTask, claimWeeklyAllComplete, claimQuestMilestone, claimPracticeModule, markPracticeCurriculumSeen, exchangeInsightCrystals, recordCueTopics, resetPlayer, refresh, setPlayerClass, claimClassTier, completePrologue, completeIdentityRestore, setAvatar, completeDiagnosticIntro, markReminiscenceSeen, markStorySceneSeen, completeLotusLessonNode, applyClassDiagnostic, confirmClassDiagnostic, setLearningProfile, updateBattleStars, performSweep, claimLevelReward, claimChapterChest, claimChapter3Star, claimJourneyNode, markLv2UnlockSeen, markUniversityIntroSeen, completeWardDefense, purchaseWardExchange, assembleWardAegis, updateState, setEquippedCards, markCardTutorialSeen, markCallTutorialSeen, advanceProloguePhase, completePrologueCinematic, claimPrologueRewards, confirmIdentityReconstruction, equipItem, unequipItem, claimSpecialization, getPlayerHeroEligibility, createPlayerHero, applyFogMapChapterBossRewards, reconcileChapterBossKeys, startCrisisDrill, resumeCrisisDrill, submitCrisisDrillResponse, pauseCrisisDrill, abandonCrisisDrill, completeCrisisDrill]);
 
   return <PlayerContext.Provider value={value}>{children}</PlayerContext.Provider>;
 }
@@ -3669,3 +3714,5 @@ export function usePlayer() {
   if (!ctx) throw new Error('usePlayer must be used within PlayerProvider');
   return ctx;
 }
+
+type LegacyUniPracticeActivity = keyof typeof LEGACY_UNI_PRACTICE_CHALLENGES;

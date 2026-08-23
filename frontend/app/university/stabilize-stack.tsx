@@ -561,7 +561,7 @@ type GamePhase = "playing" | "review" | "complete";
 
 export default function StabilizeStackScreen() {
   const router = useRouter();
-  const { grantLegacyUniPracticeReward } = usePlayer();
+  const { player, startLegacyUniPracticeAttempt, completeLegacyUniPracticeReward } = usePlayer();
   const {
     startTutorial,
     isCompleted,
@@ -576,6 +576,7 @@ export default function StabilizeStackScreen() {
   const [creditsEarned, setCreditsEarned] = useState(0);
   const [milestoneItems, setMilestoneItems] = useState<MilestoneRewardItem[] | undefined>();
   const creditedRef = useRef(false);
+  const practiceAttemptRef = useRef<Promise<string> | null>(null);
 
   // Scroll ref for auto-scrolling to orb grid on tutorial step 1
   const scrollRef   = useRef<React.ElementRef<typeof ScrollView>>(null);
@@ -595,6 +596,22 @@ export default function StabilizeStackScreen() {
     });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  const ensurePracticeAttempt = useCallback(() => {
+    if (!practiceAttemptRef.current) {
+      const attempt = startLegacyUniPracticeAttempt("stack");
+      practiceAttemptRef.current = attempt;
+      void attempt.catch(() => { practiceAttemptRef.current = null; });
+    }
+    return practiceAttemptRef.current;
+  }, [startLegacyUniPracticeAttempt]);
+
+  // Start an approved attempt before this lesson can reach its completion
+  // screen, so the completion has no client-authored claim path.
+  useEffect(() => {
+    if (!player) return;
+    void ensurePracticeAttempt().catch(() => {});
+  }, [player?.id, ensurePracticeAttempt]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Auto-start forced tutorial on first visit
   useEffect(() => {
     const t = setTimeout(() => {
@@ -605,38 +622,36 @@ export default function StabilizeStackScreen() {
     return () => clearTimeout(t);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Mark chain step + award credits + C1 objective XP when player reaches complete
+  // Settle the entry receipt through the authoritative University Practice
+  // completion route. Its first/repeat rewards are derived server-side.
   useEffect(() => {
     if (gamePhase !== "complete") return;
-    markChainStep("stabilizeDone");
     if (creditedRef.current) return;
     creditedRef.current = true;
-    const credits = correctCount === CARE_PHASES.length ? 30 : correctCount === 2 ? 20 : 10;
     const isPerfect = correctCount === CARE_PHASES.length;
     (async () => {
-      // C1: grant 10 XP for Stabilize Stack + 10 XP for full FA chain (both once only)
-      const isStabilizeNew = await completeObjective("obj_stabilize_done");
-      const isFANew       = await completeObjective("obj_fading_apprentice_done");
-      const objXp = (isStabilizeNew ? 10 : 0) + (isFANew ? 10 : 0);
-
+      const result = await completeLegacyUniPracticeReward(
+        "stack",
+        await ensurePracticeAttempt(),
+        (correctCount / CARE_PHASES.length) * 100,
+        isPerfect ? "safe" : "needs_review",
+      );
+      setCreditsEarned(result.universityCredits);
+      await completeObjective("obj_stabilize_done");
+      await completeObjective("obj_fading_apprentice_done");
       if (isPerfect) {
         const isFirst = await checkAndMarkFirstPerfect("stabilize");
         if (isFirst) {
-          const bonus = 15;
           setMilestoneItems([
-            { icon: "school", label: "Uni Credits", amount: String(bonus) },
-            { icon: "trophy", label: "First Perfect Bonus" },
-            ...(isStabilizeNew ? [{ icon: "star-outline" as const, label: "+10 XP — Stabilize", amount: "10" }] : []),
-            ...(isFANew ? [{ icon: "ribbon-outline" as const, label: "+10 XP — Case Chain Done!", amount: "10" }] : []),
+            { icon: "trophy", label: "First perfect lesson" },
           ]);
-          const result = await grantLegacyUniPracticeReward("stack", credits, objXp, isStabilizeNew || isFANew, bonus);
-          setCreditsEarned(result.universityCredits);
-          return;
         }
       }
-      const result = await grantLegacyUniPracticeReward("stack", credits, objXp, isStabilizeNew || isFANew);
-      setCreditsEarned(result.universityCredits);
+      await markChainStep("stabilizeDone");
     })();
+  // correctCount is declared below with the rest of the derived game state.
+  // The completion phase changes only after the final tap, so this effect
+  // intentionally runs on that transition with the settled value.
   }, [gamePhase]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // When tutorial requires an orb tap, scroll orb grid into view

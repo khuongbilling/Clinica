@@ -89,7 +89,11 @@ const legacyPracticeRoutes = [
   'app/university/rapid-triage.tsx',
   'app/university/stabilize-stack.tsx',
 ];
-check('All reachable legacy University labs use the shared repeat-reward guard',
-  legacyPracticeRoutes.every((route) => readFileSync(route, 'utf8').includes('grantLegacyUniPracticeReward')));
+check('All reachable legacy University labs use a bound University Practice receipt',
+  legacyPracticeRoutes.every((route) => {
+    const source = readFileSync(route, 'utf8');
+    return source.includes('startLegacyUniPracticeAttempt')
+      && source.includes('completeLegacyUniPracticeReward');
+  }));
 
 if (failures > 0) process.exit(1);
