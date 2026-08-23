@@ -5,9 +5,9 @@
 # shim. Nothing here (or in the Dockerfile) hardcodes which binaries are guarded.
 #
 # Run it:
-#   - at image build  -> creates shims for the baked default (the floor: yarn)
+#   - at image build  -> creates shims for the baked default ruleset
 #   - at pod provisioning, right AFTER cortex writes /opt/install-guard/rules.json
-#     -> creates shims for the live dashboard set (yarn, eas, npx, ...) with NO rebuild
+#     -> creates shims for the live dashboard set (npm, npx, eas, ...) with NO rebuild
 set -e
 
 SCRIPT_DIR=$(dirname "$(readlink -f "$0")")

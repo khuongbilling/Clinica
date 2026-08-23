@@ -1,6 +1,6 @@
 // The three entry modes of the command guard.
 // runArgs: shim mode -> exit 0 allow / 1 block (reason + alternate on stderr).
-// runPreinstall: yarn lifecycle hook -> checks package.json deps against the list.
+// runPreinstall: package-manager lifecycle hook -> checks package.json deps against the list.
 // runListCommands: print guarded binary names (drives sync-shims.sh).
 
 const fs = require("fs");
@@ -29,10 +29,10 @@ function runArgs(cmd, args) {
   process.exit(1);
 }
 
-// A dep in package.json is equivalent to having installed it via the one legit path
-// (`yarn expo install`, since `yarn add` is blanket-blocked). Each dep is checked as
-// that command, so editing package.json directly can't bypass the rules.
-const INSTALL_FORM = "yarn expo install";
+// A dep in package.json is checked as if it were installed through the canonical
+// Expo-aware npm path. This keeps direct manifest edits subject to the same policy
+// as command-line installs.
+const INSTALL_FORM = "npx expo install";
 
 function runPreinstall() {
   const { list, source } = loadRules();

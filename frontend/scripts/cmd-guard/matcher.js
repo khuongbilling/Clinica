@@ -1,6 +1,6 @@
 // Pattern matching, backed by the vendored wildcard-match package with separator " ":
 // patterns are command-line globs — "*" = one word, "**" = any words (incl. none).
-// e.g. "yarn add **", "yarn expo install ** expo-av* **", "eas **".
+// e.g. "npm install **", "npx expo install ** expo-av* **", "eas **".
 
 const wcmatch = require("./vendor/wildcard-match");
 
