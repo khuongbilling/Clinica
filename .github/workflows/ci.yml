@@ -17,12 +17,37 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '20.20.0'
           cache: 'npm'
           cache-dependency-path: frontend/package-lock.json
 
-      - name: Install dependencies
-        run: npm ci --legacy-peer-deps
+      - name: Guard frontend dependency manifest
+        run: node scripts/cmd-guard.js --preinstall
+
+      - name: Install CI dependencies
+        shell: bash
+        run: |
+          set -u -o pipefail
+          install_flags=(--legacy-peer-deps --ignore-scripts --no-audit --no-fund)
+
+          if [ "$(npm --version)" != "10.8.2" ]; then
+            echo "Expected npm 10.8.2, found $(npm --version)." >&2
+            exit 1
+          fi
+
+          npm ci "${install_flags[@]}"
+          install_status=$?
+
+          if [ "$install_status" -ne 0 ] || [ ! -x node_modules/.bin/sucrase-node ]; then
+            echo "npm 10.8.2 install did not produce sucrase-node; retrying once with npm 10.8.0." >&2
+            rm -rf node_modules
+            npx --yes npm@10.8.0 ci "${install_flags[@]}"
+          fi
+
+          if [ ! -x node_modules/.bin/sucrase-node ]; then
+            echo "CI dependency install failed: node_modules/.bin/sucrase-node is missing." >&2
+            exit 1
+          fi
 
       - name: Run non-mutating CI verification
         run: npm run ci:verify
