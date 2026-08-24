@@ -40,6 +40,7 @@ db = client[os.environ.get('DB_NAME', 'clinica')]
 app = FastAPI(title="Clinica: Kingdom of Healing API")
 api_router = APIRouter(prefix="/api")
 FACULTY_ID_PATTERN = re.compile(r"^[A-Za-z0-9_-]{1,128}$")
+FACULTY_ROLES = {"author", "reviewer", "approver"}
 
 ACTIVITY_REGISTRY_PATH = ROOT_DIR.parent / "frontend" / "src" / "game" / "activityRegistry.manifest.json"
 with ACTIVITY_REGISTRY_PATH.open(encoding="utf-8") as activity_registry_file:
