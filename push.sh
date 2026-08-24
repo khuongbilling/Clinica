@@ -1,9 +1,17 @@
 #!/bin/sh
-# Push all commits to GitHub
-TOKEN=$(printenv GITHUB_TOKEN)
-if [ -z "$TOKEN" ]; then
-  echo "ERROR: GITHUB_TOKEN secret not set in Replit Secrets."
-  exit 1
-fi
-git push "https://x-token-auth:${TOKEN}@github.com/khuongbilling/Clinica.git" main
-echo "Done — github.com/khuongbilling/Clinica is up to date."
+set -eu
+
+cat >&2 <<'MESSAGE'
+This helper is intentionally disabled: it never reads credentials and never
+constructs a credential-bearing Git URL.
+
+Use Replit Version Control for normal repository operations, or use your
+standard authenticated Git workflow directly against the repository's
+configured origin, for example:
+
+  git push origin main
+
+No push was performed by this helper.
+MESSAGE
+
+exit 1
