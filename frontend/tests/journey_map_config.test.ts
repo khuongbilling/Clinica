@@ -116,11 +116,11 @@ console.log('\n── design-spec table ──');
 function pct(bp: number) { return bp / 100; }
 
 {
-  // Ch1's expanded campus has a 3% Area Boss rate.
+  // Ch1–3 have no Area Bosses; the rate begins at Ch4.
   const r = getEncounterRatesBp(1);
-  check('ch1 none=62%',     pct(r.none)     === 62, `${pct(r.none)}%`);
+  check('ch1 none=65%',     pct(r.none)     === 65, `${pct(r.none)}%`);
   check('ch1 battle=30%',   pct(r.battle)   === 30, `${pct(r.battle)}%`);
-  check('ch1 areaBoss=3%',  pct(r.areaBoss) ===  3, `${pct(r.areaBoss)}%`);
+  check('ch1 areaBoss=0%',  pct(r.areaBoss) ===  0, `${pct(r.areaBoss)}%`);
   check('ch1 treasure=5%',  pct(r.treasure) ===  5, `${pct(r.treasure)}%`);
   check('ch1 merchant=0%',  pct(r.merchant) ===  0, `${pct(r.merchant)}%`);
 }
