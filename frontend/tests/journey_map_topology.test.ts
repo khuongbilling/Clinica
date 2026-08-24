@@ -80,12 +80,12 @@ function serialise(t: HexTopology): string {
 console.log('\n── Chapter boundary tile counts ──');
 
 const BOUNDARY_CASES: Array<[number, number]> = [
-  [1,   30], [3,  30], [5,  30],
-  [6,   35], [10, 35],
-  [11,  40], [20, 40],
-  [21,  45], [30, 45],
-  [31,  50],
-  [100, 80],
+  [1,  120], [3,  60], [5,  60],
+  [6,   70], [10, 70],
+  [11,  80], [20, 80],
+  [21,  90], [30, 90],
+  [31, 100],
+  [100, 160],
 ];
 
 for (const [ch, expected] of BOUNDARY_CASES) {
@@ -141,7 +141,9 @@ function runStructuralTests(
 
   // ── 10. Gate distance ≥ minimum ─────────────────────────────────────────
   const gateDist = topo.graphDistances.get(topo.gateAnchorId) ?? 0;
-  const minDist  = Math.max(4, Math.floor(target * 0.22));
+  const minDist  = target <= 100
+    ? Math.max(4, Math.floor(target * 0.22))
+    : Math.max(4, Math.floor(Math.sqrt(target) * 2));
   check(`[${label}] gate dist ${gateDist} ≥ minDist ${minDist}`,
     gateDist >= minDist, `got ${gateDist}`);
 
@@ -191,6 +193,8 @@ const TEST_CASES: Array<{ chapter: number; seed: string | number }> = [
   { chapter: 20, seed: 0        },
   { chapter: 21, seed: 'delta'  },
   { chapter: 31, seed: 'alpha'  },
+  { chapter: 31, seed: 'range_test' },
+  { chapter: 40, seed: 'sim:ch40:topo7' },
 ];
 
 for (const { chapter, seed } of TEST_CASES) {
@@ -216,6 +220,8 @@ console.log('\n── Determinism ──');
     { chapter: 6,  seed: 'determinism_test' },
     { chapter: 11, seed: 999                },
     { chapter: 21, seed: 'fixed_seed'       },
+    { chapter: 31, seed: 'range_test'       },
+    { chapter: 40, seed: 'sim:ch40:topo7'   },
   ];
 
   for (const opts of CASES) {

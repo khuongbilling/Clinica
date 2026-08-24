@@ -339,6 +339,55 @@ function isValidTopology(
   return true;
 }
 
+/**
+ * Build a deterministic, narrow portrait fallback for the rare case where
+ * every weighted-growth attempt fails validation.
+ *
+ * The rows all include q=0, so the result is connected by construction. The
+ * row count is derived from the existing gate-distance rule, rather than
+ * weakening that rule for the fallback. Seeded row-width placement keeps
+ * fallback maps deterministic while still allowing different seeds to make
+ * different silhouettes.
+ */
+function buildFallbackTileSet(
+  targetCount: number,
+  maxWidth:    number,
+  baseSeed:    number,
+): Set<string> | null {
+  const rowCount    = minGateDistance(targetCount) + 1;
+  const baseWidth   = Math.floor(targetCount / rowCount);
+  const extraRows   = targetCount % rowCount;
+  const maxRowWidth = Math.ceil(maxWidth * 1.4) + 1;
+
+  if (baseWidth < 1 || baseWidth + (extraRows > 0 ? 1 : 0) > maxRowWidth) {
+    return null;
+  }
+
+  const rowWidths = Array<number>(rowCount).fill(baseWidth);
+  const rowOrder  = Array.from({ length: rowCount }, (_, index) => index);
+  const rng       = mulberry32((baseSeed ^ 0x9e3779b9) >>> 0);
+
+  // Fisher-Yates gives a deterministic distribution of the remainder rows.
+  for (let i = rowOrder.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1));
+    [rowOrder[i], rowOrder[j]] = [rowOrder[j], rowOrder[i]];
+  }
+  for (let i = 0; i < extraRows; i++) {
+    rowWidths[rowOrder[i]]++;
+  }
+
+  const tileSet = new Set<string>();
+  for (let r = 0; r < rowCount; r++) {
+    const width = rowWidths[r];
+    const minQ  = -Math.floor(width / 2);
+    for (let q = minQ; q < minQ + width; q++) {
+      tileSet.add(axialKey(q, r));
+    }
+  }
+
+  return tileSet.size === targetCount ? tileSet : null;
+}
+
 // ── Main export ───────────────────────────────────────────────────────────────
 
 const MAX_RETRIES = 60;
@@ -355,7 +404,8 @@ const MAX_RETRIES = 60;
  *  • Same `chapter` + `seed` always produces identical output.
  *  • Different seeds normally produce different output.
  *
- * @throws if no valid topology is found within MAX_RETRIES attempts.
+ * A deterministic validator-checked fallback is used if all retry attempts
+ * fail, so supported chapter/seed combinations never fail due to randomness.
  */
 export function generateHexTopology({
   chapter,
@@ -432,8 +482,46 @@ export function generateHexTopology({
     };
   }
 
+  // Retry exhaustion must not make a valid chapter/seed unusable. Build a
+  // connected portrait map from the same count/width inputs, then pass it
+  // through the same start, gate, and validity checks as stochastic maps.
+  const fallbackTileSet = buildFallbackTileSet(targetCount, maxWidth, baseSeed);
+  if (fallbackTileSet) {
+    const fallbackCoords    = [...fallbackTileSet].map(parseKey);
+    const fallbackAdjacency = buildAdjacency(fallbackTileSet);
+    const fallbackStart     = chooseLowerStartTile(fallbackCoords);
+    const fallbackStartKey  = axialKey(fallbackStart.q, fallbackStart.r);
+    const fallbackDistances  = bfsDistances(fallbackAdjacency, fallbackStartKey);
+    const fallbackGate       = chooseGateAnchorTile(
+      fallbackCoords,
+      fallbackDistances,
+      fallbackStart,
+      fallbackTileSet,
+    );
+
+    if (fallbackGate) {
+      const fallbackGateKey = axialKey(fallbackGate.q, fallbackGate.r);
+      if (isValidTopology(
+        fallbackTileSet,
+        fallbackDistances,
+        fallbackGateKey,
+        targetCount,
+        maxWidth,
+      )) {
+        return {
+          chapter,
+          seed,
+          tiles:          fallbackCoords,
+          startTileId:    fallbackStartKey,
+          gateAnchorId:   fallbackGateKey,
+          graphDistances: fallbackDistances,
+        };
+      }
+    }
+  }
+
   throw new Error(
-    `generateHexTopology: no valid map after ${MAX_RETRIES} retries ` +
-    `(chapter=${chapter}, seed=${String(seed)})`,
+    `generateHexTopology: no valid map after ${MAX_RETRIES} retries or ` +
+    `fallback validation (chapter=${chapter}, seed=${String(seed)})`,
   );
 }
