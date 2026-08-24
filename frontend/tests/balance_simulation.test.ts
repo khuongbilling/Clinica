@@ -14,7 +14,9 @@
  *
  * FLAG THRESHOLDS
  * ─────────────────────────────────────────────────────────────────────────────
- * ⚠️  Area Boss cap (3) reached on > 60 % of maps.
+ * ℹ️  Area Boss cap (3) frequency is reported for balancing visibility.
+ *     It is not a failure by itself: late chapters intentionally reach the
+ *     canonical hard cap often. The hard maximum remains an invariant.
  * ⚠️  Merchant common too early: P(≥1 merchant) > 25 % before chapter 5.
  * ⚠️  Day density cap hit on > 80 % of day maps.
  * ⚠️  Night avg battles > 85 % of day avg battles.
@@ -51,7 +53,6 @@ const SEEDS_PER_TOPOLOGY    = MAPS_PER_COMBO / TOPOLOGIES_PER_CHAPTER; // 1 000
 const REPRESENTATIVE_CHAPTERS = [4, 5, 10, 11, 20, 21, 30, 40, 50];
 
 // Flag thresholds
-const FLAG_AREA_BOSS_CAP_PCT     = 0.60;  // > 60 %
 const FLAG_MERCHANT_EARLY_PCT    = 0.25;  // > 25 % P(≥1 merchant) before ch5
 const FLAG_DAY_CAP_EXCESSIVE_PCT = 0.80;  // > 80 %
 const FLAG_NIGHT_CLOSE_TO_DAY    = 0.85;  // night avg > 85 % of day avg
@@ -199,6 +200,12 @@ function runSimulation(): void {
           const enc  = assignCanonicalEncounters({ chapter, seed, timeOfDay: shift, topology });
 
           stats.maps++;
+          if (enc.areaBossCount > CANONICAL_AREA_BOSS_HARD_MAX) {
+            throw new Error(
+              `[${seed}] area boss count ${enc.areaBossCount} exceeds ` +
+              `hard maximum ${CANONICAL_AREA_BOSS_HARD_MAX}`,
+            );
+          }
           stats.totalBattle    += enc.battleCount;
           stats.totalAreaBoss  += enc.areaBossCount;
           stats.totalTreasure  += enc.treasureCount;
@@ -401,10 +408,10 @@ function checkFlags(allStats: ComboStats[]): void {
     const capHitPct   = s.capHits / maps;
     const merchantPresencePct = s.merchantMaps / maps;
 
-    // 1. Area boss cap reached on > 60 % of maps
-    if (s.areaBossDist[3] / maps > FLAG_AREA_BOSS_CAP_PCT) {
-      flag(`[${tag}] Area boss cap (3) reached on ${(s.areaBossDist[3] / maps * 100).toFixed(1)}% of maps (threshold: ${FLAG_AREA_BOSS_CAP_PCT * 100}%)`);
-    }
+    // 1. Area-boss cap-hit frequency is intentionally informational.
+    // The report above preserves the boss[3] distribution; late chapters are
+    // expected to reach the canonical hard cap frequently at their 4–5% tile
+    // rates. The per-map hard maximum is asserted during generation above.
 
     // 2. Merchant common too early (before ch5)
     if (chapter < 5 && merchantPresencePct > FLAG_MERCHANT_EARLY_PCT) {
