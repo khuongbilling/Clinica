@@ -4,10 +4,10 @@
  * CANONICAL UNLOCK TABLE — Book I (Chapters 1–10)
  * ─────────────────────────────────────────────────────────────────────────────
  *
- *  Ch 1  — Stability, Corruption, Area Bosses (baseline; always active)
+ *  Ch 1  — Stability, Corruption (baseline; always active)
  *  Ch 2  — Multi-threat introduction, Support Ally / Call Team tutorial
  *  Ch 3  — Intent visibility, Protocol Cards, Evening Shift
- *  Ch 4  — Chapter Boss Keys, Chapter Boss Gate, Shift Divergence
+ *  Ch 4  — Area Bosses, Chapter Boss Keys, Chapter Boss Gate, Shift Divergence
  *  Ch 5  — Merchant, Ward Blessings, Supplies interactions
  *  Ch 6  — Night Shift, Ward Hazards, Silent Risk, Expanded map (35-tile)
  *  Ch 7  — Full 2–3 threat battle composition
@@ -71,7 +71,7 @@ export type BookISystem =
   | 'intent_visibility'
   | 'protocol_cards'
   | 'evening_shift'
-  // Chapter 1 — early expedition threat
+  // Chapter 4 — area boss + boss key loop
   | 'area_boss'
   // Chapter 4 — boss key loop
   | 'chapter_boss_keys'
@@ -142,9 +142,8 @@ export const BOOK_I_UNLOCK_CHAPTER: Record<BookISystem, number> = {
   intent_visibility:         3,
   protocol_cards:            3,
   evening_shift:             3,
-  // Ch 1 — a rare, optional expedition encounter; keys/gate remain Ch 4.
-  area_boss:                 1,
-  // Ch 4 — chapter boss key loop
+  // Ch 4 — area boss + chapter boss key loop
+  area_boss:                 4,
   chapter_boss_keys:         4,
   chapter_boss_gate:         4,
   shift_divergence:          4,

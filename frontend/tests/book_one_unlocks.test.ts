@@ -109,7 +109,7 @@ console.log('\n── BOOK_I_UNLOCK_CHAPTER ──');
 // Chapter 1
 eq(BOOK_I_UNLOCK_CHAPTER['stability'],                 1, '31. stability → ch1');
 eq(BOOK_I_UNLOCK_CHAPTER['corruption'],                1, '32. corruption → ch1');
-eq(BOOK_I_UNLOCK_CHAPTER['area_boss'],                 1, '33. area_boss → ch1');
+eq(BOOK_I_UNLOCK_CHAPTER['area_boss'],                 4, '33. area_boss → ch4');
 // Chapter 2
 eq(BOOK_I_UNLOCK_CHAPTER['multi_threat_introduction'], 2, '34. multi_threat_introduction → ch2');
 eq(BOOK_I_UNLOCK_CHAPTER['call_team'],                 2, '35. call_team → ch2');
@@ -142,7 +142,7 @@ eq(BOOK_I_UNLOCK_CHAPTER['challenge_chapter'],        10, '53. challenge_chapter
 eq(BOOK_I_UNLOCK_CHAPTER['clinical_reflection'],      10, '54. clinical_reflection → ch10');
 
 // getSystemUnlockChapter mirrors the table
-eq(getSystemUnlockChapter('area_boss'), 1,            '55. getSystemUnlockChapter(area_boss) = 1');
+eq(getSystemUnlockChapter('area_boss'), 4,            '55. getSystemUnlockChapter(area_boss) = 4');
 
 // ── 56–90: isSystemUnlocked ───────────────────────────────────────────────────
 
@@ -151,7 +151,9 @@ console.log('\n── isSystemUnlocked ──');
 // Baseline: always unlocked
 check('56. stability unlocked at ch1',   isSystemUnlocked('stability', 1));
 check('57. corruption unlocked at ch1',  isSystemUnlocked('corruption', 1));
-check('57a. area_boss unlocked at ch1',  isSystemUnlocked('area_boss', 1));
+check('57a. area_boss locked at ch1',    !isSystemUnlocked('area_boss', 1));
+check('57b. area_boss locked at ch2',    !isSystemUnlocked('area_boss', 2));
+check('57c. area_boss locked at ch3',    !isSystemUnlocked('area_boss', 3));
 
 // Ch2 systems: locked at ch1, open at ch2+
 check('58. call_team locked at ch1',     !isSystemUnlocked('call_team', 1));
@@ -168,9 +170,10 @@ check('66. evening_shift locked at ch2',      !isSystemUnlocked('evening_shift',
 check('67. evening_shift unlocked at ch3',     isSystemUnlocked('evening_shift', 3));
 
 // Ch4 systems
-check('70. chapter_boss_gate locked at ch3',  !isSystemUnlocked('chapter_boss_gate', 3));
-check('71. chapter_boss_gate unlocked at ch4', isSystemUnlocked('chapter_boss_gate', 4));
-check('72. shift_divergence unlocked at ch4',  isSystemUnlocked('shift_divergence', 4));
+check('70. area_boss unlocked at ch4',         isSystemUnlocked('area_boss', 4));
+check('71. chapter_boss_gate locked at ch3',   !isSystemUnlocked('chapter_boss_gate', 3));
+check('72. chapter_boss_gate unlocked at ch4', isSystemUnlocked('chapter_boss_gate', 4));
+check('73. shift_divergence unlocked at ch4',  isSystemUnlocked('shift_divergence', 4));
 
 // Ch5 systems
 check('73. merchant locked at ch4',          !isSystemUnlocked('merchant', 4));
@@ -211,10 +214,10 @@ console.log('\n── getChapterUnlocks ──');
 
 {
   const ch1 = getChapterUnlocks(1);
-  eq(ch1.length, 3,                         '96. ch1 unlocks 3 systems');
+   eq(ch1.length, 2,                         '96. ch1 unlocks 2 systems');
   check('97. ch1 includes stability',        ch1.includes('stability'));
   check('98. ch1 includes corruption',       ch1.includes('corruption'));
-  check('98a. ch1 includes area_boss',       ch1.includes('area_boss'));
+   check('98a. ch1 excludes area_boss',      !ch1.includes('area_boss'));
 
   const ch2 = getChapterUnlocks(2);
   eq(ch2.length, 2,                         '99. ch2 unlocks 2 systems');
@@ -227,8 +230,9 @@ console.log('\n── getChapterUnlocks ──');
   check('104. ch3 includes intent_visibility', ch3.includes('intent_visibility'));
   check('105. ch3 includes protocol_cards',  ch3.includes('protocol_cards'));
 
-  const ch4 = getChapterUnlocks(4);
-  eq(ch4.length, 3,                         '106. ch4 unlocks 3 systems');
+   const ch4 = getChapterUnlocks(4);
+   eq(ch4.length, 4,                         '106. ch4 unlocks 4 systems');
+   check('107. ch4 includes area_boss',               ch4.includes('area_boss'));
   check('108. ch4 includes chapter_boss_keys', ch4.includes('chapter_boss_keys'));
   check('109. ch4 includes chapter_boss_gate', ch4.includes('chapter_boss_gate'));
   check('110. ch4 includes shift_divergence', ch4.includes('shift_divergence'));
@@ -268,9 +272,9 @@ console.log('\n── getChapterUnlocks ──');
 
 console.log('\n── getCumulativeUnlocks ──');
 
-eq(getCumulativeUnlocks(1).length,  3,   '127. cumulative at ch1 = 3');
-eq(getCumulativeUnlocks(2).length,  5,   '128. cumulative at ch2 = 5');
-eq(getCumulativeUnlocks(3).length,  8,   '129. cumulative at ch3 = 8');
+   eq(getCumulativeUnlocks(1).length,  2,   '127. cumulative at ch1 = 2');
+   eq(getCumulativeUnlocks(2).length,  4,   '128. cumulative at ch2 = 4');
+   eq(getCumulativeUnlocks(3).length,  7,   '129. cumulative at ch3 = 7');
 eq(getCumulativeUnlocks(4).length,  11,  '130. cumulative at ch4 = 11');
 eq(getCumulativeUnlocks(5).length,  14,  '131. cumulative at ch5 = 14');
 eq(getCumulativeUnlocks(6).length,  18,  '132. cumulative at ch6 = 18');
@@ -301,7 +305,7 @@ for (let ch = 1; ch < 10; ch++) {
 console.log('\n── getLockedSystems ──');
 
 eq(getLockedSystems(0).length, 24,        '140. all locked at ch0');
-eq(getLockedSystems(1).length, 21,        '141. 21 locked after ch1');
+eq(getLockedSystems(1).length, 22,        '141. 22 locked after ch1');
 eq(getLockedSystems(9).length, 3,         '142. 3 locked after ch9');
 eq(getLockedSystems(10).length, 0,        '143. 0 locked after ch10');
 
@@ -329,7 +333,7 @@ console.log('\n── getSystemsByChapter ──');
   eq(byChapter.size, 10,                      '149. map has 10 chapter keys');
   check('150. ch1 key exists',                 byChapter.has(1));
   check('151. ch10 key exists',                byChapter.has(10));
-  eq(byChapter.get(1)?.length ?? 0, 3,        '152. ch1 has 3 systems in map');
+  eq(byChapter.get(1)?.length ?? 0, 2,        '152. ch1 has 2 systems in map');
   eq(byChapter.get(6)?.length ?? 0, 4,        '153. ch6 has 4 systems in map');
   eq(byChapter.get(10)?.length ?? 0, 3,       '154. ch10 has 3 systems in map');
 
@@ -466,15 +470,17 @@ console.log('\n── validateBookIConsistency ──');
   }
 }
 
-// area_boss consistency: the Chapter 1 expedition rate enables the system.
+// Area Bosses remain unavailable through Chapter 3 and begin in Chapter 4.
 {
   // These are the external domain checks validateBookIConsistency() relies on
   const { areaBossEnabled }  = require('../src/game/journeyMap/chapterBossKeys');
   const { merchantMaxCount } = require('../src/game/journeyMap/config');
-  check('212. areaBossEnabled(1) = true (external domain check)',   areaBossEnabled(1));
-  check('213. areaBossEnabled(0) = false (external domain check)', !areaBossEnabled(0));
-  check('214. merchantMaxCount(5) > 0 (external domain check)',     merchantMaxCount(5) > 0);
-  check('215. merchantMaxCount(4) = 0 (external domain check)',     merchantMaxCount(4) === 0);
+  check('212. areaBossEnabled(1) = false (external domain check)', !areaBossEnabled(1));
+  check('213. areaBossEnabled(3) = false (external domain check)', !areaBossEnabled(3));
+  check('214. areaBossEnabled(4) = true (external domain check)',   areaBossEnabled(4));
+  check('215. areaBossEnabled(0) = false (external domain check)', !areaBossEnabled(0));
+  check('216. merchantMaxCount(5) > 0 (external domain check)',     merchantMaxCount(5) > 0);
+  check('217. merchantMaxCount(4) = 0 (external domain check)',     merchantMaxCount(4) === 0);
 }
 
 // Exhaustiveness guard: union covers ch1-10 with exactly 24 systems

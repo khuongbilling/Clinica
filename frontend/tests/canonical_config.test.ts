@@ -9,7 +9,7 @@
  *
  * Covers:
  *  - Tile counts at every band boundary
- *  - Area boss rate tiers (Ch 1 = 3%, Ch 2–3 = 0%, Ch 4–10 = 3%,
+ *  - Area boss rate tiers (Ch 1–3 = 0%, Ch 4–10 = 3%,
  *    Ch 11–20 = 4%, Ch 21+ = 5%)
  *  - Treasure rate progression and 12% cap
  *  - Merchant rate progression and 5% cap
@@ -85,7 +85,7 @@ check('ch100 → 80', canonicalTileCount(100) === 80,
 
 console.log('\n── 2. Area boss rates ──');
 
-check('ch1  areaBoss=3%',  canonicalAreaBossRateBp(1)  === 300);
+check('ch1  areaBoss=0%',  canonicalAreaBossRateBp(1)  ===   0);
 check('ch2  areaBoss=0%',  canonicalAreaBossRateBp(2)  ===   0);
 check('ch3  areaBoss=0%',  canonicalAreaBossRateBp(3)  ===   0);
 check('ch4  areaBoss=3%',  canonicalAreaBossRateBp(4)  === 300);
@@ -183,11 +183,11 @@ console.log('\n── 7. Spot-check rate values ──');
 {
   const r = canonicalEncounterRatesBp(1, 'day');
   check('ch1/day battle=30%',   pct(r.battle)    === 30);
-  check('ch1/day areaBoss=3%',  pct(r.areaBoss)  ===  3);
+  check('ch1/day areaBoss=0%',  pct(r.areaBoss)  ===  0);
   check('ch1/day treasure=5%',  pct(r.treasure)  ===  5);
   check('ch1/day merchant=0%',  pct(r.merchant)  ===  0);
   check('ch1/day wardEvent=0%', pct(r.wardEvent) ===  0);
-  check('ch1/day none=62%',     pct(r.none)      === 62);
+  check('ch1/day none=65%',     pct(r.none)      === 65);
 }
 {
   const r = canonicalEncounterRatesBp(2, 'day');

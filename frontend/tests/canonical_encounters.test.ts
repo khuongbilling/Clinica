@@ -18,7 +18,7 @@
  * 10.  No non-treasure tile has chestTier
  * 11.  All wardEvent tiles have a valid wardEventSubtype
  * 12.  No non-wardEvent tile has wardEventSubtype
- * 13.  Chapter 1 produces zero area boss tiles (rate is 0%)
+ * 13.  Chapters 1–3 produce zero area boss tiles (rate is 0%)
  * 14.  Chapter 1 produces zero ward event tiles (rate is 0%)
  * 15.  Chapter 2 night produces zero ward event tiles (rate is 0%)
  * 16.  Chapter 2 day may produce ward event tiles (rate is 5%)
@@ -183,14 +183,18 @@ for (let i = 0; i < 20; i++) {
     `${distViolations.length} violation(s) at dist=${distViolations.map(t => t.graphDistanceFromStart).join(',')}`);
 }
 
-// Also verify at chapter 1 (rate = 0%) and chapter 3 (rate = 0%) — always 0
+// Chapters 1–3 have a zero rate across every shift.  This is a new-map
+// generation contract; persisted legacy runs are loaded without rewriting
+// their historical tiles or claimed keys.
 {
-  const r1 = assignCanonicalEncounters({ chapter: 1, seed: SEED_A, timeOfDay: 'day', topology: topo1 });
-  check('ch1: zero area boss tiles', r1.areaBossCount === 0, `got ${r1.areaBossCount}`);
-
-  const topo3 = generateHexTopology({ chapter: 3, seed: SEED_A });
-  const r3 = assignCanonicalEncounters({ chapter: 3, seed: SEED_A, timeOfDay: 'day', topology: topo3 });
-  check('ch3: zero area boss tiles', r3.areaBossCount === 0, `got ${r3.areaBossCount}`);
+  for (const chapter of [1, 2, 3]) {
+    for (const timeOfDay of TIME_OF_DAY_VALUES) {
+      const topology = generateHexTopology({ chapter, seed: `${SEED_A}-${chapter}` });
+      const result = assignCanonicalEncounters({ chapter, seed: SEED_A, timeOfDay, topology });
+      check(`ch${chapter}/${timeOfDay}: zero area boss tiles`,
+        result.areaBossCount === 0, `got ${result.areaBossCount}`);
+    }
+  }
 }
 
 // ── 8. Battle density cap ─────────────────────────────────────────────────────
