@@ -3,61 +3,61 @@ outputs = []
 
 [[generated]]
 id = "M-qBvjwrSo7uvw3raB5YO"
-uri = "file://frontend/assets/heroes/novice_guardian.png"
+uri = "file://frontend/assets/heroes/portraits/novice_guardian.png"
 type = "image"
 title = "novice_guardian female portrait"
 
 [[generated]]
 id = "fvPXghVdE_4xc35rUY-h9"
-uri = "file://frontend/assets/heroes/night_watcher.png"
+uri = "file://frontend/assets/heroes/portraits/night_watcher.png"
 type = "image"
 title = "night_watcher male portrait"
 
 [[generated]]
 id = "hxY9IhxPJimAiwAaE6B0p"
-uri = "file://frontend/assets/heroes/apprentice_seer.png"
+uri = "file://frontend/assets/heroes/portraits/apprentice_seer.png"
 type = "image"
 title = "apprentice_seer female portrait"
 
 [[generated]]
 id = "p9Oy2W5zWG70QntA4Or1X"
-uri = "file://frontend/assets/heroes/junior_warden.png"
+uri = "file://frontend/assets/heroes/portraits/junior_warden.png"
 type = "image"
 title = "junior_warden male portrait"
 
 [[generated]]
 id = "TELSpOXTM6G7YjmUPp3DF"
-uri = "file://frontend/assets/heroes/data_acolyte.png"
+uri = "file://frontend/assets/heroes/portraits/data_acolyte.png"
 type = "image"
 title = "data_acolyte female portrait"
 
 [[generated]]
 id = "jwv__WisPCwS6m_q5RFMI"
-uri = "file://frontend/assets/heroes/village_caretaker.png"
+uri = "file://frontend/assets/heroes/portraits/village_caretaker.png"
 type = "image"
 title = "village_caretaker female portrait"
 
 [[generated]]
 id = "cdBaHb4SZHKqLg0LX8U64"
-uri = "file://frontend/assets/heroes/storm_runner.png"
+uri = "file://frontend/assets/heroes/portraits/storm_runner.png"
 type = "image"
 title = "storm_runner male portrait"
 
 [[generated]]
 id = "0F06h3SjrZyfJxKOVO6pm"
-uri = "file://frontend/assets/heroes/infection_warden.png"
+uri = "file://frontend/assets/heroes/portraits/infection_warden.png"
 type = "image"
 title = "infection_warden female portrait"
 
 [[generated]]
 id = "z7kMTGa8oSLkd3JOFORYC"
-uri = "file://frontend/assets/heroes/wound_sage.png"
+uri = "file://frontend/assets/heroes/portraits/wound_sage.png"
 type = "image"
 title = "wound_sage male portrait"
 
 [[generated]]
 id = "4lJ7FHarRC4Bo7LonJsvT"
-uri = "file://frontend/assets/heroes/mindkeeper.png"
+uri = "file://frontend/assets/heroes/portraits/mindkeeper.png"
 type = "image"
 title = "mindkeeper female portrait"
 
@@ -145,11 +145,6 @@ uri = "file://frontend/assets/images/ward_lobby_bg.png"
 type = "image"
 title = "ward lobby healer sanctuary bg"
 
-[[generated]]
-id = "Hk11B9fjdeLh2blcgIac2"
-uri = "file://frontend/assets/images/home_hub_bg.png"
-type = "image"
-title = "home hub kingdom bg"
 
 [[generated]]
 id = "cJr3ug5lXbgwZJu39nYZO"
@@ -157,23 +152,8 @@ uri = "file://frontend/assets/images/ward_board_scene.png"
 type = "image"
 title = "lotus sanctuary battle arena board"
 
-[[generated]]
-id = "vWeQhxCiFf8sDaHYZW9Xq"
-uri = "file://frontend/assets/images/sprite_ward_scout.png"
-type = "image"
-title = "ward-scout-chibi-sprite"
 
-[[generated]]
-id = "nMPvHc-9TVQWx2kQ_U26U"
-uri = "file://frontend/assets/images/sprite_mist_caster.png"
-type = "image"
-title = "mist-caster-chibi-sprite"
 
-[[generated]]
-id = "9XJb61S-1xBuJCz5H5h_d"
-uri = "file://frontend/assets/images/sprite_o2_healer.png"
-type = "image"
-title = "o2-healer-chibi-sprite"
 
 [[generated]]
 id = "nBc70QBItaxBK62WCgEQN"
@@ -205,23 +185,8 @@ uri = "file://frontend/assets/images/enemy_bronchospasm_drake.png"
 type = "image"
 title = "bronchospasm drake boss sprite"
 
-[[generated]]
-id = "Q5iw9XycjF2sDm92coVxB"
-uri = "file://frontend/assets/images/card_ward_scout.png"
-type = "image"
-title = "ward scout card portrait"
 
-[[generated]]
-id = "IRm9zB94pYWaPj5bJzIPm"
-uri = "file://frontend/assets/images/card_mist_caster.png"
-type = "image"
-title = "mist caster card portrait"
 
-[[generated]]
-id = "dQ5M61j4mSrwjI5qIHhcr"
-uri = "file://frontend/assets/images/card_o2_healer.png"
-type = "image"
-title = "o2 healer card portrait"
 
 [[generated]]
 id = "uLccbEjh3DE7GehcvQGdv"
@@ -529,53 +494,13 @@ uri = "file://frontend/assets/realm/ui/parchment_scroll.png"
 type = "image"
 title = "generated_image"
 
-[[generated]]
-id = "pZC3ULKy2GyipYT-EY4-C"
-uri = "file://frontend/assets/loading/scene_01_lantern_rocket.png"
-type = "image"
-title = "scene_01_lantern_rocket"
 
-[[generated]]
-id = "P6ScwcYDbJHxPekcsQuNl"
-uri = "file://frontend/assets/loading/scene_02_thermometer_bat.png"
-type = "image"
-title = "scene_02_thermometer_bat"
 
-[[generated]]
-id = "GKjOVhaebLirwCmZI-5P9"
-uri = "file://frontend/assets/loading/scene_03_water_surf.png"
-type = "image"
-title = "scene_03_water_surf"
 
-[[generated]]
-id = "aWW_ksn8UZ3Ud19KQWa3q"
-uri = "file://frontend/assets/loading/scene_04_swarm_panic.png"
-type = "image"
-title = "scene_04_swarm_panic"
 
-[[generated]]
-id = "1Y35TVygRvWyU2nOJohuj"
-uri = "file://frontend/assets/loading/scene_05_drake_flex.png"
-type = "image"
-title = "scene_05_drake_flex"
 
-[[generated]]
-id = "tmMEM9ml5P_dn0ao0YHr7"
-uri = "file://frontend/assets/loading/scene_06_syringe_sneak.png"
-type = "image"
-title = "scene_06_syringe_sneak"
 
-[[generated]]
-id = "NHWK88KDOJWE_8RIIKDC9"
-uri = "file://frontend/assets/loading/scene_07_back_to_back.png"
-type = "image"
-title = "scene_07_back_to_back"
 
-[[generated]]
-id = "iu0Rhj6PaD_1-xgnkaXNT"
-uri = "file://frontend/assets/loading/scene_08_banana_slip.png"
-type = "image"
-title = "scene_08_banana_slip"
 
 [[generated]]
 id = "woTQv6TGPgIWRtALqXoLK"
@@ -649,23 +574,8 @@ uri = "file://frontend/assets/enemies/silent_infarct.png"
 type = "image"
 title = "silent infarct boss"
 
-[[generated]]
-id = "1f82LH4Bc1LhS-v1bQuiG"
-uri = "file://frontend/assets/loading/party_01_charge.png"
-type = "image"
-title = "hero party charge loading"
 
-[[generated]]
-id = "lY2P7QlZ5kgl8Io7Uz4Ns"
-uri = "file://frontend/assets/loading/party_02_backtoback.png"
-type = "image"
-title = "hero party back to back"
 
-[[generated]]
-id = "aHEIZXFnNXNLIaOiQWpwS"
-uri = "file://frontend/assets/loading/party_03_summit.png"
-type = "image"
-title = "hero party summit heroic"
 
 [[generated]]
 id = "PB5iHUGgEKp3bg1jWm4KT"
@@ -691,11 +601,6 @@ uri = "file://frontend/assets/reminiscence/panel_03_event.png"
 type = "image"
 title = "generated_image"
 
-[[generated]]
-id = "5Of-2hwkN6eYNJ5VLVtPq"
-uri = "file://frontend/assets/reminiscence/panel_04_darkness_thread.png"
-type = "image"
-title = "panel4 darkness lotus thread"
 
 [[generated]]
 id = "bdnBzixkCxApdzUZAklY6"
@@ -799,11 +704,6 @@ uri = "file://frontend/assets/reminiscence/scene_people.png"
 type = "image"
 title = "people i protect"
 
-[[generated]]
-id = "1OtN7GbzR-YjDZi6-YSjh"
-uri = "file://frontend/assets/reminiscence/scene_could_not_save.png"
-type = "image"
-title = "could not save"
 
 [[generated]]
 id = "AzIN-Bkt1kxj1Uoh7kEMT"
@@ -817,11 +717,6 @@ uri = "file://frontend/assets/reminiscence/scene_lotus_keeper.png"
 type = "image"
 title = "generated_image"
 
-[[generated]]
-id = "SCg65nE2giCcTYcphSx6x"
-uri = "file://frontend/assets/onboarding/glass_tech_bg.png"
-type = "image"
-title = "glass tech backdrop"
 
 [[generated]]
 id = "60ClLtU2Bx7aoucgGX6oS"
@@ -877,11 +772,6 @@ uri = "file://frontend/assets/images/banner_uni_classtree.png"
 type = "image"
 title = "Class Tree banner"
 
-[[generated]]
-id = "VTKHdxxUQZnLqxJ3w21lm"
-uri = "file://frontend/assets/images/mentor_guide.png"
-type = "image"
-title = "hand-drawn mentor narrator portrait"
 
 [[generated]]
 id = "Z0pojP8i_CSUIyYbDI0cH"
@@ -1045,11 +935,6 @@ uri = "file://frontend/assets/images/cue_hunt_chibi_healer.png"
 type = "image"
 title = "chibi healer clue accent"
 
-[[generated]]
-id = "rQ6gckc3D34VHY_PMxRS0"
-uri = "file://frontend/assets/images/cue_hunt_infirmary_scene_v2.png"
-type = "image"
-title = "infirmary scene empty flask v2"
 
 [[generated]]
 id = "vJ4SRyZAcIUNLL4YX6FSD"
@@ -1159,35 +1044,10 @@ uri = "file://frontend/assets/map-nodes/node_memory.png"
 type = "image"
 title = "memory fragment node icon"
 
-[[generated]]
-id = "RthaVB749KuyzH5lpm4Tk"
-uri = "file://frontend/assets/map-bg/journey_map_ch1_sanctuary.png"
-type = "image"
-title = "ch1 lotus sanctuary map bg"
 
-[[generated]]
-id = "zupFy57J5cUDc95gLLO2w"
-uri = "file://frontend/assets/map-bg/journey_map_ch2_university_courtyard.png"
-type = "image"
-title = "ch2 university courtyard map bg"
 
-[[generated]]
-id = "J3SOsXo0tng56XiLEOJ4r"
-uri = "file://frontend/assets/map-bg/journey_map_ch3_breathing_garden.png"
-type = "image"
-title = "ch3 breathing garden map bg"
 
-[[generated]]
-id = "PYwVPqv9baeSfcbfVjpM7"
-uri = "file://frontend/assets/map-bg/journey_map_ch4_code_rush_tower.png"
-type = "image"
-title = "ch4 code rush tower map bg"
 
-[[generated]]
-id = "-O5ilq1KL7T5zwh-mz6_X"
-uri = "file://frontend/assets/map-bg/journey_map_ch5_community_bloom.png"
-type = "image"
-title = "ch5 community bloom map bg"
 
 [[generated]]
 id = "LvK4uxMsc6fQDubUdXwb1"
@@ -1448,9 +1308,8 @@ type = "image"
 title = "ward cascade boss enemy sprite"
 
 [[generated]]
-[[generated]]
 id = "3U6hu3X-rh-vFUwfsFT2L"
-uri = "file://frontend/assets/heroes/wardlight_apprentice.png"
+uri = "file://frontend/assets/heroes/portraits/wardlight_apprentice.png"
 type = "image"
 title = "wardlight_apprentice portrait"
 
@@ -1462,7 +1321,7 @@ title = "wardlight_apprentice battle"
 
 [[generated]]
 id = "BUE7-DcJmAZTNSM18XK5k"
-uri = "file://frontend/assets/heroes/gentle_hands_aide.png"
+uri = "file://frontend/assets/heroes/portraits/gentle_hands_aide.png"
 type = "image"
 title = "gentle_hands_aide portrait"
 
@@ -1474,7 +1333,7 @@ title = "gentle_hands_aide battle"
 
 [[generated]]
 id = "bgoLFykQSRHmdGQPZWo2o"
-uri = "file://frontend/assets/heroes/safety_watch_initiate.png"
+uri = "file://frontend/assets/heroes/portraits/safety_watch_initiate.png"
 type = "image"
 title = "safety_watch_initiate portrait"
 
@@ -1486,7 +1345,7 @@ title = "safety_watch_initiate battle"
 
 [[generated]]
 id = "NM-pm2XcwQwGfY51wYO_2"
-uri = "file://frontend/assets/heroes/care_chain_initiate.png"
+uri = "file://frontend/assets/heroes/portraits/care_chain_initiate.png"
 type = "image"
 title = "care_chain_initiate portrait"
 
@@ -1498,7 +1357,7 @@ title = "care_chain_initiate battle"
 
 [[generated]]
 id = "WLVn_Xv9xUNgxHS-9SXPV"
-uri = "file://frontend/assets/heroes/comfort_scribe.png"
+uri = "file://frontend/assets/heroes/portraits/comfort_scribe.png"
 type = "image"
 title = "comfort_scribe portrait"
 
@@ -1510,7 +1369,7 @@ title = "comfort_scribe battle"
 
 [[generated]]
 id = "WdDFYkKxVDNZadSky8aA2"
-uri = "file://frontend/assets/heroes/quality_sealbearer.png"
+uri = "file://frontend/assets/heroes/portraits/quality_sealbearer.png"
 type = "image"
 title = "quality_sealbearer portrait"
 
@@ -1522,7 +1381,7 @@ title = "quality_sealbearer battle"
 
 [[generated]]
 id = "-w3MIg83_cMJcfwX_Gb0T"
-uri = "file://frontend/assets/heroes/night_ward_sentinel.png"
+uri = "file://frontend/assets/heroes/portraits/night_ward_sentinel.png"
 type = "image"
 title = "night_ward_sentinel portrait"
 
@@ -1534,7 +1393,7 @@ title = "night_ward_sentinel battle"
 
 [[generated]]
 id = "0f3mOBWvyu44Pg6XoUOGp"
-uri = "file://frontend/assets/heroes/crisis_calm_keeper.png"
+uri = "file://frontend/assets/heroes/portraits/crisis_calm_keeper.png"
 type = "image"
 title = "crisis_calm_keeper portrait"
 
@@ -1546,7 +1405,7 @@ title = "crisis_calm_keeper battle"
 
 [[generated]]
 id = "5wv3Oc3zJUBAgJw7YKRmO"
-uri = "file://frontend/assets/heroes/safety_auditor.png"
+uri = "file://frontend/assets/heroes/portraits/safety_auditor.png"
 type = "image"
 title = "safety_auditor portrait"
 
@@ -1558,7 +1417,7 @@ title = "safety_auditor battle"
 
 [[generated]]
 id = "njwQzC3FTVwE1d6BeZy7K"
-uri = "file://frontend/assets/heroes/breath_aide.png"
+uri = "file://frontend/assets/heroes/portraits/breath_aide.png"
 type = "image"
 title = "breath_aide portrait"
 
@@ -1570,13 +1429,13 @@ title = "breath_aide battle"
 
 [[generated]]
 id = "2Q5CS04lIneUkK-f3MBr8"
-uri = "file://frontend/assets/heroes/record_keeper_initiate.png"
+uri = "file://frontend/assets/heroes/portraits/record_keeper_initiate.png"
 type = "image"
 title = "record_keeper_initiate portrait"
 
 [[generated]]
 id = "E6kCAIhnwuR9J_79SX85q"
-uri = "file://frontend/assets/heroes/airway_apprentice.png"
+uri = "file://frontend/assets/heroes/portraits/airway_apprentice.png"
 type = "image"
 title = "airway_apprentice portrait"
 
@@ -1588,19 +1447,19 @@ title = "airway_apprentice battle"
 
 [[generated]]
 id = "Tfxk4avx4YkpeqlP8JfPK"
-uri = "file://frontend/assets/heroes/pulsewind_initiate.png"
+uri = "file://frontend/assets/heroes/portraits/pulsewind_initiate.png"
 type = "image"
 title = "pulsewind_initiate portrait"
 
 [[generated]]
 id = "IDJIARuQ3_utUJCEPbmYh"
-uri = "file://frontend/assets/heroes/breath_lantern.png"
+uri = "file://frontend/assets/heroes/portraits/breath_lantern.png"
 type = "image"
 title = "breath_lantern portrait"
 
 [[generated]]
 id = "FOp_Dpc0_0rBsB6Cntbwa"
-uri = "file://frontend/assets/heroes/breathstride_therapist.png"
+uri = "file://frontend/assets/heroes/portraits/breathstride_therapist.png"
 type = "image"
 title = "breathstride_therapist portrait"
 
@@ -1624,19 +1483,19 @@ title = "breathstride_therapist battle"
 
 [[generated]]
 id = "3-9gX-TDYkdSjNBUW3rVn"
-uri = "file://frontend/assets/heroes/nebula_trainee.png"
+uri = "file://frontend/assets/heroes/portraits/nebula_trainee.png"
 type = "image"
 title = "nebula_trainee portrait"
 
 [[generated]]
 id = "cVcHGK8fQCP1zXEEJArts"
-uri = "file://frontend/assets/heroes/emergency_airway_warden.png"
+uri = "file://frontend/assets/heroes/portraits/emergency_airway_warden.png"
 type = "image"
 title = "emergency_airway_warden portrait"
 
 [[generated]]
 id = "b4cOpPyFTi3KeD7dzpn-J"
-uri = "file://frontend/assets/heroes/image_apprentice.png"
+uri = "file://frontend/assets/heroes/portraits/image_apprentice.png"
 type = "image"
 title = "image_apprentice portrait"
 
@@ -1648,7 +1507,7 @@ title = "triage_lantern battle"
 
 [[generated]]
 id = "270e0YnhD6oP_0n4JhqVu"
-uri = "file://frontend/assets/heroes/codefire_physician.png"
+uri = "file://frontend/assets/heroes/portraits/codefire_physician.png"
 type = "image"
 title = "codefire_physician portrait"
 
@@ -1666,7 +1525,7 @@ title = "airway_warden battle"
 
 [[generated]]
 id = "jvpX3rE5aHk2ZGtcw2aa2"
-uri = "file://frontend/assets/heroes/mindward_listener.png"
+uri = "file://frontend/assets/heroes/portraits/mindward_listener.png"
 type = "image"
 title = "mindward_listener portrait"
 
@@ -1678,31 +1537,31 @@ title = "codefire_physician battle"
 
 [[generated]]
 id = "xhtm9CiQ4C5SI2KAAQz_B"
-uri = "file://frontend/assets/heroes/pulmonary_guide.png"
+uri = "file://frontend/assets/heroes/portraits/pulmonary_guide.png"
 type = "image"
 title = "pulmonary_guide portrait"
 
 [[generated]]
 id = "Wm_bFTQKXKxS61_7Bjx4V"
-uri = "file://frontend/assets/heroes/compound_hand.png"
+uri = "file://frontend/assets/heroes/portraits/compound_hand.png"
 type = "image"
 title = "compound_hand portrait"
 
 [[generated]]
 id = "xxbJeLsbzOQhVVsTVVa0T"
-uri = "file://frontend/assets/heroes/spiral_ct_seer.png"
+uri = "file://frontend/assets/heroes/portraits/spiral_ct_seer.png"
 type = "image"
 title = "spiral_ct_seer portrait"
 
 [[generated]]
 id = "G1yVDdBMROeP66INlx_t7"
-uri = "file://frontend/assets/heroes/night_breath_warden.png"
+uri = "file://frontend/assets/heroes/portraits/night_breath_warden.png"
 type = "image"
 title = "night_breath_warden portrait"
 
 [[generated]]
 id = "guekAvBkvUAYJ7bW11x4S"
-uri = "file://frontend/assets/heroes/sample_runner.png"
+uri = "file://frontend/assets/heroes/portraits/sample_runner.png"
 type = "image"
 title = "sample_runner portrait"
 
@@ -1714,7 +1573,7 @@ title = "mindward_listener battle"
 
 [[generated]]
 id = "kC9E91vE62iNYI5bH5cp9"
-uri = "file://frontend/assets/heroes/radiant_lens.png"
+uri = "file://frontend/assets/heroes/portraits/radiant_lens.png"
 type = "image"
 title = "radiant_lens portrait"
 
@@ -1744,13 +1603,13 @@ title = "night_breath_warden battle"
 
 [[generated]]
 id = "kOEzrVB48zVLsn2U6b9AG"
-uri = "file://frontend/assets/heroes/infection_watcher.png"
+uri = "file://frontend/assets/heroes/portraits/infection_watcher.png"
 type = "image"
 title = "infection_watcher portrait"
 
 [[generated]]
 id = "4iTKQtYVZqFO4pVKXRh8v"
-uri = "file://frontend/assets/heroes/metabolic_garden_sage.png"
+uri = "file://frontend/assets/heroes/portraits/metabolic_garden_sage.png"
 type = "image"
 title = "metabolic_garden_sage portrait"
 
@@ -1762,31 +1621,31 @@ title = "radiant_lens battle"
 
 [[generated]]
 id = "-YchebLQkUPGpRm0y04C_"
-uri = "file://frontend/assets/heroes/sleepwind_keeper.png"
+uri = "file://frontend/assets/heroes/portraits/sleepwind_keeper.png"
 type = "image"
 title = "sleepwind_keeper portrait"
 
 [[generated]]
 id = "6syZRIPrYu4ngOmIdiOzO"
-uri = "file://frontend/assets/heroes/routine_keeper.png"
+uri = "file://frontend/assets/heroes/portraits/routine_keeper.png"
 type = "image"
 title = "routine_keeper portrait"
 
 [[generated]]
 id = "PuY2f5Xjk4lOfnW649_rL"
-uri = "file://frontend/assets/heroes/lotus_dietitian.png"
+uri = "file://frontend/assets/heroes/portraits/lotus_dietitian.png"
 type = "image"
 title = "lotus_dietitian portrait"
 
 [[generated]]
 id = "wjriBYsnh9JEvUbTg9G64"
-uri = "file://frontend/assets/heroes/microbe_seer.png"
+uri = "file://frontend/assets/heroes/portraits/microbe_seer.png"
 type = "image"
 title = "microbe_seer portrait"
 
 [[generated]]
 id = "qyCCSOFtP2EYmtBI1GBDF"
-uri = "file://frontend/assets/heroes/anatomy_scribe.png"
+uri = "file://frontend/assets/heroes/portraits/anatomy_scribe.png"
 type = "image"
 title = "anatomy_scribe portrait"
 
@@ -1810,31 +1669,31 @@ title = "metabolic_garden_sage battle"
 
 [[generated]]
 id = "fNhbkpz2KJ_JJuRWa1zPG"
-uri = "file://frontend/assets/heroes/lablight_technologist.png"
+uri = "file://frontend/assets/heroes/portraits/lablight_technologist.png"
 type = "image"
 title = "lablight_technologist portrait"
 
 [[generated]]
 id = "X6mzIDeUo8iyk02LTu2UE"
-uri = "file://frontend/assets/heroes/garden_apprentice.png"
+uri = "file://frontend/assets/heroes/portraits/garden_apprentice.png"
 type = "image"
 title = "garden_apprentice portrait"
 
 [[generated]]
 id = "y3FKLY1PS3oW9rNaoylqt"
-uri = "file://frontend/assets/heroes/data_threader_initiate.png"
+uri = "file://frontend/assets/heroes/portraits/data_threader_initiate.png"
 type = "image"
 title = "data_threader_initiate portrait"
 
 [[generated]]
 id = "JrLq8eVXetob13uEwDH07"
-uri = "file://frontend/assets/heroes/lifeweave_therapist.png"
+uri = "file://frontend/assets/heroes/portraits/lifeweave_therapist.png"
 type = "image"
 title = "lifeweave_therapist portrait"
 
 [[generated]]
 id = "digdPJ5ZtUoyHzL27qVcg"
-uri = "file://frontend/assets/heroes/discharge_planner.png"
+uri = "file://frontend/assets/heroes/portraits/discharge_planner.png"
 type = "image"
 title = "discharge_planner portrait"
 
@@ -1864,7 +1723,7 @@ title = "microbe_seer battle"
 
 [[generated]]
 id = "zgFs6Vnpl6gMLMcnvhPBJ"
-uri = "file://frontend/assets/heroes/village_health_aide.png"
+uri = "file://frontend/assets/heroes/portraits/village_health_aide.png"
 type = "image"
 title = "village_health_aide portrait"
 
@@ -1876,7 +1735,7 @@ title = "vial_keeper battle"
 
 [[generated]]
 id = "C5JmUsezmjPGWr9IecVBX"
-uri = "file://frontend/assets/heroes/stepwise_aide.png"
+uri = "file://frontend/assets/heroes/portraits/stepwise_aide.png"
 type = "image"
 title = "stepwise_aide portrait"
 
@@ -1912,31 +1771,31 @@ title = "discharge_planner battle"
 
 [[generated]]
 id = "VmuHrXmzSI6neDhibb7du"
-uri = "file://frontend/assets/heroes/icu_breathkeeper.png"
+uri = "file://frontend/assets/heroes/portraits/icu_breathkeeper.png"
 type = "image"
 title = "icu_breathkeeper portrait"
 
 [[generated]]
 id = "t3oeTrJKKJ8QO2vuH_Rs5"
-uri = "file://frontend/assets/heroes/grip_apprentice.png"
+uri = "file://frontend/assets/heroes/portraits/grip_apprentice.png"
 type = "image"
 title = "grip_apprentice portrait"
 
 [[generated]]
 id = "oOA8RVLX-sbDQaioWApno"
-uri = "file://frontend/assets/heroes/glucose_lantern.png"
+uri = "file://frontend/assets/heroes/portraits/glucose_lantern.png"
 type = "image"
 title = "glucose_lantern portrait"
 
 [[generated]]
 id = "TBVBzoZeW3n_hJBVu3CR0"
-uri = "file://frontend/assets/heroes/shelfmark_apprentice.png"
+uri = "file://frontend/assets/heroes/portraits/shelfmark_apprentice.png"
 type = "image"
 title = "shelfmark_apprentice portrait"
 
 [[generated]]
 id = "7OYq5pWA-iFZFNmdO_NvM"
-uri = "file://frontend/assets/heroes/whitecoat_initiate.png"
+uri = "file://frontend/assets/heroes/portraits/whitecoat_initiate.png"
 type = "image"
 title = "whitecoat_initiate portrait"
 
@@ -1948,7 +1807,7 @@ title = "village_health_aide battle"
 
 [[generated]]
 id = "0Q3KrO8ac3hlsZDolBtzR"
-uri = "file://frontend/assets/heroes/pathlight_initiate.png"
+uri = "file://frontend/assets/heroes/portraits/pathlight_initiate.png"
 type = "image"
 title = "pathlight_initiate portrait"
 
@@ -1960,31 +1819,31 @@ title = "stepwise_aide battle"
 
 [[generated]]
 id = "R60ijLJ4j-Un0shTz04zF"
-uri = "file://frontend/assets/heroes/hematology_threader.png"
+uri = "file://frontend/assets/heroes/portraits/hematology_threader.png"
 type = "image"
 title = "hematology_threader portrait"
 
 [[generated]]
 id = "qRfXVSUQnOyGBToxxvYiY"
-uri = "file://frontend/assets/heroes/plate_initiate.png"
+uri = "file://frontend/assets/heroes/portraits/plate_initiate.png"
 type = "image"
 title = "plate_initiate portrait"
 
 [[generated]]
 id = "_7xJp2qM245gDPcjy3Rcw"
-uri = "file://frontend/assets/heroes/community_lantern.png"
+uri = "file://frontend/assets/heroes/portraits/community_lantern.png"
 type = "image"
 title = "community_lantern portrait"
 
 [[generated]]
 id = "8P36IFlvvaellTHIQXLTr"
-uri = "file://frontend/assets/heroes/mindroutine_keeper.png"
+uri = "file://frontend/assets/heroes/portraits/mindroutine_keeper.png"
 type = "image"
 title = "mindroutine_keeper portrait"
 
 [[generated]]
 id = "Q7tGUZgs5uftOgOv54Snv"
-uri = "file://frontend/assets/heroes/pattern_seer.png"
+uri = "file://frontend/assets/heroes/portraits/pattern_seer.png"
 type = "image"
 title = "pattern_seer portrait"
 
@@ -2014,7 +1873,7 @@ title = "shelfmark_apprentice battle"
 
 [[generated]]
 id = "Yzf8JSKz83G4ZofylJ5e4"
-uri = "file://frontend/assets/heroes/banner_scribe.png"
+uri = "file://frontend/assets/heroes/portraits/banner_scribe.png"
 type = "image"
 title = "banner_scribe portrait"
 
@@ -2026,7 +1885,7 @@ title = "pathlight_initiate battle"
 
 [[generated]]
 id = "HZteUbN1PBQdvR24qNMFG"
-uri = "file://frontend/assets/heroes/gait_apprentice.png"
+uri = "file://frontend/assets/heroes/portraits/gait_apprentice.png"
 type = "image"
 title = "gait_apprentice portrait"
 
@@ -2062,19 +1921,19 @@ title = "pattern_seer battle"
 
 [[generated]]
 id = "tGvY10QoLaxtDczcDlduF"
-uri = "file://frontend/assets/heroes/gait_lantern.png"
+uri = "file://frontend/assets/heroes/portraits/gait_lantern.png"
 type = "image"
 title = "gait_lantern portrait"
 
 [[generated]]
 id = "4Xw5-jHF4zEcWDv3HvpYG"
-uri = "file://frontend/assets/heroes/ward_pharmacist.png"
+uri = "file://frontend/assets/heroes/portraits/ward_pharmacist.png"
 type = "image"
 title = "ward_pharmacist portrait"
 
 [[generated]]
 id = "BUtwHPmRRh0cMXPgB4e0H"
-uri = "file://frontend/assets/heroes/dose_scribe.png"
+uri = "file://frontend/assets/heroes/portraits/dose_scribe.png"
 type = "image"
 title = "dose_scribe portrait"
 
@@ -2086,7 +1945,7 @@ title = "banner_scribe battle"
 
 [[generated]]
 id = "CQlEpSNN3MU3Ou7GGA2d0"
-uri = "file://frontend/assets/heroes/resident_of_dawn.png"
+uri = "file://frontend/assets/heroes/portraits/resident_of_dawn.png"
 type = "image"
 title = "resident_of_dawn portrait"
 
@@ -2098,31 +1957,31 @@ title = "gait_apprentice battle"
 
 [[generated]]
 id = "yz1SrBSQDGe9o4uiJokse"
-uri = "file://frontend/assets/heroes/wardround_doctor.png"
+uri = "file://frontend/assets/heroes/portraits/wardround_doctor.png"
 type = "image"
 title = "wardround_doctor portrait"
 
 [[generated]]
 id = "lT0D_fLbLf_o7mIg5zuDG"
-uri = "file://frontend/assets/heroes/hydration_scribe.png"
+uri = "file://frontend/assets/heroes/portraits/hydration_scribe.png"
 type = "image"
 title = "hydration_scribe portrait"
 
 [[generated]]
 id = "pybdvkCD2biaPe15COTD1"
-uri = "file://frontend/assets/heroes/health_banner_guide.png"
+uri = "file://frontend/assets/heroes/portraits/health_banner_guide.png"
 type = "image"
 title = "health_banner_guide portrait"
 
 [[generated]]
 id = "1RQkOhcs2fPZWHymNGccr"
-uri = "file://frontend/assets/heroes/acute_step_warden.png"
+uri = "file://frontend/assets/heroes/portraits/acute_step_warden.png"
 type = "image"
 title = "acute_step_warden portrait"
 
 [[generated]]
 id = "5yTn0U5sPf1iATAVMISEH"
-uri = "file://frontend/assets/heroes/environmental_seal_warden.png"
+uri = "file://frontend/assets/heroes/portraits/environmental_seal_warden.png"
 type = "image"
 title = "environmental_seal_warden portrait"
 
@@ -2146,7 +2005,7 @@ title = "dose_scribe battle"
 
 [[generated]]
 id = "vpR6IHwHbb4nuTFY6RpNZ"
-uri = "file://frontend/assets/heroes/clean_water_runner.png"
+uri = "file://frontend/assets/heroes/portraits/clean_water_runner.png"
 type = "image"
 title = "clean_water_runner portrait"
 
@@ -2158,7 +2017,7 @@ title = "resident_of_dawn battle"
 
 [[generated]]
 id = "wdmKBigCZ4_uAyPkH2E3x"
-uri = "file://frontend/assets/heroes/stretch_hand.png"
+uri = "file://frontend/assets/heroes/portraits/stretch_hand.png"
 type = "image"
 title = "stretch_hand portrait"
 
@@ -2194,19 +2053,19 @@ title = "environmental_seal_warden battle"
 
 [[generated]]
 id = "px8pj2ke1rNYQ-6RGCj83"
-uri = "file://frontend/assets/heroes/neurostep_seer.png"
+uri = "file://frontend/assets/heroes/portraits/neurostep_seer.png"
 type = "image"
 title = "neurostep_seer portrait"
 
 [[generated]]
 id = "dssu0U4rdmuidS9jPk7Wr"
-uri = "file://frontend/assets/heroes/antidote_alchemist.png"
+uri = "file://frontend/assets/heroes/portraits/antidote_alchemist.png"
 type = "image"
 title = "antidote_alchemist portrait"
 
 [[generated]]
 id = "tU3UQdGPN6zr3aReyyCuw"
-uri = "file://frontend/assets/heroes/mortar_initiate.png"
+uri = "file://frontend/assets/heroes/portraits/mortar_initiate.png"
 type = "image"
 title = "mortar_initiate portrait"
 
@@ -2224,25 +2083,25 @@ title = "stretch_hand battle"
 
 [[generated]]
 id = "IQAMeT4r7CiYaOoAyKNZk"
-uri = "file://frontend/assets/heroes/lotus_apothecary.png"
+uri = "file://frontend/assets/heroes/portraits/lotus_apothecary.png"
 type = "image"
 title = "lotus_apothecary portrait"
 
 [[generated]]
 id = "nIMvTzjTjSg1ZZfGuKyVy"
-uri = "file://frontend/assets/heroes/clean_water_sentinel.png"
+uri = "file://frontend/assets/heroes/portraits/clean_water_sentinel.png"
 type = "image"
 title = "clean_water_sentinel portrait"
 
 [[generated]]
 id = "siPku0kDmi8m7HBU40LqM"
-uri = "file://frontend/assets/heroes/iron_tendon_adept.png"
+uri = "file://frontend/assets/heroes/portraits/iron_tendon_adept.png"
 type = "image"
 title = "iron_tendon_adept portrait"
 
 [[generated]]
 id = "fPjdSCZaGywEm7Q9ouZ04"
-uri = "file://frontend/assets/heroes/chartweave_analyst.png"
+uri = "file://frontend/assets/heroes/portraits/chartweave_analyst.png"
 type = "image"
 title = "chartweave_analyst portrait"
 
@@ -2266,13 +2125,13 @@ title = "mortar_initiate battle"
 
 [[generated]]
 id = "XA3bGBFf4BkU9BgygnpP0"
-uri = "file://frontend/assets/heroes/care_guide.png"
+uri = "file://frontend/assets/heroes/portraits/care_guide.png"
 type = "image"
 title = "care_guide portrait"
 
 [[generated]]
 id = "pSUHz1LK0rifMOMHsAiAk"
-uri = "file://frontend/assets/heroes/function_aide.png"
+uri = "file://frontend/assets/heroes/portraits/function_aide.png"
 type = "image"
 title = "function_aide portrait"
 
@@ -2302,7 +2161,7 @@ title = "chartweave_analyst battle"
 
 [[generated]]
 id = "z47O4of6-KlIxJKtmGqKJ"
-uri = "file://frontend/assets/heroes/bonepath_guide.png"
+uri = "file://frontend/assets/heroes/portraits/bonepath_guide.png"
 type = "image"
 title = "bonepath_guide portrait"
 
@@ -2320,19 +2179,19 @@ title = "function_aide battle"
 
 [[generated]]
 id = "7UBMUhqrAJk2dmfQbCkO9"
-uri = "file://frontend/assets/heroes/clinic_dosekeeper.png"
+uri = "file://frontend/assets/heroes/portraits/clinic_dosekeeper.png"
 type = "image"
 title = "clinic_dosekeeper portrait"
 
 [[generated]]
 id = "FcktJdOFL2tVtAaJign6I"
-uri = "file://frontend/assets/heroes/resource_lantern.png"
+uri = "file://frontend/assets/heroes/portraits/resource_lantern.png"
 type = "image"
 title = "resource_lantern portrait"
 
 [[generated]]
 id = "jPTd3KcYHZ6NQCJ_PDhf5"
-uri = "file://frontend/assets/heroes/cognitive_rehab_specialist.png"
+uri = "file://frontend/assets/heroes/portraits/cognitive_rehab_specialist.png"
 type = "image"
 title = "cognitive_rehab_specialist portrait"
 
@@ -2344,7 +2203,7 @@ title = "bonepath_guide battle"
 
 [[generated]]
 id = "V1oWF9-leQHU0gAACS9KZ"
-uri = "file://frontend/assets/heroes/return_path_scribe.png"
+uri = "file://frontend/assets/heroes/portraits/return_path_scribe.png"
 type = "image"
 title = "return_path_scribe portrait"
 
@@ -2373,12 +2232,12 @@ type = "image"
 title = "return_path_scribe battle"
 [[generated]]
 id = "rmqrjOMvD9UB1fAN4qQtT"
-uri = "file://frontend/assets/heroes/florence_nightingale.png"
+uri = "file://frontend/assets/images/nightingale_vn_bust.png"
 type = "image"
 title = "florence_nightingale_hero_portrait"
 
 [[generated]]
 id = "EX5oxj5wKSWGQPPsEt55K"
-uri = "file://frontend/assets/heroes/battle/florence_nightingale.png"
+uri = "file://frontend/assets/images/nightingale_battle_sprite.png"
 type = "image"
 title = "florence_nightingale_battle_sprite"
