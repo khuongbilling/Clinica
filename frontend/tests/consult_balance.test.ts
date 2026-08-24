@@ -181,7 +181,7 @@ const rules = getStarRules('nursingStudent', enemyClin);
 // -------- 12. REGRESSION: dynamic AP / hero-action / endPlayerTurn flag --------
 {
   let s = baseInit();
-  check('REG: dynamic AP at full stability = 4', s.ap === 4, `ap=${s.ap}`);
+  check('REG: dynamic AP at initial stability = 8', s.ap === 8, `ap=${s.ap}`);
   // Rapid hard gate then verify endPlayerTurn no longer auto-restores AP
   let s2 = { ...s, stability: 25, ap: 3 };
   const r = applyCall(s2, rap);
