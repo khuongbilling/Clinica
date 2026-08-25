@@ -15,6 +15,10 @@ BASE_URL = (
 assert BASE_URL, "Missing EXPO_PUBLIC_BACKEND_URL"
 
 
+def _session_headers(player):
+    return {"X-Clinica-Session": player["economy_token"]}
+
+
 @pytest.fixture(scope="module")
 def api():
     s = requests.Session()
@@ -27,21 +31,25 @@ def created_ids():
     ids = []
     yield ids
     s = requests.Session()
-    for pid in ids:
+    for player in ids:
         try:
-            s.delete(f"{BASE_URL}/api/player/{pid}", timeout=10)
+            s.delete(
+                f"{BASE_URL}/api/player/{player['id']}",
+                headers=_session_headers(player),
+                timeout=10,
+            )
         except Exception:
             pass
 
 
-# Starter inventory + shards + active_team + summon_history on create
+# Starter inventory + shards + roster state + summon_history on create
 def test_create_player_starter_inventory_and_shards(api, created_ids):
     r = api.post(f"{BASE_URL}/api/player",
                  json={"name": "TEST_iter3_inv", "aptitude": "sage"},
                  timeout=15)
     assert r.status_code == 200, r.text
     p = r.json()
-    created_ids.append(p["id"])
+    created_ids.append(p)
 
     # Inventory: 5 items
     inv = p.get("inventory")
@@ -53,14 +61,12 @@ def test_create_player_starter_inventory_and_shards(api, created_ids):
     assert inv.get("Lab Token") == 2
 
     # Shards
-    assert p.get("codex_shards") == 50
+    assert p.get("codex_shards") == 100
 
-    # Active team: 2 starter heroes
+    # New accounts start with no battle team selected.
     at = p.get("active_team")
     assert isinstance(at, list)
-    assert len(at) == 2
-    assert "apprentice_seer" in at  # sage starter
-    assert "village_caretaker" in at
+    assert at == []
 
     # Summon history starts empty
     assert p.get("summon_history") == []
@@ -73,70 +79,75 @@ def test_starter_inventory_for_all_aptitudes(api, created_ids):
                      timeout=15)
         assert r.status_code == 200
         p = r.json()
-        created_ids.append(p["id"])
-        assert p["codex_shards"] == 50
+        created_ids.append(p)
+        assert p["codex_shards"] == 100
         assert sum(p["inventory"].values()) == 6  # 1+1+1+1+2
-        assert len(p["active_team"]) == 2
+        assert p["active_team"] == []
 
 
-def test_update_inventory_and_persistence(api, created_ids):
+def test_snapshot_cannot_overwrite_inventory(api, created_ids):
     r = api.post(f"{BASE_URL}/api/player",
                  json={"name": "TEST_iter3_upd_inv", "aptitude": "guardian"},
                  timeout=15)
-    pid = r.json()["id"]
-    created_ids.append(pid)
+    p = r.json()
+    pid = p["id"]
+    created_ids.append(p)
+    initial_inventory = p["inventory"]
 
     new_inv = {"Albuterol Mist": 0, "Glucose Gel": 1, "Fluid Bolus": 1,
                "Isolation Kit": 1, "Lab Token": 1}
-    upd = api.put(f"{BASE_URL}/api/player/{pid}",
+    upd = api.put(f"{BASE_URL}/api/player/{pid}", headers=_session_headers(p),
                   json={"inventory": new_inv}, timeout=15)
     assert upd.status_code == 200, upd.text
-    assert upd.json()["inventory"] == new_inv
+    assert upd.json()["inventory"] == initial_inventory
 
-    g = api.get(f"{BASE_URL}/api/player/{pid}", timeout=15)
-    assert g.json()["inventory"] == new_inv
+    g = api.get(f"{BASE_URL}/api/player/{pid}", headers=_session_headers(p), timeout=15)
+    assert g.json()["inventory"] == initial_inventory
 
 
-def test_update_codex_shards(api, created_ids):
+def test_snapshot_cannot_overwrite_codex_shards(api, created_ids):
     r = api.post(f"{BASE_URL}/api/player",
                  json={"name": "TEST_iter3_shards", "aptitude": "warden"},
                  timeout=15)
-    pid = r.json()["id"]
-    created_ids.append(pid)
+    p = r.json()
+    pid = p["id"]
+    created_ids.append(p)
 
-    upd = api.put(f"{BASE_URL}/api/player/{pid}",
+    upd = api.put(f"{BASE_URL}/api/player/{pid}", headers=_session_headers(p),
                   json={"codex_shards": 250}, timeout=15)
     assert upd.status_code == 200
-    assert upd.json()["codex_shards"] == 250
+    assert upd.json()["codex_shards"] == 100
 
-    g = api.get(f"{BASE_URL}/api/player/{pid}", timeout=15)
-    assert g.json()["codex_shards"] == 250
+    g = api.get(f"{BASE_URL}/api/player/{pid}", headers=_session_headers(p), timeout=15)
+    assert g.json()["codex_shards"] == 100
 
 
 def test_update_active_team_max3(api, created_ids):
     r = api.post(f"{BASE_URL}/api/player",
                  json={"name": "TEST_iter3_team", "aptitude": "sage"},
                  timeout=15)
-    pid = r.json()["id"]
-    created_ids.append(pid)
+    p = r.json()
+    pid = p["id"]
+    created_ids.append(p)
 
     team = ["apprentice_seer", "village_caretaker", "wound_sage"]
-    upd = api.put(f"{BASE_URL}/api/player/{pid}",
+    upd = api.put(f"{BASE_URL}/api/player/{pid}", headers=_session_headers(p),
                   json={"heroes_owned": team, "active_team": team},
                   timeout=15)
     assert upd.status_code == 200
     assert upd.json()["active_team"] == team
 
-    g = api.get(f"{BASE_URL}/api/player/{pid}", timeout=15)
+    g = api.get(f"{BASE_URL}/api/player/{pid}", headers=_session_headers(p), timeout=15)
     assert g.json()["active_team"] == team
 
 
-def test_update_summon_history(api, created_ids):
+def test_snapshot_cannot_overwrite_summon_history(api, created_ids):
     r = api.post(f"{BASE_URL}/api/player",
                  json={"name": "TEST_iter3_summon", "aptitude": "weaver"},
                  timeout=15)
-    pid = r.json()["id"]
-    created_ids.append(pid)
+    p = r.json()
+    pid = p["id"]
+    created_ids.append(p)
 
     history = [
         {"heroId": "wound_sage", "name": "Wound Sage", "rarity": 4,
@@ -144,10 +155,10 @@ def test_update_summon_history(api, created_ids):
         {"heroId": "wound_sage", "name": "Wound Sage", "rarity": 4,
          "duplicate": True, "ts": "2026-01-01T00:01:00Z"},
     ]
-    upd = api.put(f"{BASE_URL}/api/player/{pid}",
+    upd = api.put(f"{BASE_URL}/api/player/{pid}", headers=_session_headers(p),
                   json={"summon_history": history}, timeout=15)
     assert upd.status_code == 200
-    assert upd.json()["summon_history"] == history
+    assert upd.json()["summon_history"] == []
 
-    g = api.get(f"{BASE_URL}/api/player/{pid}", timeout=15)
-    assert g.json()["summon_history"] == history
+    g = api.get(f"{BASE_URL}/api/player/{pid}", headers=_session_headers(p), timeout=15)
+    assert g.json()["summon_history"] == []

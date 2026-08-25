@@ -17,6 +17,10 @@ BASE_URL = (
 assert BASE_URL, "Missing EXPO_PUBLIC_BACKEND_URL"
 
 
+def _session_headers(player):
+    return {"X-Clinica-Session": player["economy_token"]}
+
+
 @pytest.fixture(scope="module")
 def api():
     s = requests.Session()
@@ -29,9 +33,13 @@ def created_ids():
     ids = []
     yield ids
     s = requests.Session()
-    for pid in ids:
+    for player in ids:
         try:
-            s.delete(f"{BASE_URL}/api/player/{pid}", timeout=10)
+            s.delete(
+                f"{BASE_URL}/api/player/{player['id']}",
+                headers=_session_headers(player),
+                timeout=10,
+            )
         except Exception:
             pass
 
@@ -54,14 +62,14 @@ def test_create_player_with_learning_profile(api, created_ids, profile):
     )
     assert r.status_code == 200, r.text
     p = r.json()
-    created_ids.append(p["id"])
+    created_ids.append(p)
     assert p["learning_profile"] == profile
     # Defaults for new fields
     assert p["enemy_mastery"] == {}
     assert p["chapter_progress"] == 1
 
     # GET round-trip
-    g = api.get(f"{BASE_URL}/api/player/{p['id']}", timeout=15)
+    g = api.get(f"{BASE_URL}/api/player/{p['id']}", headers=_session_headers(p), timeout=15)
     body = g.json()
     assert body["learning_profile"] == profile
     assert body["enemy_mastery"] == {}
@@ -77,7 +85,7 @@ def test_create_player_without_new_fields_defaults(api, created_ids):
     )
     assert r.status_code == 200
     p = r.json()
-    created_ids.append(p["id"])
+    created_ids.append(p)
     assert p["learning_profile"] is None
     assert p["enemy_mastery"] == {}
     assert p["chapter_progress"] == 1
@@ -90,12 +98,14 @@ def test_update_enemy_mastery(api, created_ids):
         json={"name": "TEST_iter6_mastery", "aptitude": "weaver"},
         timeout=15,
     )
-    pid = r.json()["id"]
-    created_ids.append(pid)
+    p = r.json()
+    pid = p["id"]
+    created_ids.append(p)
 
     mastery = {"air_sprite": 3, "fire_imp": 1, "river_sludge": 2}
     upd = api.put(
         f"{BASE_URL}/api/player/{pid}",
+        headers=_session_headers(p),
         json={"enemy_mastery": mastery},
         timeout=15,
     )
@@ -103,29 +113,31 @@ def test_update_enemy_mastery(api, created_ids):
     assert upd.json()["enemy_mastery"] == mastery
 
     # Persistence
-    g = api.get(f"{BASE_URL}/api/player/{pid}", timeout=15)
+    g = api.get(f"{BASE_URL}/api/player/{pid}", headers=_session_headers(p), timeout=15)
     assert g.json()["enemy_mastery"] == mastery
 
 
-def test_update_chapter_progress(api, created_ids):
+def test_snapshot_cannot_overwrite_chapter_progress(api, created_ids):
     r = api.post(
         f"{BASE_URL}/api/player",
         json={"name": "TEST_iter6_chapter", "aptitude": "warden"},
         timeout=15,
     )
-    pid = r.json()["id"]
-    created_ids.append(pid)
+    p = r.json()
+    pid = p["id"]
+    created_ids.append(p)
 
     upd = api.put(
         f"{BASE_URL}/api/player/{pid}",
+        headers=_session_headers(p),
         json={"chapter_progress": 5},
         timeout=15,
     )
     assert upd.status_code == 200, upd.text
-    assert upd.json()["chapter_progress"] == 5
+    assert upd.json()["chapter_progress"] == 1
 
-    g = api.get(f"{BASE_URL}/api/player/{pid}", timeout=15)
-    assert g.json()["chapter_progress"] == 5
+    g = api.get(f"{BASE_URL}/api/player/{pid}", headers=_session_headers(p), timeout=15)
+    assert g.json()["chapter_progress"] == 1
 
 
 def test_update_learning_profile(api, created_ids):
@@ -134,11 +146,13 @@ def test_update_learning_profile(api, created_ids):
         json={"name": "TEST_iter6_lp", "aptitude": "sage"},
         timeout=15,
     )
-    pid = r.json()["id"]
-    created_ids.append(pid)
+    p = r.json()
+    pid = p["id"]
+    created_ids.append(p)
 
     upd = api.put(
         f"{BASE_URL}/api/player/{pid}",
+        headers=_session_headers(p),
         json={"learning_profile": "nclexPrep"},
         timeout=15,
     )
@@ -150,6 +164,7 @@ def test_update_learning_profile(api, created_ids):
 def test_get_legacy_player_without_new_fields(api, created_ids):
     """Simulates an older DB doc missing enemy_mastery/chapter_progress/learning_profile."""
     from pymongo import MongoClient
+    from server import issue_guest_session
     mongo_url = "mongodb://localhost:27017"
     db_name = os.environ.get("DB_NAME", "test_database")
     mc = MongoClient(mongo_url)
@@ -158,8 +173,10 @@ def test_get_legacy_player_without_new_fields(api, created_ids):
     import uuid
     from datetime import datetime, timezone
     legacy_id = str(uuid.uuid4())
+    legacy_token = issue_guest_session(legacy_id)
     legacy_doc = {
         "id": legacy_id,
+        "economy_token": legacy_token,
         "name": "TEST_iter6_legacy",
         "aptitude": "guardian",
         "codex_depth": "simple",
@@ -189,10 +206,14 @@ def test_get_legacy_player_without_new_fields(api, created_ids):
         "updated_at": datetime.now(timezone.utc).isoformat(),
     }
     db.players.insert_one(legacy_doc)
-    created_ids.append(legacy_id)
+    created_ids.append({"id": legacy_id, "economy_token": legacy_token})
 
     # GET should succeed and apply defaults
-    g = api.get(f"{BASE_URL}/api/player/{legacy_id}", timeout=15)
+    g = api.get(
+        f"{BASE_URL}/api/player/{legacy_id}",
+        headers=_session_headers({"economy_token": legacy_token}),
+        timeout=15,
+    )
     assert g.status_code == 200, g.text
     body = g.json()
     assert body["id"] == legacy_id

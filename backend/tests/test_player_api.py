@@ -15,6 +15,10 @@ BASE_URL = (
 assert BASE_URL, "Missing EXPO_PUBLIC_BACKEND_URL in /app/frontend/.env"
 
 
+def _session_headers(player):
+    return {"X-Clinica-Session": player["economy_token"]}
+
+
 @pytest.fixture(scope="module")
 def api():
     s = requests.Session()
@@ -28,9 +32,13 @@ def created_ids():
     yield ids
     # cleanup
     s = requests.Session()
-    for pid in ids:
+    for player in ids:
         try:
-            s.delete(f"{BASE_URL}/api/player/{pid}", timeout=10)
+            s.delete(
+                f"{BASE_URL}/api/player/{player['id']}",
+                headers=_session_headers(player),
+                timeout=10,
+            )
         except Exception:
             pass
 
@@ -43,16 +51,8 @@ def test_root_ok(api):
 
 
 # Create player - all aptitudes
-@pytest.mark.parametrize(
-    "aptitude,starter_hero",
-    [
-        ("guardian", "novice_guardian"),
-        ("sage", "apprentice_seer"),
-        ("warden", "junior_warden"),
-        ("weaver", "data_acolyte"),
-    ],
-)
-def test_create_player_valid_aptitudes(api, created_ids, aptitude, starter_hero):
+@pytest.mark.parametrize("aptitude", ["guardian", "sage", "warden", "weaver"])
+def test_create_player_valid_aptitudes(api, created_ids, aptitude):
     r = api.post(
         f"{BASE_URL}/api/player",
         json={"name": f"TEST_{aptitude}", "aptitude": aptitude},
@@ -60,11 +60,11 @@ def test_create_player_valid_aptitudes(api, created_ids, aptitude, starter_hero)
     )
     assert r.status_code == 200, r.text
     p = r.json()
-    created_ids.append(p["id"])
+    created_ids.append(p)
     assert p["name"] == f"TEST_{aptitude}"
     assert p["aptitude"] == aptitude
-    assert starter_hero in p["heroes_owned"]
-    assert "village_caretaker" in p["heroes_owned"]
+    assert p["heroes_owned"] == []
+    assert p["active_team"] == []
     # Kingdom levels initialized
     for b in ["academy_of_healing", "library_of_knowledge", "hall_of_heroes", "apothecary"]:
         assert p["kingdom_levels"].get(b) == 1
@@ -91,7 +91,7 @@ def test_create_player_name_handling(api, created_ids):
     )
     assert r.status_code == 200
     p = r.json()
-    created_ids.append(p["id"])
+    created_ids.append(p)
     assert p["name"] == "Healer"
 
 
@@ -103,10 +103,11 @@ def test_get_player_persisted(api, created_ids):
         timeout=15,
     )
     assert r.status_code == 200
-    pid = r.json()["id"]
-    created_ids.append(pid)
+    p = r.json()
+    pid = p["id"]
+    created_ids.append(p)
 
-    g = api.get(f"{BASE_URL}/api/player/{pid}", timeout=15)
+    g = api.get(f"{BASE_URL}/api/player/{pid}", headers=_session_headers(p), timeout=15)
     assert g.status_code == 200
     assert g.json()["id"] == pid
     assert "_id" not in g.json()
@@ -117,18 +118,20 @@ def test_get_player_404(api):
     assert r.status_code == 404
 
 
-# Update player (partial)
-def test_update_player_partial(api, created_ids):
+# Generic snapshots cannot overwrite server-owned economy or progression.
+def test_update_player_preserves_server_owned_fields(api, created_ids):
     r = api.post(
         f"{BASE_URL}/api/player",
         json={"name": "TEST_upd", "aptitude": "weaver"},
         timeout=15,
     )
-    pid = r.json()["id"]
-    created_ids.append(pid)
+    p = r.json()
+    pid = p["id"]
+    created_ids.append(p)
 
     upd = api.put(
         f"{BASE_URL}/api/player/{pid}",
+        headers=_session_headers(p),
         json={
             "xp": 50,
             "codex_unlocked": ["asthma_basics"],
@@ -142,15 +145,17 @@ def test_update_player_partial(api, created_ids):
     )
     assert upd.status_code == 200, upd.text
     body = upd.json()
-    assert body["xp"] == 50
-    assert "asthma_basics" in body["codex_unlocked"]
-    assert body["mastery"]["assessment"] == 2
+    assert body["xp"] == p["xp"]
+    assert body["codex_unlocked"] == p["codex_unlocked"]
+    assert body["mastery"] == p["mastery"]
     assert body["runs_completed"] == 1
-    assert "apprentice_seer" in body["heroes_owned"]
+    assert body["heroes_owned"] == p["heroes_owned"]
+    assert body["bosses_defeated"] == p["bosses_defeated"]
 
     # Re-fetch to verify persistence
-    g = api.get(f"{BASE_URL}/api/player/{pid}", timeout=15)
-    assert g.json()["xp"] == 50
+    g = api.get(f"{BASE_URL}/api/player/{pid}", headers=_session_headers(p), timeout=15)
+    assert g.json()["xp"] == p["xp"]
+    assert g.json()["runs_completed"] == 1
 
 
 def test_update_player_404(api):
@@ -176,7 +181,7 @@ def test_create_player_with_new_fields(api, created_ids):
     r = api.post(f"{BASE_URL}/api/player", json=payload, timeout=15)
     assert r.status_code == 200, r.text
     p = r.json()
-    created_ids.append(p["id"])
+    created_ids.append(p)
     assert p["recommended_aptitude"] == "weaver"
     assert p["learning_goal"] == "I am preparing for NCLEX."
     assert p["codex_depth"] == "nclex"
@@ -184,7 +189,7 @@ def test_create_player_with_new_fields(api, created_ids):
     assert p["failure_counts"] == {}
 
     # Verify persisted via GET
-    g = api.get(f"{BASE_URL}/api/player/{p['id']}", timeout=15)
+    g = api.get(f"{BASE_URL}/api/player/{p['id']}", headers=_session_headers(p), timeout=15)
     gb = g.json()
     assert gb["recommended_aptitude"] == "weaver"
     assert gb["learning_goal"] == "I am preparing for NCLEX."
@@ -199,7 +204,7 @@ def test_create_player_defaults_codex_depth_simple(api, created_ids):
     )
     assert r.status_code == 200
     p = r.json()
-    created_ids.append(p["id"])
+    created_ids.append(p)
     assert p["codex_depth"] == "simple"
     assert p["recommended_aptitude"] is None
     assert p["learning_goal"] is None
@@ -213,11 +218,13 @@ def test_update_failure_counts(api, created_ids):
         json={"name": "TEST_fail", "aptitude": "warden"},
         timeout=15,
     )
-    pid = r.json()["id"]
-    created_ids.append(pid)
+    p = r.json()
+    pid = p["id"]
+    created_ids.append(p)
 
     upd = api.put(
         f"{BASE_URL}/api/player/{pid}",
+        headers=_session_headers(p),
         json={"failure_counts": {"air_sprite": 2, "fire_imp": 1}},
         timeout=15,
     )
@@ -228,11 +235,12 @@ def test_update_failure_counts(api, created_ids):
     # Reset on win simulation
     upd2 = api.put(
         f"{BASE_URL}/api/player/{pid}",
+        headers=_session_headers(p),
         json={"failure_counts": {"air_sprite": 0, "fire_imp": 1}},
         timeout=15,
     )
     assert upd2.status_code == 200
-    g = api.get(f"{BASE_URL}/api/player/{pid}", timeout=15)
+    g = api.get(f"{BASE_URL}/api/player/{pid}", headers=_session_headers(p), timeout=15)
     assert g.json()["failure_counts"] == {"air_sprite": 0, "fire_imp": 1}
 
 
@@ -242,10 +250,11 @@ def test_delete_player_roundtrip(api):
         json={"name": "TEST_del", "aptitude": "sage"},
         timeout=15,
     )
-    pid = r.json()["id"]
-    d = api.delete(f"{BASE_URL}/api/player/{pid}", timeout=15)
+    p = r.json()
+    pid = p["id"]
+    d = api.delete(f"{BASE_URL}/api/player/{pid}", headers=_session_headers(p), timeout=15)
     assert d.status_code == 200
     assert d.json().get("deleted") == 1
     # subsequent GET should 404
-    g = api.get(f"{BASE_URL}/api/player/{pid}", timeout=15)
+    g = api.get(f"{BASE_URL}/api/player/{pid}", headers=_session_headers(p), timeout=15)
     assert g.status_code == 404
