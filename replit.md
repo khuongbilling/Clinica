@@ -25,12 +25,15 @@ reasoning through adaptive Clinical Cues, and grow your Sanctuary realm.
 These are high-level product principles, not gameplay specifications. Current
 gameplay rules, exact implementation values, progression, gating, economy,
 persistence and saves, backend authority, and runtime behavior are governed by the
-active canonical modules, typed contracts, manifests, validators, and tests. The
-archived PRD at `archive/historical-product/PRD.md` is historical and
-non-authoritative and must not override those sources. The canonical gameplay
-authority freeze is `docs/canonical-gameplay-contract.md`; it records the
-authority hierarchy, current contracts, golden-master evidence, portability
-requirements, and tracked migration risks without replacing executable sources.
+ active canonical modules, typed contracts, manifests, validators, and tests. The
+ archived PRD at `archive/historical-product/PRD.md` is historical and
+ non-authoritative and must not override those sources. The canonical gameplay
+ authority freeze is `docs/canonical-gameplay-contract.md`; the canonical,
+ engine-independent save schema and migration ledger are
+ `docs/canonical-save-schema-contract.md` and
+ `docs/save-schema-migration-ledger.md`. These documents record current
+ authority boundaries and migration requirements without replacing executable
+ sources.
 
 ## Key locations
 - Game logic/state: `frontend/src/game/`
