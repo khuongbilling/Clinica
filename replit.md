@@ -28,8 +28,10 @@ persistence and saves, backend authority, and runtime behavior are governed by t
  active canonical modules, typed contracts, manifests, validators, and tests. The
  archived PRD at `archive/historical-product/PRD.md` is historical and
  non-authoritative and must not override those sources. The canonical gameplay
- authority freeze is `docs/canonical-gameplay-contract.md`; the canonical,
- engine-independent save schema and migration ledger are
+ authority freeze is `docs/canonical-gameplay-contract.md`; the canonical
+ backend/API authority contract is
+ `docs/canonical-backend-api-authority-contract.md`; the engine-independent
+ save schema and migration ledger are
  `docs/canonical-save-schema-contract.md` and
  `docs/save-schema-migration-ledger.md`. These documents record current
  authority boundaries and migration requirements without replacing executable

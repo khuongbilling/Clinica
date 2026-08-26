@@ -29,6 +29,9 @@ This contract extends
 [`docs/canonical-gameplay-contract.md`](./canonical-gameplay-contract.md).
 The gameplay contract remains the authority for the broader rule hierarchy,
 server protections, golden-master evidence, and tracked gameplay risks.
+The [`canonical backend/API authority contract`](./canonical-backend-api-authority-contract.md)
+defines which dedicated server routes, attempts, receipts, claims, and
+reconciliation responses own the values represented by this schema.
 
 ## 2. Top-level player envelope
 

@@ -26,7 +26,10 @@ precedence:
    compatibility paths** are evidence or migration material only. They must not
    override active modules, contracts, manifests, validators, or tests.
 
-`replit.md` is the project-level pointer to this contract. The archived
+`replit.md` is the project-level pointer to this contract. The
+[`canonical-backend-api-authority-contract.md`](./canonical-backend-api-authority-contract.md)
+defines the dedicated route, receipt, credential, replay, and migration boundary
+for durable server value. The archived
 `archive/historical-product/PRD.md` is historical and non-authoritative.
 `docs/freeze-journey-combat-v1.md`, `docs/battle-audit.md`, and
 `docs/tutorial-audit.md` are useful freeze/audit references, but executable
