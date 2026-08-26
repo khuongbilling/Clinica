@@ -27,7 +27,10 @@ gameplay rules, exact implementation values, progression, gating, economy,
 persistence and saves, backend authority, and runtime behavior are governed by the
 active canonical modules, typed contracts, manifests, validators, and tests. The
 archived PRD at `archive/historical-product/PRD.md` is historical and
-non-authoritative and must not override those sources.
+non-authoritative and must not override those sources. The canonical gameplay
+authority freeze is `docs/canonical-gameplay-contract.md`; it records the
+authority hierarchy, current contracts, golden-master evidence, portability
+requirements, and tracked migration risks without replacing executable sources.
 
 ## Key locations
 - Game logic/state: `frontend/src/game/`
