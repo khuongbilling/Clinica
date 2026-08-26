@@ -11,6 +11,24 @@ reasoning through adaptive Clinical Cues, and grow your Sanctuary realm.
 - **Database**: MongoDB on port 27017 (needs `MONGO_URL`; store falls back to local
   AsyncStorage when unavailable).
 
+## Canonical product principles
+- Clinica is an educational fantasy RPG that teaches biology, anatomy, physiology,
+  microbiology, nursing foundations, clinical judgment, and NCLEX reasoning through
+  play.
+- Players collect healer heroes, rebuild a healing sanctuary, and address disease
+  corruption through clue-based encounters tied to body systems.
+- The learning loop connects clinical reasoning, clues, Codex knowledge, hero/team
+  building, progression, and sanctuary growth.
+- Onboarding, learning profiles, mentor guidance, and daily engagement support a
+  welcoming path from first lesson through continued practice.
+
+These are high-level product principles, not gameplay specifications. Current
+gameplay rules, exact implementation values, progression, gating, economy,
+persistence and saves, backend authority, and runtime behavior are governed by the
+active canonical modules, typed contracts, manifests, validators, and tests. The
+archived PRD at `archive/historical-product/PRD.md` is historical and
+non-authoritative and must not override those sources.
+
 ## Key locations
 - Game logic/state: `frontend/src/game/`
 - Loading/preloader screen: `frontend/src/components/realm/RealmLoadingScreen.tsx`

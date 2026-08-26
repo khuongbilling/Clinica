@@ -1,4 +1,14 @@
-# Clinica: Kingdom of Healing — PRD
+# Historical PRD — Clinica: Kingdom of Healing
+
+> **Status: HISTORICAL / NON-AUTHORITATIVE.**
+> This document was archived from `memory/PRD.md` during the M0-P3E documentation
+> cleanup. It preserves historical product intent and superseded assumptions for
+> audit context only.
+>
+> Do not use this document to determine current gameplay rules, exact values,
+> progression, gating, economy, persistence or saves, backend authority,
+> dependencies, CI, or implementation behavior. Those are governed by the active
+> canonical modules, typed contracts, manifests, validators, and tests.
 
 ## Vision
 A fantasy mobile RPG that teaches biology, anatomy, physiology, microbiology, nursing foundations, clinical judgment, and NCLEX reasoning through gameplay. Players collect healer heroes, rebuild a fallen kingdom, and battle disease corruptions through clue-based encounters tied to body systems.
