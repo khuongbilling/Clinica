@@ -33,6 +33,11 @@ The [`canonical backend/API authority contract`](./canonical-backend-api-authori
 defines which dedicated server routes, attempts, receipts, claims, and
 reconciliation responses own the values represented by this schema.
 
+The portable v1 migration vectors, canonical JSON profile, and fixture validator
+are in [`fixtures/clinica-golden/v1/`](../fixtures/clinica-golden/v1/). Those
+fixtures lock `clinica.player` v3 interchange semantics while retaining
+independent Journey and Daily Rounds nested versions.
+
 ## 2. Top-level player envelope
 
 Every canonical player export, cache payload, or engine-to-engine interchange

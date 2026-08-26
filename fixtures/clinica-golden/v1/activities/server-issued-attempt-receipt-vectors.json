@@ -1,0 +1,70 @@
+{
+  "fixture_id": "server-issued-attempt-receipt-vectors",
+  "fixture_revision": 1,
+  "schema_id": "clinica.golden.server-attempt-receipts",
+  "schema_version": 1,
+  "authority": "server",
+  "normalization_version": 1,
+  "content_manifest_id": "clinica-content",
+  "content_manifest_version": 1,
+  "source_revision": "6cd44455370cf333516022ff4b1a371bd08e18ad",
+  "payload": {
+    "privacy": "sanitized-no-credentials-no-personal-data",
+    "virtual_issued_at": "2026-08-23T12:00:00Z",
+    "records": [
+      {
+        "activity_id": "university_practice",
+        "attempt_id": "attempt-university-001",
+        "manifest_version": 1,
+        "status": "claimed",
+        "receipt_id": "receipt-university-001",
+        "replay": {"already_claimed": true, "granted": {}}
+      },
+      {
+        "activity_id": "clinical_simulation",
+        "attempt_id": "attempt-clinical-001",
+        "case_id": "clinical-case-fixture-001",
+        "manifest_version": 1,
+        "status": "claimed",
+        "receipt_id": "receipt-clinical-001",
+        "replay": {"already_completed": true, "same_debrief": true}
+      },
+      {
+        "activity_id": "grand_rounds",
+        "attempt_id": "attempt-grand-rounds-001",
+        "round_id": "round-fixture-001",
+        "manifest_version": 1,
+        "status": "claimed",
+        "receipt_id": "receipt-grand-rounds-001",
+        "replay": {"already_completed": true, "same_receipt_id": true}
+      },
+      {
+        "activity_id": "crisis_drill",
+        "attempt_id": "attempt-crisis-drill-001",
+        "drill_id": "drill-fixture-001",
+        "manifest_version": 1,
+        "status": "claimed",
+        "receipt_id": "receipt-crisis-drill-001",
+        "replay": {"already_completed": true, "same_receipt_id": true}
+      },
+      {
+        "activity_id": "ward_defense",
+        "attempt_id": "attempt-ward-defense-001",
+        "run_id": "ward-defense-run-fixture-001",
+        "manifest_version": 1,
+        "status": "claimed",
+        "receipt_id": "receipt-ward-defense-001",
+        "replay": {"already_completed": true, "durable_reward_authority": "server"}
+      },
+      {
+        "activity_id": "player_hero",
+        "attempt_id": "attempt-player-hero-001",
+        "player_hero_id": "player-hero-fixture-0001",
+        "manifest_version": 1,
+        "status": "claimed",
+        "receipt_id": "receipt-player-hero-001",
+        "replay": {"already_created": true, "same_player_hero_id": true}
+      }
+    ]
+  }
+}

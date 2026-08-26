@@ -1,0 +1,52 @@
+{
+  "fixture_id": "battle-clinical-vectors",
+  "fixture_revision": 1,
+  "schema_id": "clinica.golden.battle-clinical",
+  "schema_version": 1,
+  "authority": "portable",
+  "normalization_version": 1,
+  "content_manifest_id": "clinica-content",
+  "content_manifest_version": 1,
+  "source_revision": "6cd44455370cf333516022ff4b1a371bd08e18ad",
+  "payload": {
+    "formula_revision": "skillCalc-current",
+    "cases": [
+      {
+        "case_id": "element-strike",
+        "kind": "strike",
+        "input": {"base": 100, "element_bonus": 0.3, "clinical_mod": 1, "affinity_family_mod": 1},
+        "expected": {"effect": 130, "rounding": "Math.round"}
+      },
+      {
+        "case_id": "inappropriate-element-strike",
+        "kind": "strike",
+        "input": {"base": 100, "element_bonus": 0.3, "clinical_mod": 0.25, "affinity_family_mod": 1},
+        "expected": {"effect": 33, "multiplier": 0.325, "rounding": "Math.round"}
+      },
+      {
+        "case_id": "strong-clinical-strike",
+        "kind": "strike",
+        "input": {"base": 100, "element_bonus": 0, "clinical_mod": 1.6, "affinity_family_mod": 1},
+        "expected": {"effect": 160}
+      },
+      {
+        "case_id": "full-optimal-strike",
+        "kind": "strike",
+        "input": {"base": 100, "element_bonus": 0.3, "clinical_mod": 1.6, "affinity_family_mod": 1.18},
+        "expected": {"effect": 245}
+      },
+      {
+        "case_id": "cue-stabilize-order",
+        "kind": "stabilize",
+        "input": {"base": 20, "clinical_mod": 1, "cue_bonus_flat": 8, "stability_gain_mod": 0.5, "enemy_resistance_mod": 1},
+        "expected": {"effect": 14, "ordering": "multiply_then_flat_cue_then_patient_modifiers"}
+      },
+      {
+        "case_id": "shield-before-hp",
+        "kind": "resolution",
+        "input": {"incoming_stability_damage": 20, "shield_percent": 60, "stability_before": 70},
+        "expected": {"blocked_damage": 12, "stability_after": 62, "ordering": "shield_before_hp"}
+      }
+    ]
+  }
+}

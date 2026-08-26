@@ -1,0 +1,54 @@
+{
+  "fixture_id": "journey-canonical-run-vectors",
+  "fixture_revision": 1,
+  "schema_id": "clinica.golden.journey-run",
+  "schema_version": 1,
+  "authority": "portable",
+  "normalization_version": 1,
+  "content_manifest_id": "clinica-content",
+  "content_manifest_version": 1,
+  "source_revision": "6cd44455370cf333516022ff4b1a371bd08e18ad",
+  "payload": {
+    "run": {
+      "id": "journey-fixture-ch10-001",
+      "player_id": "fixture-player-0001",
+      "chapter_id": "chapter_10",
+      "attempt_number": 1,
+      "schema_version": 2,
+      "seed": "canonical-test-seed-alpha",
+      "shift": "day",
+      "topology_family": "canonical-linear-compact",
+      "map_blueprint_hash": "fixture-ch10-blueprint-v1",
+      "start_tile_id": "tile_start",
+      "gate_tile_id": "tile_gate",
+      "tiles": [
+        {"id": "tile_start", "q": 0, "r": 0, "encounter_type": "battle"},
+        {"id": "tile_1", "q": 1, "r": 0, "encounter_type": "treasure", "chest_tier": "standard"},
+        {"id": "tile_2", "q": 1, "r": 1, "encounter_type": "ward", "ward_subtype": "triage"},
+        {"id": "tile_gate", "q": 2, "r": 1, "encounter_type": "gate"}
+      ]
+    },
+    "fog_move": {
+      "from_tile_id": "tile_start",
+      "to_tile_id": "tile_1",
+      "reveal_radius": 1,
+      "expected": {
+        "visible_now": ["tile_start", "tile_1", "tile_2"],
+        "explored_but_out_of_vision": [],
+        "unexplored": ["tile_gate"]
+      }
+    },
+    "boss_keys": {
+      "chapter_id": "chapter_5",
+      "tile_ids": ["tile_1", "tile_2", "tile_3"],
+      "expected_key_totals": [1, 2, 3],
+      "expected_gate_open_after_key_total": 3,
+      "duplicate_completion": {"tile_id": "tile_3", "expected_key_total": 3, "grant_delta": 0}
+    },
+    "identity_invariants": {
+      "different_seed_same_geometry": true,
+      "different_shift_same_geometry": true,
+      "map_blueprint_hash_is_geometry_identity": true
+    }
+  }
+}

@@ -29,7 +29,13 @@ precedence:
 `replit.md` is the project-level pointer to this contract. The
 [`canonical-backend-api-authority-contract.md`](./canonical-backend-api-authority-contract.md)
 defines the dedicated route, receipt, credential, replay, and migration boundary
-for durable server value. The archived
+for durable server value.
+
+Portable migration vectors and their SHA-256 validation profile live in
+[`fixtures/clinica-golden/v1/`](../fixtures/clinica-golden/v1/). They preserve
+deterministic rules and stable identifiers for engine ports; they do not replace
+the executable gameplay, server-authority, or concurrency suites.
+
 `archive/historical-product/PRD.md` is historical and non-authoritative.
 `docs/freeze-journey-combat-v1.md`, `docs/battle-audit.md`, and
 `docs/tutorial-audit.md` are useful freeze/audit references, but executable

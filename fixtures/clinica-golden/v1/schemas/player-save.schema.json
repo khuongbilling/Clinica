@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "clinica.player.v3.fixture",
+  "type": "object",
+  "required": ["schema_id", "save_version", "player_id", "authoritative", "local"],
+  "properties": {
+    "schema_id": {"const": "clinica.player"},
+    "save_version": {"const": 3},
+    "player_id": {"type": "string", "minLength": 1},
+    "authoritative": {"type": "object"},
+    "local": {"type": "object"}
+  },
+  "additionalProperties": true
+}

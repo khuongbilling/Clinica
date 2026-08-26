@@ -1,0 +1,18 @@
+{
+  "schema_id": "clinica.golden.hashes",
+  "schema_version": 1,
+  "hash_algorithm": "SHA-256",
+  "canonicalization_profile": "clinica-jcs-v1",
+  "entries": [
+    {"fixture_id": "stable-id-manifest", "path": "catalogs/stable-id-manifest.json", "payload_sha256": "616125d268fc58fa3d3c157379567372dc6d61a17ed9170fd299850d7337bc1b"},
+    {"fixture_id": "player-migration-vectors", "path": "saves/player-migration-vectors.json", "payload_sha256": "4eac5b048695c5e4dff1b4cfc6b6b1811bad93485852ee45dbcf846c4a35b905"},
+    {"fixture_id": "account-gates-vectors", "path": "progression/account-gates-vectors.json", "payload_sha256": "fd8cc206342ce2ad00ad60ab202aa150d75a07bee1ca02e2c3349e4bdc1cdc6d"},
+    {"fixture_id": "battle-clinical-vectors", "path": "gameplay/battle-clinical-vectors.json", "payload_sha256": "e29ffa63c4bbc1a7c77573a01958e62fd2122f0faafc61dbeb6e9e9286fa12e4"},
+    {"fixture_id": "journey-canonical-run-vectors", "path": "journey/canonical-run-vectors.json", "payload_sha256": "beff97bbadd53423d32540032f56e5cee552b04ce524ffb4060915bb4a0f037e"},
+    {"fixture_id": "daily-rounds-v2-vectors", "path": "daily/daily-rounds-v2-vectors.json", "payload_sha256": "7c990b172e40d5bdbf65b8b131000b736cd370e8feb4de21f00456804e37c5b4"},
+    {"fixture_id": "realm-layout-classification", "path": "realm/layout-and-production-classification.json", "payload_sha256": "8670f3a242947b278074f38b7a0fc566b5d7d84bbb4f8065361198de673992fc"},
+    {"fixture_id": "server-issued-attempt-receipt-vectors", "path": "activities/server-issued-attempt-receipt-vectors.json", "payload_sha256": "251f9074e330ccd85f62eb8dcf6328c31f92e79a4dd09a53237b76eb0d2799a9"},
+    {"fixture_id": "api-replay-and-error-vectors", "path": "authority/api-replay-and-error-vectors.json", "payload_sha256": "7b35f16a650de141dc4445f9478ef9bbe253452bca2b02141c698f26e260b577"},
+    {"fixture_id": "replit-godot-unity-roundtrip", "path": "portability/replit-godot-unity-roundtrip.json", "payload_sha256": "d2034c0f4fffd358eb594d02aef1ce0bff8a99060ae1479a31493dd08b720597"}
+  ]
+}

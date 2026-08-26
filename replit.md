@@ -35,7 +35,10 @@ persistence and saves, backend authority, and runtime behavior are governed by t
  `docs/canonical-save-schema-contract.md` and
  `docs/save-schema-migration-ledger.md`. These documents record current
  authority boundaries and migration requirements without replacing executable
- sources.
+ sources. Portable Replit-to-Godot/Unity golden fixtures, schemas, and the
+ SHA-256 fixture validator are under `fixtures/clinica-golden/v1/`; they lock
+ deterministic data and semantic projections without replacing backend authority
+ or runtime tests.
 
 ## Key locations
 - Game logic/state: `frontend/src/game/`

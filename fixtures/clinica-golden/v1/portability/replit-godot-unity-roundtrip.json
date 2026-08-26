@@ -1,0 +1,53 @@
+{
+  "fixture_id": "replit-godot-unity-roundtrip",
+  "fixture_revision": 1,
+  "schema_id": "clinica.golden.engine-roundtrip",
+  "schema_version": 1,
+  "authority": "portable",
+  "normalization_version": 1,
+  "content_manifest_id": "clinica-content",
+  "content_manifest_version": 1,
+  "source_revision": "6cd44455370cf333516022ff4b1a371bd08e18ad",
+  "payload": {
+    "canonical_player": {
+      "schema_id": "clinica.player",
+      "save_version": 3,
+      "player_id": "fixture-player-0001",
+      "authoritative": {
+        "xp": 700,
+        "stamina": 12,
+        "inventory": {"I001": 2, "I003": 1},
+        "equipment_owned": ["insight_lens", "cue_compass"],
+        "loadout": [
+          {"slot": "focusTool", "equipment_id": "insight_lens"},
+          {"slot": "charm", "equipment_id": "cue_compass"}
+        ],
+        "roster_heroes": [{"hero_id": "night_watcher", "level": 5}],
+        "player_hero": {"player_hero_id": "player-hero-fixture-0001", "level": 1},
+        "journey_run_refs": ["journey-fixture-ch10-001"],
+        "activity_attempt_refs": ["attempt-university-001"],
+        "receipt_ids": ["receipt-university-001"]
+      },
+      "local": {"realm_seed": "realm-fixture-0001"}
+    },
+    "semantic_projection": {
+      "stable_ids": {
+        "player_id": "fixture-player-0001",
+        "roster_hero_ids": ["night_watcher"],
+        "player_hero_ids": ["player-hero-fixture-0001"],
+        "equipment_ids": ["cue_compass", "insight_lens"],
+        "journey_run_ids": ["journey-fixture-ch10-001"],
+        "activity_attempt_ids": ["attempt-university-001"],
+        "receipt_ids": ["receipt-university-001"]
+      },
+      "quantities": {"I001": 2, "I003": 1},
+      "versions": {"player_save_version": 3, "journey_schema_version": 2, "daily_rounds_version": 2},
+      "excluded_from_equality": ["renderer_paths", "scene_state", "local_presentation_preferences", "credentials", "volatile_timestamps"]
+    },
+    "engine_expectations": {
+      "replit": {"canonical_hash_matches": true, "semantic_projection_matches": true},
+      "godot": {"canonical_hash_matches": true, "semantic_projection_matches": true},
+      "unity": {"canonical_hash_matches": true, "semantic_projection_matches": true}
+    }
+  }
+}

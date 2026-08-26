@@ -1,0 +1,69 @@
+{
+  "fixture_id": "player-migration-vectors",
+  "fixture_revision": 1,
+  "schema_id": "clinica.golden.player-migration",
+  "schema_version": 1,
+  "authority": "portable",
+  "normalization_version": 1,
+  "content_manifest_id": "clinica-content",
+  "content_manifest_version": 1,
+  "source_revision": "6cd44455370cf333516022ff4b1a371bd08e18ad",
+  "payload": {
+    "target_player_schema_id": "clinica.player",
+    "target_save_version": 3,
+    "cases": [
+      {
+        "case_id": "canonical-v3-roundtrip",
+        "input": {
+          "schema_id": "clinica.player",
+          "save_version": 3,
+          "player_id": "fixture-player-0001",
+          "authoritative": {
+            "xp": 700,
+            "stamina": 12,
+            "inventory": {"I001": 2, "I003": 1},
+            "equipment_owned": ["insight_lens"],
+            "roster_heroes": ["night_watcher"],
+            "journey_run_refs": ["journey-fixture-ch10-001"],
+            "activity_attempt_refs": ["attempt-university-001"]
+          },
+          "local": {"learning_profile": "curious", "realm_seed": "realm-fixture-0001"}
+        },
+        "expected": {"action": "accept", "save_version": 3, "idempotent": true},
+        "grant_delta": {"currency": 0, "stamina": 0, "inventory": {}, "heroes": [], "equipment": [], "claims": [], "receipts": []}
+      },
+      {
+        "case_id": "legacy-alias-and-dedup",
+        "input": {
+          "cache_namespace": "clinica.player.v2",
+          "player_id": "fixture-player-0002",
+          "learning_profile": "nursingStudent",
+          "inventory": {"I001": 2},
+          "equipment_owned": ["insight_lens", "insight_lens"],
+          "claimed_reward_ids": ["claim-fixture-001", "claim-fixture-001"],
+          "activity_receipt_ids": ["receipt-fixture-001", "receipt-fixture-001"]
+        },
+        "expected": {
+          "action": "migrate",
+          "save_version": 3,
+          "learning_profile": "nursing_student",
+          "set_like_ids": {"equipment_owned": ["insight_lens"], "claimed_reward_ids": ["claim-fixture-001"], "activity_receipt_ids": ["receipt-fixture-001"]},
+          "realm_seed": "realm-fixture-0002"
+        },
+        "grant_delta": {"currency": 0, "stamina": 0, "inventory": {}, "heroes": [], "equipment": [], "claims": [], "receipts": []}
+      },
+      {
+        "case_id": "unknown-future-quarantine",
+        "input": {"schema_id": "clinica.player", "save_version": 99, "player_id": "fixture-player-0003", "authoritative": {"xp": 999}},
+        "expected": {"action": "quarantine", "preserve_input_unchanged": true, "never_downgrade": true},
+        "grant_delta": {"currency": 0, "stamina": 0, "inventory": {}, "heroes": [], "equipment": [], "claims": [], "receipts": []}
+      },
+      {
+        "case_id": "malformed-valuable-field-fails-closed",
+        "input": {"player_id": "fixture-player-0004", "inventory": {"I001": -1}, "stamina": "infinite"},
+        "expected": {"action": "quarantine", "reason": "malformed_valuable_field"},
+        "grant_delta": {"currency": 0, "stamina": 0, "inventory": {}, "heroes": [], "equipment": [], "claims": [], "receipts": []}
+      }
+    ]
+  }
+}

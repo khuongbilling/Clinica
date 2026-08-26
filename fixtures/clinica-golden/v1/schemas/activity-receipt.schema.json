@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "clinica.activity-receipt.v1.fixture",
+  "type": "object",
+  "required": ["activity_id", "attempt_id", "status", "receipt_id"],
+  "properties": {
+    "activity_id": {"type": "string", "minLength": 1},
+    "attempt_id": {"type": "string", "minLength": 1},
+    "status": {"enum": ["issued", "active", "completed", "claimed"]},
+    "receipt_id": {"type": "string", "minLength": 1}
+  },
+  "additionalProperties": true
+}

@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "clinica.golden.fixture-envelope.v1",
+  "type": "object",
+  "required": [
+    "fixture_id",
+    "fixture_revision",
+    "schema_id",
+    "schema_version",
+    "authority",
+    "normalization_version",
+    "content_manifest_id",
+    "content_manifest_version",
+    "source_revision",
+    "payload"
+  ],
+  "properties": {
+    "fixture_id": {"type": "string", "minLength": 1},
+    "fixture_revision": {"type": "integer", "minimum": 1},
+    "schema_id": {"type": "string", "pattern": "^clinica\\.golden\\."},
+    "schema_version": {"type": "integer", "minimum": 1},
+    "authority": {"enum": ["portable", "server", "local_projection", "reference"]},
+    "normalization_version": {"type": "integer", "minimum": 1},
+    "content_manifest_id": {"type": "string", "minLength": 1},
+    "content_manifest_version": {"type": "integer", "minimum": 1},
+    "source_revision": {"type": "string", "minLength": 7},
+    "payload": {}
+  },
+  "additionalProperties": false
+}

@@ -34,6 +34,11 @@ When the client, cache, or server disagree, use this precedence:
 > must never be promoted into a currency, reward, inventory, progression, or
 > cross-device authority source.
 
+Portable sanitized attempt/receipt, replay, and error-semantics vectors live in
+[`fixtures/clinica-golden/v1/`](../fixtures/clinica-golden/v1/). They are
+cross-engine validation inputs, not proof of HMAC/session enforcement, FastAPI
+routing, MongoDB indexes/CAS, concurrency safety, or server reward authority.
+
 `ENGINE LOCK-IN: LOW.` The transport, record ownership, stable identifiers,
 manifest versions, and replay rules are engine-neutral. Expo/React Native is
 one client implementation; a Godot or Unity client must preserve these

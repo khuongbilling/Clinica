@@ -1,0 +1,66 @@
+{
+  "fixture_id": "stable-id-manifest",
+  "fixture_revision": 1,
+  "schema_id": "clinica.golden.catalog-manifest",
+  "schema_version": 1,
+  "authority": "reference",
+  "normalization_version": 1,
+  "content_manifest_id": "clinica-content",
+  "content_manifest_version": 1,
+  "source_revision": "6cd44455370cf333516022ff4b1a371bd08e18ad",
+  "payload": {
+    "items": [
+      {"id": "I001", "target": "corruption"},
+      {"id": "I002", "target": "corruption"},
+      {"id": "I003", "target": "stability"},
+      {"id": "I004", "target": "shield"}
+    ],
+    "equipment": [
+      {"id": "insight_lens", "slot": "focusTool"},
+      {"id": "cue_compass", "slot": "charm"},
+      {"id": "oxygen_lantern_core", "slot": "medicalKit"},
+      {"id": "diagnostic_scroll", "slot": "relic"}
+    ],
+    "heroes": [
+      {"id": "novice_guardian"},
+      {"id": "night_watcher"},
+      {"id": "apprentice_seer"}
+    ],
+    "skills": [
+      {"id": "breath_of_dawn"},
+      {"id": "lantern_of_clues"},
+      {"id": "rapid_response"},
+      {"id": "rally_bell"}
+    ],
+    "activities": [
+      {"id": "university_practice"},
+      {"id": "clinical_simulation"},
+      {"id": "grand_rounds"},
+      {"id": "crisis_drill"},
+      {"id": "ward_defense"},
+      {"id": "player_hero"}
+    ],
+    "features": [
+      {"id": "summoning_hall"},
+      {"id": "daily_rounds"},
+      {"id": "ward_defense"},
+      {"id": "realm"},
+      {"id": "world_events"},
+      {"id": "boss_encounters"}
+    ],
+    "buildings": [
+      {"id": "grand_ward_atrium"},
+      {"id": "clinica_university"}
+    ],
+    "chapters": [
+      {"id": "chapter_5"},
+      {"id": "chapter_10"}
+    ],
+    "encounter_types": [
+      {"id": "battle"},
+      {"id": "treasure"},
+      {"id": "ward"},
+      {"id": "gate"}
+    ]
+  }
+}

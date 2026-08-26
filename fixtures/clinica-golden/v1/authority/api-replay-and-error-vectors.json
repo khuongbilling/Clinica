@@ -1,0 +1,45 @@
+{
+  "fixture_id": "api-replay-and-error-vectors",
+  "fixture_revision": 1,
+  "schema_id": "clinica.golden.api-semantics",
+  "schema_version": 1,
+  "authority": "server",
+  "normalization_version": 1,
+  "content_manifest_id": "clinica-content",
+  "content_manifest_version": 1,
+  "source_revision": "6cd44455370cf333516022ff4b1a371bd08e18ad",
+  "payload": {
+    "error_cases": [
+      {"case_id": "missing-session", "semantic_status": 401, "reason": "authentication_required"},
+      {"case_id": "locked-feature", "semantic_status": 403, "reason": "feature_locked"},
+      {"case_id": "missing-attempt", "semantic_status": 404, "reason": "attempt_not_found"},
+      {"case_id": "stale-claim-cas", "semantic_status": 409, "reason": "state_conflict", "client_action": "refetch_and_reconcile"},
+      {"case_id": "invalid-action", "semantic_status": 422, "reason": "illegal_transition"},
+      {"case_id": "retired-generic-claim", "semantic_status": 410, "reason": "retired_non_authoritative_route"}
+    ],
+    "replay_cases": [
+      {
+        "case_id": "duplicate-activity-receipt",
+        "request_identity": {"activity_id": "university_practice", "receipt_id": "receipt-university-001"},
+        "expected": {"duplicate": true, "grant_delta": {}}
+      },
+      {
+        "case_id": "duplicate-university-completion",
+        "request_identity": {"attempt_id": "attempt-university-001"},
+        "expected": {"already_claimed": true, "granted": {}}
+      },
+      {
+        "case_id": "duplicate-clinical-completion",
+        "request_identity": {"attempt_id": "attempt-clinical-001"},
+        "expected": {"already_completed": true, "same_debrief": true}
+      }
+    ],
+    "non_proofs": [
+      "HMAC/session verification",
+      "FastAPI routing and request parsing",
+      "Mongo unique indexes and CAS predicates",
+      "real concurrent claim races",
+      "server reward settlement"
+    ]
+  }
+}

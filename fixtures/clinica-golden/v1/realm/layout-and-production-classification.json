@@ -1,0 +1,34 @@
+{
+  "fixture_id": "realm-layout-classification",
+  "fixture_revision": 1,
+  "schema_id": "clinica.golden.realm-layout",
+  "schema_version": 1,
+  "authority": "local_projection",
+  "normalization_version": 1,
+  "content_manifest_id": "clinica-content",
+  "content_manifest_version": 1,
+  "source_revision": "6cd44455370cf333516022ff4b1a371bd08e18ad",
+  "payload": {
+    "realm_id": "realm-fixture-0001",
+    "realm_seed": "realm-fixture-0001",
+    "grid": {"width": 4, "height": 3},
+    "placements": [
+      {"building_id": "grand_ward_atrium", "cell": {"q": 1, "r": 1}, "classification": "prebuilt"},
+      {"building_id": "clinica_university", "cell": {"q": 2, "r": 1}, "classification": "player_placed"}
+    ],
+    "cells": {
+      "buildable": [{"q": 0, "r": 0}, {"q": 3, "r": 2}],
+      "decoration": [{"q": 0, "r": 2}],
+      "blocked": [{"q": 3, "r": 0}]
+    },
+    "producer_projection": {
+      "building_id": "clinica_university",
+      "assigned_hero_ids": ["night_watcher"],
+      "points": 25,
+      "virtual_observed_at": "2026-08-23T12:00:00Z",
+      "authority": "local_projection",
+      "durable_grant": false,
+      "requires_server_receipt_for_value": true
+    }
+  }
+}

@@ -1,0 +1,29 @@
+{
+  "fixture_id": "account-gates-vectors",
+  "fixture_revision": 1,
+  "schema_id": "clinica.golden.account-gates",
+  "schema_version": 1,
+  "authority": "portable",
+  "normalization_version": 1,
+  "content_manifest_id": "clinica-content",
+  "content_manifest_version": 1,
+  "source_revision": "6cd44455370cf333516022ff4b1a371bd08e18ad",
+  "payload": {
+    "cases": [
+      {"case_id": "level-1-no-world-events", "player_level": 1, "feature_id": "world_events", "expected_unlocked": false},
+      {"case_id": "level-2-daily-rounds", "player_level": 2, "feature_id": "daily_rounds", "expected_unlocked": true},
+      {"case_id": "level-4-ward-defense", "player_level": 4, "feature_id": "ward_defense", "expected_unlocked": true},
+      {"case_id": "level-6-world-events", "player_level": 6, "feature_id": "world_events", "expected_unlocked": false},
+      {"case_id": "level-7-world-events", "player_level": 7, "feature_id": "world_events", "expected_unlocked": true},
+      {"case_id": "level-8-boss", "player_level": 8, "feature_id": "boss_encounters", "expected_unlocked": false},
+      {"case_id": "level-9-boss", "player_level": 9, "feature_id": "boss_encounters", "expected_unlocked": true}
+    ],
+    "identity_separation": {
+      "roster_hero_id": "night_watcher",
+      "roster_hero_level": 5,
+      "player_hero_id": "player-hero-fixture-0001",
+      "player_hero_level": 1,
+      "expected": "independent_progression"
+    }
+  }
+}

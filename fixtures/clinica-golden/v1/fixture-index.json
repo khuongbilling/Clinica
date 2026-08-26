@@ -1,0 +1,20 @@
+{
+  "schema_id": "clinica.golden.index",
+  "schema_version": 1,
+  "fixture_set_id": "clinica-golden-v1",
+  "canonicalization_profile": "clinica-jcs-v1",
+  "hash_algorithm": "SHA-256",
+  "source_revision": "6cd44455370cf333516022ff4b1a371bd08e18ad",
+  "fixtures": [
+    {"fixture_id": "stable-id-manifest", "path": "catalogs/stable-id-manifest.json", "authority": "reference"},
+    {"fixture_id": "player-migration-vectors", "path": "saves/player-migration-vectors.json", "authority": "portable"},
+    {"fixture_id": "account-gates-vectors", "path": "progression/account-gates-vectors.json", "authority": "portable"},
+    {"fixture_id": "battle-clinical-vectors", "path": "gameplay/battle-clinical-vectors.json", "authority": "portable"},
+    {"fixture_id": "journey-canonical-run-vectors", "path": "journey/canonical-run-vectors.json", "authority": "portable"},
+    {"fixture_id": "daily-rounds-v2-vectors", "path": "daily/daily-rounds-v2-vectors.json", "authority": "portable"},
+    {"fixture_id": "realm-layout-classification", "path": "realm/layout-and-production-classification.json", "authority": "local_projection"},
+    {"fixture_id": "server-issued-attempt-receipt-vectors", "path": "activities/server-issued-attempt-receipt-vectors.json", "authority": "server"},
+    {"fixture_id": "api-replay-and-error-vectors", "path": "authority/api-replay-and-error-vectors.json", "authority": "server"},
+    {"fixture_id": "replit-godot-unity-roundtrip", "path": "portability/replit-godot-unity-roundtrip.json", "authority": "portable"}
+  ]
+}

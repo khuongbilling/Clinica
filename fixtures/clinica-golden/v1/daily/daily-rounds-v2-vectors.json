@@ -1,0 +1,39 @@
+{
+  "fixture_id": "daily-rounds-v2-vectors",
+  "fixture_revision": 1,
+  "schema_id": "clinica.golden.daily-rounds",
+  "schema_version": 1,
+  "authority": "portable",
+  "normalization_version": 1,
+  "content_manifest_id": "clinica-content",
+  "content_manifest_version": 1,
+  "source_revision": "6cd44455370cf333516022ff4b1a371bd08e18ad",
+  "payload": {
+    "daily_rounds_version": 2,
+    "virtual_date": "2026-08-23",
+    "board_generation": {
+      "player_id": "same-player",
+      "pool_id": "daily-v2-fixture-pool",
+      "expected_deterministic": true,
+      "expected_activity_ids": ["university_practice", "clinical_simulation", "ward_defense"]
+    },
+    "legacy_migration": {
+      "player_id": "legacy-account",
+      "input_version": 1,
+      "expected_version": 2,
+      "expected_action": "migrate_without_local_settlement",
+      "grant_delta": {"currency": 0, "xp": 0, "inventory": {}, "claims": [], "receipts": []}
+    },
+    "verified_progress_merge": {
+      "receipt_id": "receipt-university-001",
+      "activity_id": "university_practice",
+      "first_merge": {"accepted": true, "durable_reward_authority": "server"},
+      "duplicate_merge": {"accepted": false, "duplicate": true, "grant_delta": {"currency": 0, "xp": 0, "inventory": {}}}
+    },
+    "rollover": {
+      "from_virtual_date": "2026-08-23",
+      "to_virtual_date": "2026-08-24",
+      "expected": "new_board_without_replaying_old_receipt"
+    }
+  }
+}
