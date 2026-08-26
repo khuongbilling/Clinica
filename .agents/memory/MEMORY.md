@@ -133,3 +133,4 @@
 - [Activity registry manifest location](activity-registry-manifest-location.md) — Metro cannot bundle a canonical manifest outside frontend; backend reads the frontend-owned JSON directly.
 - [Daily Rounds V2 authority](daily-rounds-v2-authority.md) — V2 board state is client-persisted; server-owned receipts are required before anti-cheat reward authority.
 - [GitHub push credential fallback](github-push-credential-fallback.md) — Git transport can reject credentials despite a healthy connector; use the configured PAT only through one-shot GIT_ASKPASS, never persist it.
+- [Test runner separation](clinica-test-runner-separation.md) — Backend authority tests share one asyncio runner for Motor; Vitest discovery must stay explicit because contract scripts share `.test.ts`.
