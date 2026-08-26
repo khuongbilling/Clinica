@@ -1,0 +1,35 @@
+; Engine configuration file.
+; Generated as part of the M1-P1 Godot migration skeleton (foundation pass
+; only). This project is additive and isolated: it does not affect the
+; existing Expo/React Native client, backend, gameplay, or save behavior.
+; See godot-client/docs/MIGRATION.md for scope and authority boundaries.
+;
+; NOTE: no Godot executable was available in the environment this file was
+; authored in, so it has not been opened/parsed by the Godot editor. Open it
+; once in Godot 4.3+ to confirm it loads before building further on top of it.
+
+config_version=5
+
+[application]
+
+config/name="Clinica Godot Client (M1-P1 Skeleton)"
+config/description="Engine migration foundation skeleton. Presentation-only; gameplay/economy/save authority remains server-owned per docs/canonical-*-contract.md."
+run/main_scene="res://scenes/boot/boot.tscn"
+config/features=PackedStringArray("4.3", "Mobile")
+
+[autoload]
+
+Services="*res://scripts/core/composition_root.gd"
+
+[display]
+
+window/size/viewport_width=1080
+window/size/viewport_height=1920
+window/handheld/orientation="portrait"
+window/stretch/mode="canvas_items"
+window/stretch/aspect="keep"
+
+[rendering]
+
+renderer/rendering_method="mobile"
+textures/vram_compression/import_etc2_astc=true

@@ -1,0 +1,15 @@
+# Godot editor cache / generated import data — never checked in.
+.godot/
+.import/
+export/
+export_presets.cfg.uid
+*.translation
+
+# Local Android/iOS build tooling artifacts if ever generated locally.
+android/build/
+android/.gradle/
+ios/build/
+
+# Editor/OS noise.
+.DS_Store
+*.tmp
