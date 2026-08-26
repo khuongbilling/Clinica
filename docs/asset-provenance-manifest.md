@@ -350,3 +350,32 @@ Each row records original path and SHA-256. The section heading is the file clas
 ## Non-destructive cleanup rule
 
 Future deletion must be limited to an explicit candidate that is both hash-proven duplicate and reference-proven noncanonical, after unique material is preserved and owner-approved review is complete.
+
+## `.canvas` provenance cleanup
+
+This section records the complete pre-cleanup inventory of the tracked `.canvas`
+asset directory for M0-P3E. Hashes and sizes were captured before any removal or
+move. The three exact duplicates were removed only from `.canvas`; their canonical
+frontend counterparts remain unchanged. The other twelve files were moved byte-for-
+byte to `archive/historical-assets/canvas/`.
+
+| Original `.canvas` path | SHA-256 | Bytes | Classification | Canonical counterpart | Final disposition |
+|---|---|---:|---|---|---|
+| `.canvas/assets/asset_-1080724980.png` | `b75a452e43a82f9479eb6e4d911bc8801e3704172213c2fc260d00eb4f756657` | 330,011 | `UNKNOWN/REFERENCE` | — | `MOVE intact → archive/historical-assets/canvas/asset_-1080724980.png` |
+| `.canvas/assets/asset_1359401704.png` | `1f6d70891f95ffdec04bd4c1ef639e5ef73b0d3aa046c32919e24970c7e62713` | 2,946,718 | `UNKNOWN/REFERENCE` | — | `MOVE intact → archive/historical-assets/canvas/asset_1359401704.png` |
+| `.canvas/assets/asset_-1478809049.png` | `8941a4197f7421c519ada99627eaf9f30c38c6870d1a4909407a2342e5fcfe4c` | 318,949 | `UNKNOWN/REFERENCE` | — | `MOVE intact → archive/historical-assets/canvas/asset_-1478809049.png` |
+| `.canvas/assets/asset_-1615378816.png` | `2184f66e273a957004dd668e4fe41dcd519a4794d278c39fef7063ece213ee97` | 87,010 | `UNKNOWN/REFERENCE` | — | `MOVE intact → archive/historical-assets/canvas/asset_-1615378816.png` |
+| `.canvas/assets/asset_1621773123.png` | `d169067de2b406b3935f39ea21002383e6cd361fd6cc33ad94d9988506871435` | 2,549,909 | `UNKNOWN/REFERENCE` | — | `MOVE intact → archive/historical-assets/canvas/asset_1621773123.png` |
+| `.canvas/assets/asset_1700694498.png` | `2abe49c6b69644bdb256bb249c00dc59972171ac872b53064e6bb35030095543` | 2,691,974 | `UNKNOWN/REFERENCE` | — | `MOVE intact → archive/historical-assets/canvas/asset_1700694498.png` |
+| `.canvas/assets/asset_-1799576052.png` | `56bcc087709160c9231c43d63431c37568b80dcaef8dbb6f5fbe00ba7444a66c` | 1,479,062 | `UNKNOWN/REFERENCE` | — | `MOVE intact → archive/historical-assets/canvas/asset_-1799576052.png` |
+| `.canvas/assets/asset_2075317585.png` | `8bb4ee6998613ad7e678d80dabd6676d7531ca22c890d1e0becc79267466d680` | 3,083,358 | `EXACT-DUPLICATE/CACHE` | `frontend/assets/images/home_hub_bg_v4.png` | REMOVE .canvas copy; canonical retained |
+| `.canvas/assets/asset_-910002516.png` | `9741f863d053995f08aae0b348ed4a91d28214f2547aa4f9ed8cd54d06f3c8ae` | 2,505,347 | `UNKNOWN/REFERENCE` | — | `MOVE intact → archive/historical-assets/canvas/asset_-910002516.png` |
+| `.canvas/assets/asset_988491662.png` | `82cd63a2b6aff94fa7d9f04ceab039576811f884799f45d9635827ec828bba49` | 2,990,086 | `UNKNOWN/REFERENCE` | — | `MOVE intact → archive/historical-assets/canvas/asset_988491662.png` |
+| `.canvas/assets/master_bai.png` | `ea8b223272905faec12cc218bfb75c100d1d89571c5747f872fc5a2d7407bcd6` | 1,237,021 | `EXACT-DUPLICATE/CACHE` | `frontend/assets/images/tutorial_master_bai.png` | REMOVE .canvas copy; canonical retained |
+| `.canvas/assets/nightingale_vn_bust.png` | `f6548075caf1af295d5d7193ec9c0498362f847b31b9e7fc5742983cb08e1646` | 1,497,180 | `EXACT-DUPLICATE/CACHE` | `frontend/assets/images/nightingale_vn_bust.png` | REMOVE .canvas copy; canonical retained |
+| `.canvas/assets/nightingale_vn_lower.png` | `40515ae577af27e312776eb1a775fd57e30893cf463732b744cd393c3b917666` | 1,391,027 | `HISTORICAL/REFERENCE/UNKNOWN` | — | `MOVE intact → archive/historical-assets/canvas/nightingale_vn_lower.png` |
+| `.canvas/assets/prodigy_scene_preview.jpg` | `d64e2fa98842e5fbe2e5d6dd3d24c74cf12cf8c417f228c9c9b8a1f27eacf10f` | 92,502 | `DESIGN-HISTORY/REFERENCE` | — | `MOVE intact → archive/historical-assets/canvas/prodigy_scene_preview.jpg` |
+| `.canvas/assets/prodigy_scene_v2.png` | `0a0930a6498c0729e5d04af745965160b98fdde074465c78f1d352d9e0ffef54` | 354,472 | `DESIGN-HISTORY/REFERENCE` | — | `MOVE intact → archive/historical-assets/canvas/prodigy_scene_v2.png` |
+
+The archived files are historical, non-runtime, and non-authoritative. They must
+not be imported into the application or treated as canonical asset replacements.
