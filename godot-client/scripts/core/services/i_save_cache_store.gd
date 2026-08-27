@@ -18,3 +18,28 @@ func write_local_cache(_envelope: Dictionary) -> void:
 
 func clear_local_namespace() -> void:
 	push_error("ISaveCacheStore.clear_local_namespace is abstract")
+
+## M1-P2: reads the raw local cache (if any) and runs it through
+## PlayerSaveMigration.migrate(). Never writes as a side effect — callers
+## decide whether/how to persist the result (see
+## `write_migrated_cache`/`write_quarantine` below).
+func read_and_migrate() -> MigrationOutcome:
+	push_error("ISaveCacheStore.read_and_migrate is abstract")
+	return null
+
+## M1-P2: persists an already-migrated/accepted canonical v3 envelope. This
+## is a cache rewrite, not a reward/authority mutation (ledger §4).
+func write_migrated_cache(_envelope: PlayerEnvelope) -> void:
+	push_error("ISaveCacheStore.write_migrated_cache is abstract")
+
+## M1-P2: preserves a quarantined (unknown-future-version or malformed)
+## record in a namespace fully separate from the normal cache, so it is
+## never confused with, mixed into, or silently overwritten by valid
+## envelope data (contract §7 / ledger §5).
+func write_quarantine(_outcome: MigrationOutcome) -> void:
+	push_error("ISaveCacheStore.write_quarantine is abstract")
+
+## M1-P2: reads back the quarantine namespace (empty Dictionary if none).
+func read_quarantine() -> Dictionary:
+	push_error("ISaveCacheStore.read_quarantine is abstract")
+	return {}

@@ -36,12 +36,21 @@ if [ -n "$GODOT_BIN" ]; then
     overall_status=1
   fi
 
-  echo "[2/2] Headless boot-scene parse/run smoke test"
+  echo "[2/3] Headless boot-scene parse/run smoke test"
   if timeout 30 "$GODOT_BIN" --headless --path "$GODOT_CLIENT_DIR" \
       --quit-after 2 res://scenes/boot/boot.tscn; then
     echo "PASS: boot scene parsed and ran headlessly."
   else
     echo "FAIL: boot scene did not parse/run headlessly."
+    overall_status=1
+  fi
+
+  echo "[3/3] Headless M1-P2 player-save migration validator"
+  if "$GODOT_BIN" --headless --path "$GODOT_CLIENT_DIR" \
+      --script res://scripts/tools/run_migration_validation.gd; then
+    echo "PASS: migration validator ran headlessly."
+  else
+    echo "FAIL: migration validator reported a failure or crashed."
     overall_status=1
   fi
 else
@@ -64,6 +73,9 @@ else
     "scripts/core/contracts/journey_run_ref.gd"
     "scripts/core/contracts/activity_attempt_ref.gd"
     "scripts/core/contracts/validation_result.gd"
+    "scripts/core/contracts/migration_outcome.gd"
+    "scripts/core/migration/player_save_migration.gd"
+    "scripts/core/migration/player_save_transfer.gd"
     "scripts/core/services/i_navigation_service.gd"
     "scripts/core/services/i_app_state_service.gd"
     "scripts/core/services/i_api_transport.gd"

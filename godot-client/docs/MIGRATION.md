@@ -1,13 +1,15 @@
-# M1-P1 Godot Migration Foundation
+# M1-P1/M1-P2 Godot Migration Foundation
 
 > **Scope: additive foundation pass, now verified against a real Godot
 > engine.** This document describes the `godot-client/` skeleton added in
-> M1-P1. It does not change the existing Expo/React Native client, backend
+> M1-P1, plus the M1-P2 portable-schema migration layer described in §9. It
+> does not change the existing Expo/React Native client, backend
 > routes/auth/economy/save behavior, gameplay rules, assets, application
 > dependencies, or the M0 canonical contracts. It does add Godot 4.4.1
 > itself to this workspace's Nix environment (`replit.nix`) purely as a
 > dev/verification tool — no application/runtime dependency changed. See §4
-> and `docs/M1-P1-VERIFICATION.md` for what that verification covered.
+> and `docs/M1-P1-VERIFICATION.md` for what M1-P1 verified, and
+> `docs/M1-P2-VERIFICATION.md` for what M1-P2 verified.
 
 ## 1. Relationship to the canonical contracts
 
@@ -211,3 +213,101 @@ Godot code specifically.
   `pkgs.godot_4` — as a dev/verification tool; see
   `docs/M1-P1-VERIFICATION.md`. That is not an application dependency and
   changes no gameplay, economy, authority, or save behavior.)
+
+## 9. M1-P2: Portable Schemas + Migrations
+
+M1-P2 adds the first real, executable implementation of the migration
+ledger described in
+[`../../docs/save-schema-migration-ledger.md`](../../docs/save-schema-migration-ledger.md),
+on the Godot side, plus a safe import/export transfer boundary. It does not
+touch gameplay, and it does not change what the existing Expo frontend or
+FastAPI backend do — see §10.
+
+```
+scripts/core/migration/
+  player_save_migration.gd   Pure migrator: migrate(raw) -> MigrationOutcome.
+                              Ordered Entry A (legacy -> v1 aliases/backfill)
+                              -> Entry B (v1 -> v2 authoritative/local split)
+                              -> v3 envelope. See its header doc comment for
+                              the full purity/determinism/idempotency/
+                              no-mint contract this file holds itself to.
+  player_save_transfer.gd    import_from_transfer()/export_for_transfer():
+                              a thin wrapper around the one migrator above,
+                              plus defensive credential-key redaction on
+                              export. Never a Godot-specific serialized
+                              Resource — always the same portable
+                              Dictionary/JSON shape any engine can read.
+scripts/core/contracts/
+  migration_outcome.gd       Result contract: action (accept/migrate/
+                              quarantine), save_version, envelope,
+                              quarantine_reason, raw_preserved.
+scripts/adapters/validation/
+  player_save_migration_validator_adapter.gd
+                              Runs the real migrator against the golden
+                              fixture (player-migration-vectors.json) AND a
+                              few supplementary native GDScript vectors for
+                              scenarios the fixture pack does not yet cover
+                              (repeated-migration idempotency, Chapter-1
+                              alias delta-safety, JSON round trip, quarantine
+                              of a non-Dictionary input, no destructive
+                              downgrade path, Player Hero never manufactured,
+                              export redaction). Every check is labeled
+                              `fixture:*` or `native:*` so it is always clear
+                              which is fixture-driven vs. supplementary.
+scripts/tools/
+  run_migration_validation.gd   Headless entry point, mirrors
+                                 run_fixture_validation.gd's pattern.
+```
+
+`ISaveCacheStore` (and `LocalSaveCacheAdapter`) gained four new methods for
+this push: `read_and_migrate()` (read the local cache and run it through the
+migrator, no write side effect), `write_migrated_cache(envelope)` (persist
+an already-migrated v3 envelope), and `write_quarantine(outcome)` /
+`read_quarantine()` (a namespace **fully separate** from the normal cache
+file, so a quarantined unknown-future-version or malformed record can never
+be confused with, merged into, or silently overwrite valid save data).
+
+### Design decisions worth recording
+
+- **Field classification default.** Every input field is classified as
+  `authoritative`, `local`, or — if it matches neither explicit allowlist in
+  `player_save_migration.gd` — routed into `local.extensions` (opaque,
+  preserved, never read as authority). This follows the ledger's explicit
+  instruction to carry unknown fields into a non-authoritative extension
+  area rather than dropping them, and avoids having to enumerate the
+  entire ~200-field PlayerState shape up front.
+- **`realm_seed` backfill formula** is a portable, deterministic
+  string-derivation rule (`"…-player-…" -> "realm-…"`) independent of, and
+  not a re-implementation of, the frontend's own numeric FNV-1a Realm-grid
+  seed algorithm in `frontend/src/game/store.tsx` — that one seeds a
+  different, engine-specific rendering concern. Both are legitimately
+  different, non-conflicting derivations from the same `player_id`.
+- **No-mint proof is independently computed**, not trusted from a fixture's
+  declared `grant_delta`: `PlayerSaveMigration.compute_grant_delta()`
+  actually diffs before/after valuable fields at runtime. The one
+  documented exception is the Chapter-1 journey-node alias rename (adds the
+  new ID only when its old counterpart was already present — a rename of an
+  existing grant, not a new one).
+- **Idempotency by construction, not by re-running logic.** An input that is
+  already v3-shaped (`authoritative`/`local` present, `save_version: 3`) is
+  accepted unchanged on a fast path — Entry A/B logic never re-runs against
+  already-classified data, which is what makes a second `migrate()` call a
+  true no-op.
+- **Determinism w.r.t. device time** is enforced by construction and
+  verifiable by inspection: nothing in `scripts/core/migration/` calls
+  `Time.*`, `OS.*`, `randi()`/`randf()`, or any `RandomNumberGenerator` — no
+  runtime clock-variance test was fabricated to "prove" this; it is a
+  structural property of the code, stated honestly here instead.
+
+## 10. Explicitly out of scope for M1-P2
+
+- Journey/battle/Realm/inventory/shop/recruitment/economy/Player-Hero-
+  creation gameplay parity or behavior changes.
+- Any network authority work — `HttpApiTransport` is unchanged; migration
+  operates only on already-fetched or locally cached data.
+- Fixing the backend authority gaps already tracked in
+  `docs/canonical-save-schema-contract.md` §8 and
+  `docs/save-schema-migration-ledger.md` §8 — those remain labeled,
+  out-of-scope tracked gaps, not silently patched by this push.
+- Any modification to `frontend/`, `backend/`, `fixtures/clinica-golden/v1/`,
+  or the M0 canonical contract documents themselves.

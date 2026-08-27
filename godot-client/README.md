@@ -1,13 +1,26 @@
-# Clinica Godot Client — M1-P1 Skeleton
+# Clinica Godot Client — M1-P1 Skeleton + M1-P2 Portable Schemas
 
 Foundation-only Godot 4.x project. This is an additive migration skeleton:
 it does not replace, modify, or depend on the existing Expo/React Native
 client (`frontend/`) or backend (`backend/`), and it changes no gameplay,
 economy, or save behavior. See [`docs/MIGRATION.md`](docs/MIGRATION.md) for
-folder responsibilities and authority boundaries, and
-[`docs/M1-P1-VERIFICATION.md`](docs/M1-P1-VERIFICATION.md) for exactly what
-was verified — and what remains unverified — in the environment this
-skeleton was built in.
+folder responsibilities and authority boundaries,
+[`docs/M1-P1-VERIFICATION.md`](docs/M1-P1-VERIFICATION.md) for what M1-P1
+verified, and [`docs/M1-P2-VERIFICATION.md`](docs/M1-P2-VERIFICATION.md) for
+what the M1-P2 portable-schema migration layer verified.
+
+## M1-P2: portable save schema + migrations
+
+`scripts/core/migration/player_save_migration.gd` is a pure, deterministic
+migrator (`migrate(raw) -> MigrationOutcome`) that carries a legacy or
+partial player save forward to the canonical `clinica.player` v3 envelope
+(unversioned/legacy → v1 → v2 → v3, per
+`docs/save-schema-migration-ledger.md`), plus `player_save_transfer.gd`, a
+thin safe import/export boundary for future Godot ↔ Unity/Replit transfer
+that never emits a Godot-specific serialized resource. See
+[`docs/MIGRATION.md`](docs/MIGRATION.md) §9 for the full design notes and
+[`docs/M1-P2-VERIFICATION.md`](docs/M1-P2-VERIFICATION.md) for verification
+results.
 
 ## What this push ships
 
