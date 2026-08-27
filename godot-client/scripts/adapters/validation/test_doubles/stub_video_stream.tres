@@ -1,0 +1,6 @@
+[gd_resource type="VideoStream" script_class="StubVideoStream" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/adapters/validation/test_doubles/stub_video_stream.gd" id="1_stub"]
+
+[resource]
+script = ExtResource("1_stub")

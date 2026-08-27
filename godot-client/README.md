@@ -1,4 +1,4 @@
-# Clinica Godot Client — M1-P1 Skeleton + M1-P2 Portable Schemas
+# Clinica Godot Client — M1-P1 Skeleton + M1-P2 Portable Schemas + M2-P1 Opening Shell
 
 Foundation-only Godot 4.x project. This is an additive migration skeleton:
 it does not replace, modify, or depend on the existing Expo/React Native
@@ -6,8 +6,25 @@ client (`frontend/`) or backend (`backend/`), and it changes no gameplay,
 economy, or save behavior. See [`docs/MIGRATION.md`](docs/MIGRATION.md) for
 folder responsibilities and authority boundaries,
 [`docs/M1-P1-VERIFICATION.md`](docs/M1-P1-VERIFICATION.md) for what M1-P1
-verified, and [`docs/M1-P2-VERIFICATION.md`](docs/M1-P2-VERIFICATION.md) for
-what the M1-P2 portable-schema migration layer verified.
+verified, [`docs/M1-P2-VERIFICATION.md`](docs/M1-P2-VERIFICATION.md) for
+what the M1-P2 portable-schema migration layer verified, and
+[`docs/M2-P1-VERIFICATION.md`](docs/M2-P1-VERIFICATION.md) for what the
+M2-P1 opening shell + real cutscene playback push verified.
+
+## M2-P1: opening shell + real cutscene playback
+
+`Boot` now navigates to a new `Opening` scene (before `AppShell`), which
+hosts a real, video-backed implementation of `ICutscenePlaybackService`
+(`scripts/adapters/cutscene/cutscene_playback_service.gd`): a loading
+state, mobile-friendly Skip and Replay controls, and a genuine
+missing/unsupported-asset fallback (there is no pre-rendered video in this
+repository yet — see `assets/cutscenes/README.md`). Finished playback, a
+user skip, and a fallback all converge on the exact same
+post-cutscene transition into `AppShell`; Replay is a presentation-only
+restart with no reward, gating, or save/progression effect. See
+[`docs/MIGRATION.md`](docs/MIGRATION.md) §11 for the full design and
+[`docs/M2-P1-VERIFICATION.md`](docs/M2-P1-VERIFICATION.md) for verification
+results.
 
 ## M1-P2: portable save schema + migrations
 
@@ -24,14 +41,15 @@ results.
 
 ## What this push ships
 
-- A mobile-first Godot project: boot scene → app-shell placeholder screen.
+- A mobile-first Godot project: boot scene → opening cutscene shell →
+  app-shell placeholder screen.
 - Engine-independent domain contracts (`scripts/core/contracts/`) and
   service interfaces (`scripts/core/services/`).
 - A composition root (`scripts/core/composition_root.gd`, the `Services`
   autoload) that wires concrete adapters (`scripts/adapters/`) — navigation,
   app state, an API-transport seam, a local save/cache adapter, config,
-  logging, error reporting, a cutscene-playback placeholder, and a
-  read-only fixture validator.
+  logging, error reporting, a real video-backed cutscene-playback service
+  (M2-P1), and read-only fixture/migration/cutscene validators.
 - A read-only validator for `fixtures/clinica-golden/v1/`
   (`scripts/adapters/validation/fixture_validator_adapter.gd`, runnable
   headlessly via `scripts/tools/run_fixture_validation.gd`).
@@ -45,8 +63,9 @@ results.
 - Real network/save wiring — `HttpApiTransport.request()` and
   `LocalSaveCacheAdapter` are structural seams, not a working backend
   integration.
-- Cinematic content — the cutscene service is a placeholder seam
-  (skip/replay/fallback/finished hooks only).
+- Cinematic content — no pre-rendered video file exists yet; the opening
+  scene's real, honest missing-asset fallback is what runs today (see
+  `assets/cutscenes/README.md` and `docs/MIGRATION.md` §11).
 - Signed or verified platform exports.
 
 ## Running (Godot 4.4.1 verified in this environment)
@@ -67,7 +86,13 @@ godot --headless --path godot-client \
   --script res://scripts/tools/run_fixture_validation.gd
 
 godot --headless --path godot-client \
-  --quit-after 2 res://scenes/boot/boot.tscn
+  --script res://scripts/tools/run_migration_validation.gd
+
+godot --headless --path godot-client \
+  --script res://scripts/tools/run_opening_cutscene_validation.gd
+
+godot --headless --path godot-client \
+  --quit-after 6 res://scenes/boot/boot.tscn
 ```
 
 ## Structural + real-engine smoke check

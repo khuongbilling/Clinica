@@ -36,21 +36,39 @@ if [ -n "$GODOT_BIN" ]; then
     overall_status=1
   fi
 
-  echo "[2/3] Headless boot-scene parse/run smoke test"
+  echo "[2/5] Headless boot-scene parse/run smoke test (boot -> opening -> app_shell)"
   if timeout 30 "$GODOT_BIN" --headless --path "$GODOT_CLIENT_DIR" \
-      --quit-after 2 res://scenes/boot/boot.tscn; then
-    echo "PASS: boot scene parsed and ran headlessly."
+      --quit-after 6 res://scenes/boot/boot.tscn; then
+    echo "PASS: boot scene parsed and ran headlessly (full boot->opening->app_shell chain)."
   else
     echo "FAIL: boot scene did not parse/run headlessly."
     overall_status=1
   fi
 
-  echo "[3/3] Headless M1-P2 player-save migration validator"
+  echo "[3/5] Headless opening-scene direct parse/run smoke test"
+  if timeout 30 "$GODOT_BIN" --headless --path "$GODOT_CLIENT_DIR" \
+      --quit-after 4 res://scenes/opening/opening.tscn; then
+    echo "PASS: opening scene parsed and ran headlessly."
+  else
+    echo "FAIL: opening scene did not parse/run headlessly."
+    overall_status=1
+  fi
+
+  echo "[4/5] Headless M1-P2 player-save migration validator"
   if "$GODOT_BIN" --headless --path "$GODOT_CLIENT_DIR" \
       --script res://scripts/tools/run_migration_validation.gd; then
     echo "PASS: migration validator ran headlessly."
   else
     echo "FAIL: migration validator reported a failure or crashed."
+    overall_status=1
+  fi
+
+  echo "[5/5] Headless M2-P1 opening/cutscene validator"
+  if "$GODOT_BIN" --headless --path "$GODOT_CLIENT_DIR" \
+      --script res://scripts/tools/run_opening_cutscene_validation.gd; then
+    echo "PASS: opening/cutscene validator ran headlessly."
+  else
+    echo "FAIL: opening/cutscene validator reported a failure or crashed."
     overall_status=1
   fi
 else
@@ -95,6 +113,18 @@ else
     "scripts/adapters/validation/fixture_validator_adapter.gd"
     "scripts/adapters/cutscene/cutscene_playback_service.gd"
     "scripts/tools/run_fixture_validation.gd"
+    "scripts/core/migration/player_save_migration.gd"
+    "scripts/core/migration/player_save_transfer.gd"
+    "scripts/core/contracts/migration_outcome.gd"
+    "scripts/adapters/validation/player_save_migration_validator_adapter.gd"
+    "scripts/tools/run_migration_validation.gd"
+    "scenes/opening/opening.tscn"
+    "scenes/opening/opening.gd"
+    "scripts/adapters/validation/opening_cutscene_validator_adapter.gd"
+    "scripts/adapters/validation/test_doubles/stub_video_stream.gd"
+    "scripts/adapters/validation/test_doubles/stub_video_stream.tres"
+    "scripts/tools/run_opening_cutscene_validation.gd"
+    "assets/cutscenes/README.md"
     "export_presets.cfg"
   )
 

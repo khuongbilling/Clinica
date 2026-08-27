@@ -157,20 +157,15 @@ notation (e.g. `1e+21`); none occur in the current fixture pack. If a
 future fixture introduces such a value, extend `_canonicalize()` in
 `fixture_validator_adapter.gd` and re-verify before trusting its hash.
 
-## 5. Cutscene placeholder seam
+## 5. Cutscene playback seam (superseded by §11 / M2-P1)
 
-`ICutscenePlaybackService` exists so that later work (actual pre-rendered
-cutscene playback) has an agreed seam to implement against without forcing
-scene/UI code to change call sites. Current behavior:
-
-- `play(id)` records the id and immediately emits `finished` (there is no
-  asset to play yet).
-- `skip()` emits `skipped` if a cutscene is "current".
-- `replay()` re-invokes `play()` with the same id.
-- `trigger_fallback(reason)` emits `fallback_triggered` for a caller to
-  react to (e.g. show a static image instead of a video) — this hook exists
-  now specifically so the future video-backed implementation has a defined
-  failure path from day one.
+`ICutscenePlaybackService` originally existed (M1-P1) as a placeholder seam
+only: `play(id)` immediately emitted `finished` with no real asset
+resolution. **M2-P1 replaced that placeholder with a real, video-backed
+implementation** — see §11 for the current design. The interface itself is
+unchanged in spirit (same four verbs: play/skip/replay/trigger_fallback,
+now joined by `loading` and `current_state()`), so no call site outside
+`scripts/adapters/cutscene/` and `scenes/opening/` had to change.
 
 None of this touches gameplay state, currency, or progression.
 
@@ -311,3 +306,93 @@ be confused with, merged into, or silently overwrite valid save data).
   out-of-scope tracked gaps, not silently patched by this push.
 - Any modification to `frontend/`, `backend/`, `fixtures/clinica-golden/v1/`,
   or the M0 canonical contract documents themselves.
+
+## 11. M2-P1: Opening Shell + Real Cutscene Playback
+
+**Scope: additive presentation pass.** Replaces the M1-P1 cutscene
+placeholder (§5) with a real, video-backed implementation, and inserts a
+new `Opening` scene between `Boot` and `AppShell`. No gameplay, save,
+reward, or progression code path is touched.
+
+### 11.1 What changed
+
+- `scripts/core/services/i_cutscene_playback_service.gd` — the interface
+  gained a `loading(cutscene_id)` signal and a `current_state() -> String`
+  abstract method (for UI state-driving and testability), and promoted
+  `trigger_fallback(reason)` from an adapter-only convenience to a formal
+  abstract method. Signatures remain engine-neutral (`String` ids only) —
+  no Godot type appears in the interface.
+- `scripts/adapters/cutscene/cutscene_playback_service.gd` — real
+  implementation. Owns a `CUTSCENE_ASSET_PATHS` manifest
+  (`"opening" -> res://assets/cutscenes/opening.ogv`), a small state
+  machine (`IDLE/LOADING/PLAYING/FINISHED/SKIPPED/FALLBACK`), and resolves
+  + loads the asset via `ResourceLoader`. It does **not** own or construct
+  the `VideoStreamPlayer` node — the display surface is bound in from the
+  outside via `bind_display_node()`/`unbind_display_node()`, so the
+  service (a long-lived autoload member) never keeps a dangling reference
+  to a node owned by a scene that may be freed.
+- `scenes/opening/opening.tscn` + `opening.gd` (new) — the presentation
+  scene. Owns the real `VideoStreamPlayer`, a loading label, a fallback
+  label, and Skip/Replay buttons. Binds the display node on `_ready()`,
+  unbinds it on `_exit_tree()`.
+- `scenes/boot/boot.gd` — now navigates to `opening` (previously navigated
+  straight to `app_shell`).
+- `assets/cutscenes/README.md` (new) — documents the expected drop-in path
+  and format for the real pre-rendered clip. No video file is added by
+  this push; see §11.4.
+
+### 11.2 Fallback detection (real, not simulated)
+
+`play(id)` can fall back for three distinct, independently-verified
+reasons, in this order:
+
+1. **`missing_asset`** — `ResourceLoader.exists(path)` is false. This is
+   the actual, current state of the repository (no `.ogv` file exists yet)
+   — the fallback this push ships with is exercised for real, every time,
+   not merely simulated in a test.
+2. **`unsupported_asset`** — the resource loads but is not a `VideoStream`.
+3. **`no_display_node`** — the resource is a valid `VideoStream`, but no
+   display node is currently bound (e.g. the opening scene was torn down
+   mid-load, or a caller invoked `play()` before binding a surface).
+
+### 11.3 Convergence: one shared transition, three triggers, no second path
+
+`opening.gd`'s `_on_cutscene_finished`, `_on_cutscene_skipped`, and
+`_on_cutscene_fallback` handlers all call the exact same
+`_advance_to_app_shell()` function, guarded by a one-shot `_transitioned`
+flag. There is deliberately no second transition path. This is enforced by
+an automated source-level regression check in
+`OpeningCutsceneValidatorAdapter` (§ "M2-P1 opening/cutscene validator" in
+`docs/M2-P1-VERIFICATION.md`), not just by code review.
+
+**Replay is presentation-only and is not a second completion path.**
+`_on_replay_pressed()` calls `Services.cutscene.replay()` and nothing else
+— it never calls `_advance_to_app_shell()`, `navigate_to()`, or
+`change_scene_to_file`, and it is only reachable before `_transitioned`
+becomes true. Replaying the cutscene cannot grant a reward, alter gating,
+or write save/progression state: `opening.gd` and
+`cutscene_playback_service.gd` reference no save/state/progression/network
+authority surface at all (`Services.save_cache`, `Services.app_state`,
+`Services.api_transport`, `PlayerEnvelope`) — verified by an automated
+grep-style check in the same validator, not just by inspection.
+
+### 11.4 Explicitly out of scope for M2-P1
+
+- The actual pre-rendered cinematic video file. `assets/cutscenes/` ships
+  only a `README.md` describing the expected drop-in path
+  (`res://assets/cutscenes/opening.ogv`); no video content is fabricated,
+  generated, or embedded by this push. The real, honest missing-asset
+  fallback (§11.2) is what runs today, and is what future
+  `godot --headless --quit-after N res://scenes/boot/boot.tscn` runs will
+  keep exercising until a real asset is dropped in.
+- A "watch again" screen reachable after the shared transition has fired.
+  Replay in this push is a restart-from-the-top control on the opening
+  screen itself, available only until `_advance_to_app_shell()` runs —
+  see §11.3.
+- Threaded/async video resource loading. `ResourceLoader.load()` is called
+  synchronously; this is a deliberate scope decision appropriate for a
+  short pre-rendered clip, documented here as a known future extension
+  point rather than fabricated complexity.
+- Any change to `PlayerEnvelope`, save migrations (§9), Journey, combat,
+  Realm, economy, inventory, recruitment, Player-Hero creation, backend
+  authority routes, the Expo frontend, or any lockfile.
