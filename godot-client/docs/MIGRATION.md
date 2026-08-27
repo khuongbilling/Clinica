@@ -1,9 +1,13 @@
 # M1-P1 Godot Migration Foundation
 
-> **Scope: additive foundation pass only.** This document describes the
-> `godot-client/` skeleton added in M1-P1. It does not change the existing
-> Expo/React Native client, backend routes/auth/economy/save behavior,
-> gameplay rules, assets, dependencies, or the M0 canonical contracts.
+> **Scope: additive foundation pass, now verified against a real Godot
+> engine.** This document describes the `godot-client/` skeleton added in
+> M1-P1. It does not change the existing Expo/React Native client, backend
+> routes/auth/economy/save behavior, gameplay rules, assets, application
+> dependencies, or the M0 canonical contracts. It does add Godot 4.4.1
+> itself to this workspace's Nix environment (`replit.nix`) purely as a
+> dev/verification tool — no application/runtime dependency changed. See §4
+> and `docs/M1-P1-VERIFICATION.md` for what that verification covered.
 
 ## 1. Relationship to the canonical contracts
 
@@ -122,7 +126,7 @@ interface would.
   server data; they exist so a future implementation has an
   already-agreed-upon shape to fill in.
 
-## 4. Fixture validation — what it checks and what it explicitly does not
+## 4. Fixture validation — what it checks and how parity is verified
 
 Run from the repository root:
 
@@ -135,18 +139,21 @@ full referential integrity). It is unchanged by this push.
 
 The Godot-side validator
 (`scripts/adapters/validation/fixture_validator_adapter.gd`, runnable via
-`scripts/tools/run_fixture_validation.gd`) is a **portability smoke check**:
-it re-implements the envelope-shape and a handful of cross-reference checks
-from `validate.cjs` in GDScript, to prove the fixture pack is readable and
-structurally sound from a second engine. It deliberately does **not**
-attempt SHA-256 canonical-hash verification: no Godot executable was
-available while this script was authored, so a hand-ported canonicalization
-routine could not be exercised or trusted, and shipping an unverified hash
-check that might silently always "pass" (or always "fail") would be worse
-than not having one. The validator reports this explicitly as a `limited`
-check rather than fabricating a result. Closing this gap (porting and
-testing the canonicalization routine against a real Godot binary) is
-future work, not implemented here.
+`scripts/tools/run_fixture_validation.gd`) now performs a real second-engine
+**canonical SHA-256 hash-parity check**, not just a structural smoke check.
+It ports `validate.cjs`'s `clinica-jcs-v1` canonicalization (sorted-key JSON
+stringification + SHA-256) into GDScript, using `String.sha256_text()`, and
+compares the resulting digest for every fixture against `hashes.json`.
+Verified under real Godot 4.4.1.stable: all 10 `payload_sha256_parity:*`
+checks pass, matching `validate.cjs` byte-for-byte for every value in the
+fixture pack, including every float literal present
+(0.25 / 0.3 / 0.325 / 0.5 / 1.18 / 1.6).
+
+One known, narrow limitation: the GDScript port does not special-case
+extreme-magnitude floats that JavaScript would render in exponential
+notation (e.g. `1e+21`); none occur in the current fixture pack. If a
+future fixture introduces such a value, extend `_canonicalize()` in
+`fixture_validator_adapter.gd` and re-verify before trusting its hash.
 
 ## 5. Cutscene placeholder seam
 
@@ -198,5 +205,9 @@ Godot code specifically.
   tutorials, minigames, or UI parity with the existing client.
 - Real authentication, reward settlement, server mutations, gameplay
   persistence, cinematic recreation, or signed platform exports.
-- Any modification to `frontend/`, `backend/`, assets, dependencies,
-  lockfiles, or the contents of `fixtures/clinica-golden/v1/`.
+- Any modification to `frontend/`, `backend/`, assets, application
+  dependencies, lockfiles, or the contents of `fixtures/clinica-golden/v1/`.
+  (`replit.nix` did gain the Godot engine itself — `pkgs.godot` /
+  `pkgs.godot_4` — as a dev/verification tool; see
+  `docs/M1-P1-VERIFICATION.md`. That is not an application dependency and
+  changes no gameplay, economy, authority, or save behavior.)

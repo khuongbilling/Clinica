@@ -4,9 +4,11 @@
 ; existing Expo/React Native client, backend, gameplay, or save behavior.
 ; See godot-client/docs/MIGRATION.md for scope and authority boundaries.
 ;
-; NOTE: no Godot executable was available in the environment this file was
-; authored in, so it has not been opened/parsed by the Godot editor. Open it
-; once in Godot 4.3+ to confirm it loads before building further on top of it.
+; NOTE: Godot 4.4.1 is available in this environment (added via replit.nix)
+; and this project has been headlessly imported and booted against it
+; (`godot --headless --path godot-client --import` / `--quit-after`) — see
+; godot-client/docs/M1-P1-VERIFICATION.md for the verified results. It has
+; not yet been opened in the graphical Godot editor.
 
 config_version=5
 

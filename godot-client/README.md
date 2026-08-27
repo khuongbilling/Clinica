@@ -36,31 +36,35 @@ skeleton was built in.
   (skip/replay/fallback/finished hooks only).
 - Signed or verified platform exports.
 
-## Running (requires a local Godot 4.3+ install)
+## Running (Godot 4.4.1 verified in this environment)
 
-No Godot executable was available in the sandbox this skeleton was authored
-in, so none of the `.tscn`/`.gd` files below have been opened or executed by
-the Godot engine. Treat them as unverified until run once locally.
+Godot 4.4.1.stable is available in this workspace (added via `pkgs.godot` /
+`pkgs.godot_4` in `replit.nix`, specifically so this skeleton could be
+verified against a real engine — see `docs/M1-P1-VERIFICATION.md`). Every
+`.tscn`/`.gd` file below has been headlessly imported and booted by that
+real engine, and the Godot-side fixture validator's canonical SHA-256
+hash-parity check has been run against it and passes.
 
 ```sh
 # Open the editor:
 #   Godot 4.3+ → Import → select godot-client/project.godot
 
-# Or run headless:
-godot4 --headless --path godot-client \
+# Or run headless (as verified in this environment):
+godot --headless --path godot-client \
   --script res://scripts/tools/run_fixture_validation.gd
 
-godot4 --headless --path godot-client \
+godot --headless --path godot-client \
   --quit-after 2 res://scenes/boot/boot.tscn
 ```
 
-## Structural/limitation smoke check (works without Godot installed)
+## Structural + real-engine smoke check
 
 ```sh
 bash godot-client/tools/validate_skeleton.sh
 ```
 
-This checks that required files exist and, when a `godot`/`godot4` binary
-is present, also attempts a real headless parse/run. When no binary is
-present it prints an explicit limitation banner rather than claiming a
-Godot-verified pass.
+In this environment this detects the real Godot binary and reports a
+genuine PASS from both headless checks (fixture validator, including hash
+parity; and boot-scene parse/run) rather than the structural-only fallback.
+The fallback path (file-presence checks + limitation banner) remains in the
+script for environments that have no Godot binary at all.
