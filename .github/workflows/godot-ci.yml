@@ -1,0 +1,122 @@
+name: Godot CI
+
+on:
+  push:
+    paths:
+      - 'godot-client/**'
+      - 'fixtures/clinica-golden/v1/**'
+      - '.github/workflows/godot-ci.yml'
+  pull_request:
+    paths:
+      - 'godot-client/**'
+      - 'fixtures/clinica-golden/v1/**'
+      - '.github/workflows/godot-ci.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: godot-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  godot-headless:
+    name: Godot 4.4.1 headless validation
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Confirm independent runner context
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -n "${REPL_ID:-}" ] || [ -n "${REPL_SLUG:-}" ] || [ -n "${REPL_OWNER:-}" ]; then
+            echo "Unexpected Replit environment detected." >&2
+            exit 1
+          fi
+          echo "GitHub-hosted Ubuntu runner; no Replit environment variables detected."
+
+      - name: Install verified Godot 4.4.1
+        shell: bash
+        env:
+          GODOT_VERSION: 4.4.1
+          GODOT_RELEASE: 4.4.1-stable
+          GODOT_ARCHIVE: Godot_v4.4.1-stable_linux.x86_64.zip
+        run: |
+          set -euo pipefail
+          work_dir="${RUNNER_TEMP}/godot-install"
+          bin_dir="${RUNNER_TEMP}/godot-bin"
+          mkdir -p "$work_dir" "$bin_dir"
+          cd "$work_dir"
+
+          base_url="https://github.com/godotengine/godot/releases/download/${GODOT_RELEASE}"
+          curl --fail --location --retry 3 --retry-all-errors \
+            --output "$GODOT_ARCHIVE" \
+            "${base_url}/${GODOT_ARCHIVE}"
+          curl --fail --location --retry 3 --retry-all-errors \
+            --output SHA512-SUMS.txt \
+            "${base_url}/SHA512-SUMS.txt"
+
+          grep " ${GODOT_ARCHIVE}$" SHA512-SUMS.txt > godot.sha512
+          sha512sum --check godot.sha512
+
+          unzip -q "$GODOT_ARCHIVE"
+          install -m 0755 "Godot_v${GODOT_RELEASE}_linux.x86_64" "${bin_dir}/godot"
+          echo "$bin_dir" >> "$GITHUB_PATH"
+
+      - name: Verify exact engine line
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="$(godot --version)"
+          echo "Godot reports: $version"
+          case "$version" in
+            4.4.1.stable*) ;;
+            *)
+              echo "Expected Godot 4.4.1 stable, found: $version" >&2
+              exit 1
+              ;;
+          esac
+
+      - name: Clean headless import
+        shell: bash
+        env:
+          HOME: ${{ runner.temp }}/clinica-godot-home
+          XDG_CONFIG_HOME: ${{ runner.temp }}/clinica-godot-xdg/config
+          XDG_CACHE_HOME: ${{ runner.temp }}/clinica-godot-xdg/cache
+          XDG_DATA_HOME: ${{ runner.temp }}/clinica-godot-xdg/data
+        run: |
+          set -euo pipefail
+          mkdir -p "$HOME" "$XDG_CONFIG_HOME" "$XDG_CACHE_HOME" "$XDG_DATA_HOME"
+          godot --headless --path godot-client --editor --quit
+
+      - name: Run aggregate Godot validation
+        shell: bash
+        env:
+          HOME: ${{ runner.temp }}/clinica-godot-home
+          XDG_CONFIG_HOME: ${{ runner.temp }}/clinica-godot-xdg/config
+          XDG_CACHE_HOME: ${{ runner.temp }}/clinica-godot-xdg/cache
+          XDG_DATA_HOME: ${{ runner.temp }}/clinica-godot-xdg/data
+        run: |
+          set -euo pipefail
+          bash godot-client/tools/validate_skeleton.sh | tee "${RUNNER_TEMP}/godot-validation.log"
+
+          if grep -q 'LIMITATION:' "${RUNNER_TEMP}/godot-validation.log"; then
+            echo "Validator fell back to structural-only mode; refusing false CI pass." >&2
+            exit 1
+          fi
+
+          grep -q '== RESULT: PASS ==' "${RUNNER_TEMP}/godot-validation.log"
+
+      - name: Verify validation is non-mutating
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ! git diff --exit-code; then
+            echo "Godot CI modified tracked repository content." >&2
+            exit 1
+          fi
