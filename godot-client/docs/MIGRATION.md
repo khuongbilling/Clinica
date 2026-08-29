@@ -396,3 +396,72 @@ grep-style check in the same validator, not just by inspection.
 - Any change to `PlayerEnvelope`, save migrations (§9), Journey, combat,
   Realm, economy, inventory, recruitment, Player-Hero creation, backend
   authority routes, the Expo frontend, or any lockfile.
+
+## 12. M2-P2: Deterministic Prologue Battle Slice
+
+M2-P2 adds the first controlled playable Godot slice after the M2-P1 opening
+shell. AppShell now links to a temporary loadout, a deterministic introductory
+clinical encounter, and an explicitly non-rewarding handoff placeholder.
+
+### 12.1 One portable battle seam
+
+`IPrologueBattleService` is the only new battle-facing interface.
+`GodotPrologueBattleService` is its only concrete adapter and is wired only in
+the existing `Services` composition root. The presentation scene calls that
+service; it does not calculate effects or own action state.
+
+`PrologueBattleRules` contains the minimal engine-independent state transitions
+and calculator ordering needed by this slice. Its Strike, Stabilize, and Shield
+calculations are validated directly against all six cases in
+`battle-clinical-vectors.json`. It is intentionally not a second full combat
+engine and does not implement turns, rewards, progression, inventory, or
+server settlement.
+
+### 12.2 Session-only action economy
+
+The encounter owns four battle AP. Assessment, prioritization, and
+reassessment are teaching decisions; the intervention spends one battle AP.
+The state also carries a read-only displayed stamina baseline so validation can
+prove that AP changes while persistent stamina does not.
+
+No M2-P2 service or scene references `save_cache`, `api_transport`,
+`PlayerEnvelope`, or any local-cache write API. Completion sets only a
+session-local handoff route.
+
+### 12.3 Deterministic teaching sequence
+
+The fixed temporary loadout uses the existing prologue-only IDs for
+Nightingale, Fleming, and the Former Self. The fixed encounter is the Silent
+Infarction introduction. The state machine accepts exactly:
+
+1. assess;
+2. prioritize;
+3. intervene;
+4. reassess;
+5. final action.
+
+Out-of-order input is rejected without changing state. Reassessment advances
+to the explicit final-action beat; only that fifth action completes the local
+teaching case and reveals the Continue action to the handoff placeholder.
+
+### 12.4 Presentation and portability
+
+Loadout, battle, and handoff are Godot presentation scenes with readable,
+wrapped labels, keyboard focus, and controls at least 76 logical pixels tall.
+They use no required art, audio, generated asset, or renderer-specific combat
+logic, so missing visuals cannot block the loop.
+
+For a future Unity port, the state snapshot, fixed content dictionaries,
+calculator inputs/outputs, and action sequence can translate directly to plain
+C# data and an interface. Only the Godot adapter and scene layer need
+replacement.
+
+### 12.5 Explicitly out of scope for M2-P2
+
+- Durable completion, rewards, XP, currency, stamina, hero ownership,
+  progression, saves, receipts, or backend calls.
+- Main battle-engine replacement or redesign of clinical precedence/formulas.
+- Journey, Realm, inventory, shops, recruitment, Player Hero creation, or
+  M2-P3.
+- Changes to the Expo frontend, backend, root dependencies/lockfiles, canonical
+  contracts, or golden fixture content.

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# M1-P1 skeleton smoke/structure check.
+# M1-P1/M2-P2 Godot smoke and validator check.
 #
 # Honesty contract: this script never claims a Godot-verified pass unless a
 # `godot4`/`godot` executable is actually present and actually runs. When no
@@ -27,7 +27,7 @@ done
 if [ -n "$GODOT_BIN" ]; then
   echo "-- Godot binary found: $GODOT_BIN --"
 
-  echo "[1/2] Headless fixture validator"
+  echo "[1/9] Headless fixture/hash validator"
   if "$GODOT_BIN" --headless --path "$GODOT_CLIENT_DIR" \
       --script res://scripts/tools/run_fixture_validation.gd; then
     echo "PASS: fixture validator ran headlessly."
@@ -36,7 +36,7 @@ if [ -n "$GODOT_BIN" ]; then
     overall_status=1
   fi
 
-  echo "[2/5] Headless boot-scene parse/run smoke test (boot -> opening -> app_shell)"
+  echo "[2/9] Headless boot-scene parse/run smoke test (boot -> opening -> app_shell)"
   if timeout 30 "$GODOT_BIN" --headless --path "$GODOT_CLIENT_DIR" \
       --quit-after 6 res://scenes/boot/boot.tscn; then
     echo "PASS: boot scene parsed and ran headlessly (full boot->opening->app_shell chain)."
@@ -45,7 +45,7 @@ if [ -n "$GODOT_BIN" ]; then
     overall_status=1
   fi
 
-  echo "[3/5] Headless opening-scene direct parse/run smoke test"
+  echo "[3/9] Headless opening-scene direct parse/run smoke test"
   if timeout 30 "$GODOT_BIN" --headless --path "$GODOT_CLIENT_DIR" \
       --quit-after 4 res://scenes/opening/opening.tscn; then
     echo "PASS: opening scene parsed and ran headlessly."
@@ -54,7 +54,34 @@ if [ -n "$GODOT_BIN" ]; then
     overall_status=1
   fi
 
-  echo "[4/5] Headless M1-P2 player-save migration validator"
+  echo "[4/9] Headless prologue loadout-scene parse/run smoke test"
+  if timeout 30 "$GODOT_BIN" --headless --path "$GODOT_CLIENT_DIR" \
+      --quit-after 4 res://scenes/prologue/prologue_loadout.tscn; then
+    echo "PASS: prologue loadout scene parsed and ran headlessly."
+  else
+    echo "FAIL: prologue loadout scene did not parse/run headlessly."
+    overall_status=1
+  fi
+
+  echo "[5/9] Headless prologue battle-scene parse/run smoke test"
+  if timeout 30 "$GODOT_BIN" --headless --path "$GODOT_CLIENT_DIR" \
+      --quit-after 4 res://scenes/prologue/prologue_battle.tscn; then
+    echo "PASS: prologue battle scene parsed and ran headlessly."
+  else
+    echo "FAIL: prologue battle scene did not parse/run headlessly."
+    overall_status=1
+  fi
+
+  echo "[6/9] Headless prologue handoff-scene parse/run smoke test"
+  if timeout 30 "$GODOT_BIN" --headless --path "$GODOT_CLIENT_DIR" \
+      --quit-after 4 res://scenes/prologue/prologue_handoff.tscn; then
+    echo "PASS: prologue handoff scene parsed and ran headlessly."
+  else
+    echo "FAIL: prologue handoff scene did not parse/run headlessly."
+    overall_status=1
+  fi
+
+  echo "[7/9] Headless M1-P2 player-save migration validator"
   if "$GODOT_BIN" --headless --path "$GODOT_CLIENT_DIR" \
       --script res://scripts/tools/run_migration_validation.gd; then
     echo "PASS: migration validator ran headlessly."
@@ -63,12 +90,21 @@ if [ -n "$GODOT_BIN" ]; then
     overall_status=1
   fi
 
-  echo "[5/5] Headless M2-P1 opening/cutscene validator"
+  echo "[8/9] Headless M2-P1 opening/cutscene validator"
   if "$GODOT_BIN" --headless --path "$GODOT_CLIENT_DIR" \
       --script res://scripts/tools/run_opening_cutscene_validation.gd; then
     echo "PASS: opening/cutscene validator ran headlessly."
   else
     echo "FAIL: opening/cutscene validator reported a failure or crashed."
+    overall_status=1
+  fi
+
+  echo "[9/9] Headless M2-P2 first-battle validator"
+  if "$GODOT_BIN" --headless --path "$GODOT_CLIENT_DIR" \
+      --script res://scripts/tools/run_first_battle_validation.gd; then
+    echo "PASS: first-battle validator ran headlessly."
+  else
+    echo "FAIL: first-battle validator reported a failure or crashed."
     overall_status=1
   fi
 else
@@ -124,6 +160,18 @@ else
     "scripts/adapters/validation/test_doubles/stub_video_stream.gd"
     "scripts/adapters/validation/test_doubles/stub_video_stream.tres"
     "scripts/tools/run_opening_cutscene_validation.gd"
+    "scripts/core/contracts/prologue_battle_state.gd"
+    "scripts/core/services/i_prologue_battle_service.gd"
+    "scripts/core/prologue_battle_rules.gd"
+    "scripts/adapters/battle/godot_prologue_battle_service.gd"
+    "scripts/adapters/validation/first_battle_validator_adapter.gd"
+    "scripts/tools/run_first_battle_validation.gd"
+    "scenes/prologue/prologue_loadout.tscn"
+    "scenes/prologue/prologue_loadout.gd"
+    "scenes/prologue/prologue_battle.tscn"
+    "scenes/prologue/prologue_battle.gd"
+    "scenes/prologue/prologue_handoff.tscn"
+    "scenes/prologue/prologue_handoff.gd"
     "assets/cutscenes/README.md"
     "export_presets.cfg"
   )

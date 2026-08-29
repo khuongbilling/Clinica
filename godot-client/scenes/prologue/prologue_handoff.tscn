@@ -1,0 +1,55 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scenes/prologue/prologue_handoff.gd" id="1_handoff"]
+
+[node name="PrologueHandoff" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_handoff")
+
+[node name="Scroll" type="ScrollContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+follow_focus = true
+horizontal_scroll_mode = 0
+
+[node name="Margin" type="MarginContainer" parent="Scroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/margin_left = 32
+theme_override_constants/margin_top = 32
+theme_override_constants/margin_right = 32
+theme_override_constants/margin_bottom = 32
+
+[node name="Content" type="VBoxContainer" parent="Scroll/Margin"]
+layout_mode = 2
+alignment = 1
+theme_override_constants/separation = 24
+
+[node name="Title" type="Label" parent="Scroll/Margin/Content"]
+layout_mode = 2
+text = "SHIFT HANDOFF"
+theme_override_font_sizes/font_size = 36
+horizontal_alignment = 1
+
+[node name="Body" type="Label" parent="Scroll/Margin/Content"]
+layout_mode = 2
+text = "Assessment, prioritization, intervention, reassessment, and final action complete.\n\nThis M2-P2 teaching case grants no XP, currency, reward, hero, unlock, progression, stamina, or save mutation."
+autowrap_mode = 2
+theme_override_font_sizes/font_size = 24
+horizontal_alignment = 1
+
+[node name="ReturnButton" type="Button" parent="Scroll/Margin/Content"]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 84)
+focus_mode = 2
+text = "RETURN TO CLINICA"
+theme_override_font_sizes/font_size = 26

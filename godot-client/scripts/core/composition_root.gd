@@ -21,6 +21,7 @@ const LocalSaveCacheAdapterScript = preload("res://scripts/adapters/storage/loca
 const HttpApiTransportScript = preload("res://scripts/adapters/api/http_api_transport.gd")
 const FixtureValidatorAdapterScript = preload("res://scripts/adapters/validation/fixture_validator_adapter.gd")
 const CutscenePlaybackServiceScript = preload("res://scripts/adapters/cutscene/cutscene_playback_service.gd")
+const GodotPrologueBattleServiceScript = preload("res://scripts/adapters/battle/godot_prologue_battle_service.gd")
 
 var logger
 var error_reporter
@@ -31,6 +32,7 @@ var save_cache
 var api_transport
 var fixture_validator
 var cutscene
+var prologue_battle
 
 func _ready() -> void:
 	logger = GodotLoggerScript.new()
@@ -46,5 +48,6 @@ func _ready() -> void:
 
 	fixture_validator = FixtureValidatorAdapterScript.new()
 	cutscene = CutscenePlaybackServiceScript.new(logger)
+	prologue_battle = GodotPrologueBattleServiceScript.new()
 
 	logger.info("composition_root", "Services composed for M1-P1 skeleton.")
