@@ -121,7 +121,7 @@ jobs:
           python - <<'PY'
           import server
           assert server.app is not None
-          assert server.app.title == 'Clinica API'
+          assert server.app.title == 'Clinica: Kingdom of Healing API'
           print('PASS: backend/server.py imported and FastAPI app initialized.')
           PY
 
