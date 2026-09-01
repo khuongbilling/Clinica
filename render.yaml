@@ -1,6 +1,7 @@
 services:
   - type: web
     name: clinica-backend-staging
+    branch: infra-r3d-render-staging
     runtime: docker
     plan: free
     dockerfilePath: ./backend/Dockerfile
