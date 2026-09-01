@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: clinica-backend-staging
+    runtime: docker
+    plan: free
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: .
+    autoDeployTrigger: "off"
+    healthCheckPath: /healthz
+    envVars:
+      - key: CLINICA_ENV
+        value: production
+      - key: DB_NAME
+        value: clinica
+      - key: MONGO_URL
+        sync: false
+      - key: SESSION_SECRET
+        sync: false
