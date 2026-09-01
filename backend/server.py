@@ -1,4 +1,5 @@
 from fastapi import FastAPI, APIRouter, HTTPException, Header
+from fastapi.responses import JSONResponse
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -23,6 +24,7 @@ import uuid
 from datetime import datetime, timezone, timedelta
 from grand_rounds import GRAND_ROUNDS_CASES, public_attempt as grand_round_public_attempt
 from crisis_drill import CRISIS_DRILL_CASES, CRISIS_DRILL_FAMILIES, public_cd_attempt
+from runtime_config import get_runtime_config
 
 CRISIS_DRILL_ADVANCED_LEVEL_GATE = 12
 CRISIS_DRILL_GRANT_LOCKS: Dict[str, asyncio.Lock] = {}
@@ -33,9 +35,10 @@ GRAND_ROUNDS_ADVANCED_LEVEL_GATE = 12
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
-mongo_url = os.environ.get('MONGO_URL', 'mongodb://127.0.0.1:27017')
+runtime_config = get_runtime_config()
+mongo_url = runtime_config.mongo_url
 client = AsyncIOMotorClient(mongo_url)
-db = client[os.environ.get('DB_NAME', 'clinica')]
+db = client[runtime_config.db_name]
 
 app = FastAPI(title="Clinica: Kingdom of Healing API")
 api_router = APIRouter(prefix="/api")
@@ -855,6 +858,23 @@ async def resolve_player_hero_journey_opportunity(player: Dict[str, Any], run: D
 
 
 # ---------- Routes ----------
+
+@app.get("/healthz", include_in_schema=False)
+async def healthz():
+    """Process/import liveness probe; deliberately does not touch MongoDB."""
+    return {"status": "ok"}
+
+
+@app.get("/readyz", include_in_schema=False)
+async def readyz():
+    """Readiness probe that validates config and performs a non-mutating ping."""
+    try:
+        get_runtime_config()
+        await client.admin.command("ping")
+    except Exception:
+        return JSONResponse(status_code=503, content={"status": "not_ready"})
+    return {"status": "ok"}
+
 
 @api_router.get("/")
 async def root():
@@ -5243,6 +5263,7 @@ async def mark_run_abandoned(run_id: str, x_clinica_session: Optional[str] = Hea
 @app.on_event("startup")
 async def startup_db():
     """Create authority indexes for gameplay, activities, and faculty publishing."""
+    get_runtime_config()
     await db.journey_runs.create_index(
         [("player_id", ASCENDING), ("chapter_id", ASCENDING), ("attempt_number", ASCENDING)],
         unique=True,

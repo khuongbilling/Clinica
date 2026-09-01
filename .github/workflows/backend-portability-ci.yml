@@ -5,11 +5,17 @@ on:
     paths:
       - 'backend/**'
       - 'frontend/src/game/activityRegistry.manifest.json'
+      - '.dockerignore'
+      - '.gitignore'
+      - 'docs/external-backend-portability.md'
       - '.github/workflows/backend-portability-ci.yml'
   pull_request:
     paths:
       - 'backend/**'
       - 'frontend/src/game/activityRegistry.manifest.json'
+      - '.dockerignore'
+      - '.gitignore'
+      - 'docs/external-backend-portability.md'
       - '.github/workflows/backend-portability-ci.yml'
   workflow_dispatch:
 
@@ -26,6 +32,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     env:
+      CLINICA_ENV: test
       MONGO_URL: mongodb://127.0.0.1:27017
       DB_NAME: clinica_ci_import_only
       SESSION_SECRET: ci-portability-not-production
@@ -113,6 +120,35 @@ jobs:
           set -euo pipefail
           test -f frontend/src/game/activityRegistry.manifest.json
 
+      - name: Verify production configuration fails closed
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from backend.runtime_config import RuntimeConfigError, get_runtime_config
+
+          try:
+              get_runtime_config({"CLINICA_ENV": "production"})
+          except RuntimeConfigError:
+              print("PASS: production configuration fails closed.")
+          else:
+              raise SystemExit("Production configuration unexpectedly accepted missing values.")
+          PY
+
+      - name: Import backend from a clean non-Replit environment
+        shell: bash
+        run: |
+          set -euo pipefail
+          env -i \
+            PATH="$PATH" \
+            HOME="${RUNNER_TEMP}" \
+            PYTHONNOUSERSITE=1 \
+            CLINICA_ENV=test \
+            MONGO_URL=mongodb://127.0.0.1:27099 \
+            DB_NAME=clinica_ci_import_only \
+            SESSION_SECRET=ci-portability-not-production \
+            python -c "import sys; sys.path.insert(0, 'backend'); import server; assert any(route.path == '/healthz' for route in server.app.routes); assert any(route.path == '/readyz' for route in server.app.routes)"
+
       - name: Import FastAPI backend without Replit
         shell: bash
         working-directory: backend
@@ -131,6 +167,116 @@ jobs:
         run: |
           set -euo pipefail
           pytest tests --collect-only -q
+
+      - name: Run portability unit checks without database mutation
+        shell: bash
+        working-directory: backend
+        run: |
+          set -euo pipefail
+          pytest -q tests/test_portability.py
+
+      - name: Build and smoke-test the provider-neutral container
+        shell: bash
+        run: |
+          set -euo pipefail
+          image='clinica-backend:portability-ci'
+          docker build -f backend/Dockerfile -t "$image" .
+
+          runtime_uid="$(docker run --rm "$image" id -u)"
+          if [ "$runtime_uid" = "0" ]; then
+            echo "Container must not run as root." >&2
+            exit 1
+          fi
+
+          if docker run --rm "$image" \
+            python -c "import sys; sys.path.insert(0, 'backend'); import server"; then
+            echo "Production container accepted missing required configuration." >&2
+            exit 1
+          fi
+
+          docker run --rm -i \
+            --env CLINICA_ENV=test \
+            --env MONGO_URL=mongodb://127.0.0.1:27099 \
+            --env DB_NAME=clinica_ci_import_only \
+            --env SESSION_SECRET=ci-portability-not-production \
+            "$image" python - <<'PY'
+          import asyncio
+          import sys
+
+          import httpx
+
+          sys.path.insert(0, "backend")
+          import server
+
+          async def main() -> None:
+              transport = httpx.ASGITransport(app=server.app)
+              async with httpx.AsyncClient(
+                  transport=transport, base_url="http://container"
+              ) as client:
+                  response = await client.get("/healthz")
+              assert response.status_code == 200
+              assert response.json() == {"status": "ok"}
+
+          asyncio.run(main())
+          print("PASS: container health probe is available without MongoDB mutation.")
+          PY
+
+      - name: Verify deployment and secret-boundary files
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f backend/Dockerfile
+          test -f docs/external-backend-portability.md
+          python - <<'PY'
+          import re
+          import subprocess
+          from pathlib import Path
+
+          forbidden = re.compile(
+              r"(^|/)(INFRA-R3A-Mongo-Export(/|$)|"
+              r"\.env(rc|\.|$)|.*token\.json.*|.*credentials\.json.*|"
+              r".*\.(pem|archive|dump|bson)(\.gz)?$)"
+          )
+          representatives = (
+              ".env",
+              "backend/.env.production",
+              ".envrc",
+              "config/service-token.json",
+              "config/provider-credentials.json",
+              "config/private.pem",
+              "INFRA-R3A-Mongo-Export/source-metadata.json",
+              "backup/clinica.archive.gz",
+          )
+          if any(not forbidden.search(path) for path in representatives):
+              raise SystemExit("Tracked-file denylist does not cover a required secret/artifact class.")
+
+          dockerignore = Path(".dockerignore").read_text(encoding="utf-8")
+          required_docker_ignores = (
+              "**/.env",
+              "**/.env.*",
+              "**/.envrc",
+              "**/*.pem",
+              "**/*token.json*",
+              "**/*credentials.json*",
+              "INFRA-R3A-Mongo-Export",
+              "**/*.archive.gz",
+          )
+          if any(pattern not in dockerignore for pattern in required_docker_ignores):
+              raise SystemExit(".dockerignore is missing a required secret/artifact pattern.")
+
+          tracked = [
+              path
+              for path in subprocess.check_output(["git", "ls-files", "-z"]).decode().split("\0")
+              if path
+          ]
+          violations = [path for path in tracked if forbidden.search(path)]
+          if violations:
+              raise SystemExit("Forbidden environment or migration artifact is tracked.")
+          print(f"PASS: checked {len(tracked)} tracked paths and Docker context guards.")
+          PY
+          if git diff --exit-code; then
+            echo "Tracked repository content remains unchanged by validation."
+          fi
 
       - name: Verify portability checks are non-mutating
         shell: bash
